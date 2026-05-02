@@ -2,6 +2,33 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_062202 [接入 AppPaths 到 RuntimeStore 与 SQLite]
+
+- Added `atelier/app/services.py` as app-level orchestration glue.
+- Added `create_runtime_store(paths)` to create `RuntimeStore` from `AppPaths.data_root` after ensuring the shared data layout exists.
+- Added `open_app_database(paths)` to open `AppPaths.database_path` and initialize the SQLite schema.
+- Kept `runtime/` and `storage/` independent from `app/`; app layer performs the wiring.
+- Added `tests/test_app_services.py` before implementation and confirmed the initial failure was `ModuleNotFoundError: No module named 'atelier.app.services'`.
+- Fixed the SQLite test to close the connection explicitly because `sqlite3.Connection` as a context manager does not release the file handle on Windows.
+- Updated `docs/APP_CODE_MAP.md` to include `atelier/app/services.py`, `tests/test_app_services.py`, and the new code file count.
+- Updated `docs/plan/plan_main_app_skeleton.md` with Phase 5 for AppPaths integration.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_app_services
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `tests/test_app_services.py` passed after adding app-level factories and explicit SQLite connection close in the test.
+- Final `.venv/Scripts/python -m unittest discover -s tests`: 19 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_060137 [建立开发 venv 与 AppPaths 路径管理]
 
 - Created local `.venv/` for development and installed Atelier in editable mode with `.venv/Scripts/python -m pip install -e .`.

@@ -93,6 +93,22 @@ Validation:
 - `.venv/Scripts/python -m unittest discover -s tests`
 - `git diff --check`
 
+### Phase 5: AppPaths Integration
+
+Goal: connect runtime store creation and SQLite database opening to `AppPaths` through the app orchestration layer.
+
+Completion signal:
+
+- App-level factory functions create `RuntimeStore` from `AppPaths.data_root`.
+- App-level database opening uses `AppPaths.database_path`, creates required parent directories, and initializes the SQLite schema.
+- `runtime/` and `storage/` do not import `app/`; app layer performs the wiring.
+
+Validation:
+
+- `.venv/Scripts/python -m unittest discover -s tests`
+- `.venv/Scripts/python -m compileall -q atelier tests`
+- `git diff --check`
+
 ## Child Plans
 
 - None yet.
@@ -115,6 +131,7 @@ Validation:
 - 2026-05-03: Added `docs/APP_CODE_MAP.md` and `docs/RECENT_CHANGES.md` so future agents and developers can quickly understand the current code tree and durable change history.
 - 2026-05-03: Clarified development `.venv/`, local `.atelier/AtelierData/`, release App Runtime, and managed AtelierData runtime directory boundaries.
 - 2026-05-03: Created local `.venv/`, installed the package in editable mode, and added `AppPaths` as the first single source for development/user data paths.
+- 2026-05-03: Added app-level factories that create `RuntimeStore` and open initialized SQLite connections from `AppPaths`, while keeping lower layers independent from `app/`.
 
 ## Blockers
 

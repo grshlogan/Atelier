@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 35
+Code file count: 37
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 26 files
-- `tests/`: 8 files
+- `atelier/`: 27 files
+- `tests/`: 9 files
 
 ## Current Code Tree
 
@@ -21,6 +21,7 @@ atelier/
     __init__.py
     bootstrap.py
     paths.py
+    services.py
   core/
     __init__.py
     time.py
@@ -56,6 +57,7 @@ atelier/
 
 tests/
   test_app_paths.py
+  test_app_services.py
   test_package_integrity.py
   test_runtime_health.py
   test_runtime_manager.py
@@ -167,6 +169,21 @@ Boundary:
 - Does not decide release install directories.
 - Does not open SQLite, instantiate `RuntimeStore`, or install runtimes.
 - Does not put runtime binaries under `atelier/runtime/`.
+
+### `atelier/app/services.py`
+
+Responsibility:
+
+- Provides app-level factory functions that wire `AppPaths` into lower-level services.
+- `create_runtime_store(paths)` creates a `RuntimeStore` from `paths.data_root` after ensuring local data directories exist.
+- `open_app_database(paths)` opens `paths.database_path` and initializes the SQLite schema.
+
+Boundary:
+
+- This is orchestration glue, not a service container framework.
+- Does not start GUI, Scheduler, workers, or external tools.
+- Does not make `runtime/` or `storage/` depend on `app/`.
+- Callers still own database connection lifetime and must close returned SQLite connections.
 
 ## `atelier/core/`
 
@@ -499,6 +516,19 @@ Boundary:
 - Does not test installer-specific app runtime layout.
 - Does not create `.venv/`.
 - Does not instantiate real runtime stores, SQLite databases, or GUI objects.
+
+### `tests/test_app_services.py`
+
+Responsibility:
+
+- Tests app-level wiring from `AppPaths` to `RuntimeStore`.
+- Tests opening `AppPaths.database_path` and initializing SQLite schema through `open_app_database()`.
+
+Boundary:
+
+- Does not test GUI startup.
+- Does not run worker tasks.
+- Does not keep SQLite connections open after assertions.
 
 ### `tests/test_worker_events.py`
 
