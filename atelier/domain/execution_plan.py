@@ -35,6 +35,8 @@ class ExecutionTask(BaseModel):
     task_id: str
     source_node_id: str
     node_type: str
+    phase_id: str = "phase-1"
+    lane_id: str = "lane-default"
     params: dict[str, Any] = Field(default_factory=dict)
     input_artifacts: list[str] = Field(default_factory=list)
     output_artifact_slots: list[ArtifactSlot] = Field(default_factory=list)
@@ -50,3 +52,10 @@ class ExecutionTask(BaseModel):
     started_at: str | None = None
     completed_at: str | None = None
     error_message: str | None = None
+
+
+class ExecutionPlan(BaseModel):
+    plan_id: str
+    workflow_graph_id: str
+    status: Literal["draft", "ready", "running", "completed", "failed"] = "ready"
+    tasks: list[ExecutionTask] = Field(default_factory=list)

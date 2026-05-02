@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 37
+Code file count: 44
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 27 files
-- `tests/`: 9 files
+- `atelier/`: 32 files
+- `tests/`: 11 files
 
 ## Current Code Tree
 
@@ -34,6 +34,9 @@ atelier/
     __init__.py
   i18n/
     __init__.py
+  planning/
+    __init__.py
+    simple.py
   plugins/
     __init__.py
   release/
@@ -50,15 +53,21 @@ atelier/
   storage/
     __init__.py
     db.py
+    repositories.py
     schema.sql
   workers/
     __init__.py
     simulated.py
+  workflow/
+    __init__.py
+    graph.py
 
 tests/
   test_app_paths.py
   test_app_services.py
   test_package_integrity.py
+  test_phase6_minimal_loop.py
+  test_planning_simple.py
   test_runtime_health.py
   test_runtime_manager.py
   test_runtime_store.py
@@ -299,6 +308,33 @@ Boundary:
 - User-facing strings should eventually flow through this subsystem or Qt translation APIs.
 - Do not hard-code UI strings in GUI widgets once GUI work starts.
 
+## `atelier/planning/`
+
+### `atelier/planning/__init__.py`
+
+Responsibility:
+
+- Marks the execution planning package.
+
+Boundary:
+
+- No planning work at import time.
+
+### `atelier/planning/simple.py`
+
+Responsibility:
+
+- Provides `build_linear_execution_plan()` for the current Phase 6 minimum loop.
+- Converts a `WorkflowGraph` into an `ExecutionPlan` containing `ExecutionTask` objects.
+- Preserves simple edge dependencies by mapping source node IDs to generated task IDs.
+
+Boundary:
+
+- Not a full scheduler.
+- Does not allocate hardware resources.
+- Does not inspect runtime availability.
+- Does not optimize, parallelize, retry, or recover execution.
+
 ## `atelier/plugins/`
 
 ### `atelier/plugins/__init__.py`
@@ -449,6 +485,23 @@ Boundary:
 - Does not implement repositories or migrations yet.
 - Does not serialize domain models into rows yet.
 
+### `atelier/storage/repositories.py`
+
+Responsibility:
+
+- Provides the current minimal SQLite persistence functions for Phase 6.
+- `persist_planned_execution()` writes a project, workflow graph, job, execution plan, execution tasks, and task dependencies.
+- `record_worker_events()` writes structured worker events to `task_events`, records `ArtifactEvent` rows to `artifacts` / `task_artifacts`, and updates terminal task status.
+- Provides small query helpers for tests: `fetch_task_event_types()`, `fetch_artifact_paths()`, and `fetch_task_status()`.
+
+Boundary:
+
+- This is not the final repository layer.
+- Does not own SQLite connection lifecycle.
+- Does not implement migrations.
+- Does not implement queue claiming, retries, recovery actions, cache lookups, or scheduler locks.
+- Does not parse logs; it records structured worker events only.
+
 ### `atelier/storage/schema.sql`
 
 Responsibility:
@@ -500,6 +553,36 @@ Boundary:
 - Does not spawn subprocesses.
 - Does not write artifacts to disk.
 - Should be replaced by real worker runner/adapters only through the worker protocol boundary.
+
+## `atelier/workflow/`
+
+### `atelier/workflow/__init__.py`
+
+Responsibility:
+
+- Marks the workflow graph package.
+
+Boundary:
+
+- No registry loading or validation side effects at import time.
+
+### `atelier/workflow/graph.py`
+
+Responsibility:
+
+- Defines the current minimal workflow graph models:
+  - `WorkflowGraph`
+  - `WorkflowNode`
+  - `WorkflowEdge`
+  - `WorkflowPortRef`
+- Carries node params, resource requests, runtime requests, and simple edge references.
+
+Boundary:
+
+- Does not implement the full node registry.
+- Does not validate media formats or node compatibility.
+- Does not generate execution plans.
+- Does not run workflow nodes.
 
 ## `tests/`
 
@@ -583,6 +666,29 @@ Boundary:
 
 - Does not test signatures or release policy.
 
+### `tests/test_phase6_minimal_loop.py`
+
+Responsibility:
+
+- Tests the current Phase 6 business loop:
+  `WorkflowGraph -> ExecutionPlan -> simulated Worker -> SQLite events/artifacts`.
+- Confirms worker event types, artifact paths, and completed task status are persisted.
+
+Boundary:
+
+- Does not test real GUI, Scheduler, FFmpeg, model backends, or worker subprocesses.
+
+### `tests/test_planning_simple.py`
+
+Responsibility:
+
+- Tests `build_linear_execution_plan()` task generation and edge dependency preservation.
+- Tests empty graph rejection.
+
+Boundary:
+
+- Does not test full scheduling or advanced graph validation.
+
 ### `tests/test_storage_schema.py`
 
 Responsibility:
@@ -605,14 +711,14 @@ Boundary:
 
 ## Not Yet Present
 
-These packages are specified in docs but not implemented yet:
+These packages are specified in docs but not fully implemented yet:
 
-- `workflow/`: WorkflowGraph, node schema, validation, registry.
-- `planning/`: WorkflowGraph to ExecutionPlan conversion.
+- `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
+- `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
 - `scheduler/`: queue policy, resource locks, task dispatch.
 - `gui/`: PySide6 application window, dock workspace, canvas, panels.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
-- `storage/repositories/`: durable read/write APIs over SQLite.
+- `storage/repositories/`: only minimal Phase 6 persistence exists; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.
 - `release` implementation: update manifests, staging, rollback.
 - `plugins` implementation: manifest validation, contribution registry, isolation.

@@ -2,6 +2,44 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_064008 [完成 Phase 6 最小业务闭环]
+
+- Added minimal workflow graph models in `atelier/workflow/graph.py`:
+  - `WorkflowGraph`
+  - `WorkflowNode`
+  - `WorkflowEdge`
+  - `WorkflowPortRef`
+- Added `ExecutionPlan` to `atelier/domain/execution_plan.py` and added default `phase_id` / `lane_id` to `ExecutionTask`.
+- Added `build_linear_execution_plan()` in `atelier/planning/simple.py`.
+- Added minimal SQLite persistence helpers in `atelier/storage/repositories.py`:
+  - `persist_planned_execution()`
+  - `record_worker_events()`
+  - `fetch_task_event_types()`
+  - `fetch_artifact_paths()`
+  - `fetch_task_status()`
+- Added `tests/test_phase6_minimal_loop.py` before implementation and confirmed the first failure was `ModuleNotFoundError: No module named 'atelier.planning'`.
+- Added `tests/test_planning_simple.py` for simple planner behavior and empty graph rejection.
+- Updated `README.md`, `docs/ARCHITECTURE.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md` to reflect that Phase 6 now has a first working minimum loop.
+
+Current Phase 6 boundary:
+
+- Implemented: `WorkflowGraph -> ExecutionPlan -> simulated Worker -> SQLite events/artifacts`.
+- Not implemented: queue claiming, Scheduler, resource locks, real worker subprocesses, real adapters, failure recovery actions, GUI queue monitor.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest discover -s tests`: 22 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_062834 [按 AGENTS 规则中文化主计划]
 
 - Reviewed `AGENTS.md` Planning Discipline against `docs/plan/plan_main_app_skeleton.md`.

@@ -183,7 +183,12 @@
 
 状态：
 
-- 待开始。
+- 已完成首版最小闭环。
+
+说明：
+
+- 当前 Phase 6 只覆盖 sample workflow、simple planner、simulated Worker、SQLite events/artifacts。
+- queue、Scheduler、真实 worker subprocess、failure recovery action 尚未进入本阶段。
 
 ## Child Plans（子计划）
 
@@ -232,6 +237,7 @@ python -m mypy .
 - 2026-05-03：创建本地 `.venv/`，执行 editable install，并新增 `AppPaths` 作为 development/user data path 的首个单一事实源。
 - 2026-05-03：新增 app-level factories：从 `AppPaths` 创建 `RuntimeStore`，并打开初始化后的 SQLite connection，同时保持 lower layers 不依赖 `app/`。
 - 2026-05-03：按用户要求对照 `AGENTS.md` 重写本计划：保留主计划九段结构，正文改为中文，并补齐当前事实、验证事实和 Phase 6。
+- 2026-05-03：完成 Phase 6 首版最小业务闭环：新增 minimal `workflow/`、simple `planning/`、SQLite repository helpers，并验证 `WorkflowGraph -> ExecutionPlan -> simulated Worker -> SQLite events/artifacts`。
 
 ## Blockers（阻塞）
 
