@@ -2,6 +2,88 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_073409 [执行 resource locks Phase A]
+
+- Started execution of `docs/plan/plan_resource_locks_failure_recovery.md`.
+- Added `tests/test_resource_locks.py` before implementation and confirmed the first failure was missing `fetch_active_resource_lock`.
+- Added `ResourceLockRecord` and `fetch_active_resource_lock()` in `atelier/storage/repositories.py`.
+- Updated `mark_task_running()` so Scheduler claim now creates an active `resource_locks` row in the same claim path.
+- Updated `docs/APP_CODE_MAP.md` and `docs/plan/plan_resource_locks_failure_recovery.md`.
+
+Current Phase A boundary:
+
+- Implemented: Scheduler claim creates a queryable active resource lock.
+- Not implemented yet: terminal event lock release, failure facts, recovery options, stale lock detection.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_resource_locks
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_resource_locks`: passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 24 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260503_074057 [执行 resource locks Phase B]
+
+- Extended `tests/test_resource_locks.py` before implementation to cover terminal event lock release for:
+  - `CompletedEvent`
+  - `FailedEvent(error_code="CANCELLED")`
+  - ordinary recoverable `FailedEvent`
+- Confirmed the expected red state: task status was updated but active locks were not released.
+- Updated `record_worker_events()` terminal event path in `atelier/storage/repositories.py` so active resource locks are released after task status is updated.
+- Updated `docs/plan/plan_resource_locks_failure_recovery.md`.
+
+Current Phase B boundary:
+
+- Implemented: completed / cancelled / failed terminal events release active locks.
+- Not implemented yet: failed task facts, recovery options, stale lock detection.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_resource_locks
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_resource_locks`: 4 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 27 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260503_072200 [分发后续两个子计划]
+
+- Added `docs/plan/plan_resource_locks_failure_recovery.md`.
+  - Execution order: first.
+  - Scope: resource locks, terminal event lock release, failure facts, recovery options, stale lock detection.
+  - Boundary: no real worker subprocesses, no production multi-process locking, no GUI recovery panel.
+- Added `docs/plan/plan_readonly_pyside6_workbench.md`.
+  - Execution order: second.
+  - Scope: read-only PySide6 workbench shell that renders existing SQLite / runtime / queue state.
+  - Boundary: no heavy task execution in GUI, no real Workflow Canvas editing, no FFmpeg/model work.
+- Updated `docs/plan/plan_main_app_skeleton.md` Child Plans to link both sub-plans and record the intended execution order.
+
+Validation run:
+
+```powershell
+git diff --check
+```
+
+Result:
+
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_065626 [完成 Phase 7 最小 queue / Scheduler claim]
 
 - Added `atelier/scheduler/simple.py` with `SimpleScheduler` and `ClaimedTask`.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from dataclasses import dataclass
 from typing import Iterable
 
 from atelier.core.time import utc_now_iso
@@ -15,6 +16,17 @@ from atelier.domain.worker_event import (
     task_status_from_terminal_event,
 )
 from atelier.workflow.graph import WorkflowGraph
+
+
+@dataclass(frozen=True)
+class ResourceLockRecord:
+    lock_id: str
+    task_id: str
+    device_id: str
+    lock_type: str
+    vram_mb: int | None
+    acquired_at: str
+    released_at: str | None
 
 
 def persist_planned_execution(
@@ -148,7 +160,7 @@ def mark_task_running(
     resource_binding: ResourceBinding,
 ) -> None:
     now = utc_now_iso()
-    connection.execute(
+    cursor = connection.execute(
         """
         UPDATE execution_tasks
         SET status = 'running',
@@ -158,6 +170,23 @@ def mark_task_running(
         WHERE task_id = ? AND status = 'pending'
         """,
         (_dump_json(resource_binding), now, now, task_id),
+    )
+    if cursor.rowcount == 0:
+        raise RuntimeError(f"task is not claimable: {task_id}")
+    connection.execute(
+        """
+        INSERT INTO resource_locks
+            (lock_id, task_id, device_id, lock_type, vram_mb, acquired_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            f"{task_id}-resource-lock",
+            task_id,
+            resource_binding.device_id,
+            "task",
+            resource_binding.allocated_vram_mb,
+            now,
+        ),
     )
     connection.commit()
 
@@ -170,6 +199,30 @@ def fetch_task_resource_binding(connection: sqlite3.Connection, task_id: str) ->
     if row is None or row[0] is None:
         raise LookupError(f"missing task resource binding: {task_id}")
     return ResourceBinding.model_validate(json.loads(row[0]))
+
+
+def fetch_active_resource_lock(connection: sqlite3.Connection, task_id: str) -> ResourceLockRecord:
+    row = connection.execute(
+        """
+        SELECT lock_id, task_id, device_id, lock_type, vram_mb, acquired_at, released_at
+        FROM resource_locks
+        WHERE task_id = ? AND released_at IS NULL
+        ORDER BY acquired_at DESC, lock_id DESC
+        LIMIT 1
+        """,
+        (task_id,),
+    ).fetchone()
+    if row is None:
+        raise LookupError(f"missing active resource lock: {task_id}")
+    return ResourceLockRecord(
+        lock_id=row[0],
+        task_id=row[1],
+        device_id=row[2],
+        lock_type=row[3],
+        vram_mb=row[4],
+        acquired_at=row[5],
+        released_at=row[6],
+    )
 
 
 def _insert_execution_task(
@@ -257,6 +310,7 @@ def _update_task_from_terminal_event(
     connection: sqlite3.Connection,
     event: CompletedEvent | FailedEvent,
 ) -> None:
+    status = task_status_from_terminal_event(event)
     connection.execute(
         """
         UPDATE execution_tasks
@@ -264,12 +318,13 @@ def _update_task_from_terminal_event(
         WHERE task_id = ?
         """,
         (
-            task_status_from_terminal_event(event),
+            status,
             event.timestamp,
             event.timestamp,
             event.task_id,
         ),
     )
+    _release_resource_locks_for_task(connection, event.task_id, event.timestamp)
 
 
 def _dump_json(value: object) -> str:
@@ -282,6 +337,23 @@ def _dump_optional_json(value: object | None) -> str | None:
     if value is None:
         return None
     return _dump_json(value)
+
+
+def _release_resource_locks_for_task(
+    connection: sqlite3.Connection,
+    task_id: str,
+    timestamp: str,
+) -> None:
+    connection.execute(
+        """
+        UPDATE resource_locks
+        SET released_at = ?,
+            heartbeat_at = ?
+        WHERE task_id = ?
+          AND released_at IS NULL
+        """,
+        (timestamp, timestamp, task_id),
+    )
 
 
 def _dependencies_are_completed(connection: sqlite3.Connection, task_id: str) -> bool:

@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 47
+Code file count: 48
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
 - `atelier/`: 34 files
-- `tests/`: 12 files
+- `tests/`: 13 files
 
 ## Current Code Tree
 
@@ -74,6 +74,7 @@ tests/
   test_runtime_health.py
   test_runtime_manager.py
   test_runtime_store.py
+  test_resource_locks.py
   test_scheduler_simple.py
   test_simulated_worker.py
   test_storage_schema.py
@@ -523,8 +524,9 @@ Responsibility:
 
 - Provides the current minimal SQLite persistence functions for Phase 6.
 - `persist_planned_execution()` writes a project, workflow graph, job, execution plan, execution tasks, and task dependencies.
-- `record_worker_events()` writes structured worker events to `task_events`, records `ArtifactEvent` rows to `artifacts` / `task_artifacts`, and updates terminal task status.
+- `record_worker_events()` writes structured worker events to `task_events`, records `ArtifactEvent` rows to `artifacts` / `task_artifacts`, updates terminal task status, and releases active task resource locks on terminal events.
 - Provides minimum queue helpers for Phase 7: `fetch_next_runnable_task()`, `mark_task_running()`, and `fetch_task_resource_binding()`.
+- Provides minimum resource lock helpers for the resource-lock plan: `ResourceLockRecord` and `fetch_active_resource_lock()`.
 - Provides small query helpers for tests: `fetch_task_event_types()`, `fetch_artifact_paths()`, and `fetch_task_status()`.
 
 Boundary:
@@ -691,6 +693,20 @@ Responsibility:
 Boundary:
 
 - Does not test real concurrency, resource locks, worker subprocesses, or GPU policy.
+
+### `tests/test_resource_locks.py`
+
+Responsibility:
+
+- Tests Phase A and Phase B of `plan_resource_locks_failure_recovery.md`.
+- Confirms `SimpleScheduler.claim_next_task()` creates an active `resource_locks` row.
+- Confirms the active lock records task id, device id, lock type, VRAM field, acquisition timestamp, and unreleased state.
+- Confirms completed, cancelled, and failed terminal worker events release active resource locks.
+
+Boundary:
+
+- Does not test stale lock detection.
+- Does not test failure recovery options.
 
 ### `tests/test_runtime_health.py`
 

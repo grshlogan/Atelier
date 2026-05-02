@@ -30,7 +30,7 @@
 - 当前已有 `AppPaths`，开发期默认数据目录为 `.atelier/AtelierData/`。
 - 当前已有 app-level factory：`create_runtime_store(paths)` 和 `open_app_database(paths)`。
 - 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、package SHA-256 helper、SQLite schema 初始化和 simulated Worker。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 23 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 27 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -222,9 +222,15 @@
 
 ## Child Plans（子计划）
 
-- 暂无。
+- [plan_resource_locks_failure_recovery.md](./plan_resource_locks_failure_recovery.md)：第 1 个后续子计划。补 resource locks、terminal event lock release、failure facts、recovery options 和 stale lock 检测。
+- [plan_readonly_pyside6_workbench.md](./plan_readonly_pyside6_workbench.md)：第 2 个后续子计划。建立只读 PySide6 工作台壳，读取 SQLite / runtime / queue 状态并展示，不执行重型任务。
 
-如后续某一阶段变复杂，例如 Scheduler、Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
+执行顺序：
+
+1. 先执行 `plan_resource_locks_failure_recovery.md`，让后端执行状态更可信。
+2. 再执行 `plan_readonly_pyside6_workbench.md`，让 GUI 读取更完整的只读状态。
+
+如后续某一阶段继续变复杂，例如 Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
 
 ## Verification（验证）
 
@@ -238,7 +244,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：23 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：27 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -269,6 +275,7 @@ python -m mypy .
 - 2026-05-03：按用户要求对照 `AGENTS.md` 重写本计划：保留主计划九段结构，正文改为中文，并补齐当前事实、验证事实和 Phase 6。
 - 2026-05-03：完成 Phase 6 首版最小业务闭环：新增 minimal `workflow/`、simple `planning/`、SQLite repository helpers，并验证 `WorkflowGraph -> ExecutionPlan -> simulated Worker -> SQLite events/artifacts`。
 - 2026-05-03：完成 Phase 7 首版 queue / Scheduler claim：新增 `SimpleScheduler`，验证只 claim 依赖满足的 pending task，并持久化 `ResourceBinding` 和 `running` 状态。
+- 2026-05-03：按后续实施顺序拆出两个子计划：先 `resource_locks + failure recovery`，再只读 PySide6 工作台壳。
 
 ## Blockers（阻塞）
 
