@@ -2,6 +2,30 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_062834 [按 AGENTS 规则中文化主计划]
+
+- Reviewed `AGENTS.md` Planning Discipline against `docs/plan/plan_main_app_skeleton.md`.
+- Confirmed the plan already used the correct location, main-plan filename prefix, and the required nine-section structure.
+- Rewrote `docs/plan/plan_main_app_skeleton.md` in Chinese while preserving the AGENTS-required section skeleton through bilingual headings.
+- Updated stale plan facts:
+  - Current local Python is `Python 3.11.9`.
+  - `.venv/` editable install exists.
+  - Current validation baseline is 19 passing unittest tests.
+  - `AppPaths` and app-level `create_runtime_store()` / `open_app_database()` exist.
+- Added Phase 6 for the next minimum business loop: `WorkflowGraph -> ExecutionPlan -> simulated Worker -> SQLite events/artifacts`.
+
+Validation run:
+
+```powershell
+git diff --check
+.venv/Scripts/python -m unittest discover -s tests
+```
+
+Result:
+
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+- `.venv/Scripts/python -m unittest discover -s tests`: 19 tests passed.
+
 ## 20260503_062202 [接入 AppPaths 到 RuntimeStore 与 SQLite]
 
 - Added `atelier/app/services.py` as app-level orchestration glue.

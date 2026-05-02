@@ -1,138 +1,238 @@
-# Atelier App Skeleton Plan
+# Atelier 应用骨架主计划
 
-## Objective
+> 本计划是首版应用骨架的主计划文档。它按照 `AGENTS.md` 的 Planning Discipline 维护：轻量、可更新、只记录已验证事实和真实约束。
 
-Prepare the documentation contract for the first application skeleton, then scaffold a local-first Python/PySide6 desktop workstation around WorkflowGraph, ExecutionPlan, Scheduler, Worker, Storage, Hardware, and Runtime boundaries.
+## Objective（目标）
 
-## Scope
+在不提前接入真实 GUI、真实模型和真实外部工具的前提下，搭建 Atelier 的首版可信代码骨架。
 
-- Patch current specs so they agree on artifacts, cache hits, cancellation, resource bindings, and runtime ownership.
-- Treat Atelier's runtime environment as a first-class subsystem before code skeleton work begins.
-- Treat release/update, plugin system, workspace layout, and i18n as first-class subsystem contracts before code skeleton work begins.
-- Keep root clean: root docs stay limited to `README.md`, `AGENTS.md`, and `DESIGN.md`; planning lives under `docs/plan/`.
+目标边界：
 
-## Current Facts
+- 先确定文档契约、工程边界、runtime 目录模型和本地开发环境。
+- 让 `WorkflowGraph -> ExecutionPlan -> Worker Events -> SQLite` 的最小闭环逐步可运行。
+- 保持 GUI、WorkflowGraph、ExecutionPlan、Scheduler、RuntimeManager、Worker、Storage、Security 等职责分离。
 
-- Project name is `Atelier`.
-- First implementation direction is Python 3.12, PySide6, SQLite, Pydantic v2, JSON Lines workers, and typed external-tool adapters.
-- Runtime-heavy work must not run in the GUI process.
-- `rg` is unavailable in this environment because Windows returned `Access is denied`; use PowerShell `Select-String` for repository text search until this is resolved.
+## Scope（范围）
 
-## Constraints
+- 对齐首版 specs，确保 artifacts、cache hit、cancel、resource binding、runtime ownership、release/update、plugin、workspace、i18n、hardware scheduling、failure recovery、security/privacy 等基础契约不互相冲突。
+- 建立 Python 包骨架、测试基线、SQLite schema 初始化、runtime manifest 管理、runtime health check、package hash 校验、开发 `.venv` 和 `AppPaths` 路径事实源。
+- 保持根目录清爽：根目录文档只保留 `README.md`、`AGENTS.md`、`DESIGN.md`；计划与阶段文档放在 `docs/plan/`。
+- 当前阶段不实现真实 PySide6 GUI、真实 Scheduler、真实 FFmpeg/model adapters、打包发布链或插件加载链。
 
-- GUI must not call FFmpeg, model inference, CUDA, llama.cpp, or any heavy backend directly.
-- Scheduler is the only component that binds hardware resources.
-- Runtime/tool/model paths must come from a managed runtime manifest, not from global `PATH` assumptions or developer-local paths.
-- System GPU drivers may be detected and validated, but Atelier should manage all redistributable user-space runtime components it depends on.
-- App/runtime/model/plugin updates must use manifest, hash/signature verification, staging, and rollback concepts.
-- Plugin contributions must be manifest-driven and must not execute heavy work in the GUI process.
-- Workspace layout must be persisted and restorable, not hard-coded as one immutable four-panel layout.
-- UI text must use translation keys and support runtime locale switching.
-- Hardware scheduling, failure recovery, and security/privacy boundaries must be documented before scaffold work.
+## Current Facts（当前事实）
 
-## Execution Plan
+- 项目名是 `Atelier`。
+- 当前本地 Python 是 `Python 3.11.9`。
+- `pyproject.toml` 要求 `requires-python = ">=3.11"`，当前硬依赖只有 `pydantic>=2.0`。
+- `.venv/` 已创建，本地包已通过 `.venv/Scripts/python -m pip install -e .` editable install。
+- `.venv/`、`venv/`、`.atelier/` 已加入 `.gitignore`。
+- 当前已有 `atelier/` 包、`tests/` 测试目录、`pyproject.toml`、`docs/APP_CODE_MAP.md` 和 `docs/RECENT_CHANGES.md`。
+- 当前已有 `AppPaths`，开发期默认数据目录为 `.atelier/AtelierData/`。
+- 当前已有 app-level factory：`create_runtime_store(paths)` 和 `open_app_database(paths)`。
+- 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、package SHA-256 helper、SQLite schema 初始化和 simulated Worker。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 19 tests passed。
+- `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
-### Phase 1: Documentation Patch
+## Constraints（约束）
 
-Goal: make the current docs internally consistent before scaffold work.
+- GUI 不得直接调用 FFmpeg、模型推理、CUDA、llama.cpp 或其他重型 backend。
+- GUI 不得阻塞 Qt main event loop。
+- Scheduler 是唯一能进行硬件资源绑定的组件。
+- RuntimeManager 是唯一解析 executable path、backend path、model path 和 worker runtime env 的组件。
+- `atelier/runtime/` 是 runtime 管理源码目录，不存放 runtime 二进制、模型或虚拟环境。
+- 开发 `.venv/` 只服务本仓库开发，不是产品 App Runtime，也不提交。
+- 发布后的 GUI runtime 属于 App Install Dir；工具/runtime/model/backend 数据属于 AtelierData。
+- `runtime/` 和 `storage/` 不反向依赖 `app/`；由 app orchestration layer 负责接线。
+- Worker 应通过结构化事件协议上报进度，当前首版使用 pydantic models 和 simulated Worker。
+- SQLite 是 runtime state、events、artifacts、cache、recovery state 的首选持久层。
+- 不假设全局安装 FFmpeg、CUDA tools、llama.cpp、whisper.cpp、模型文件或开发机路径。
+- 不硬编码 `cuda:0` 作为默认策略。
+- 不提交 secrets、API keys、bearer tokens、模型 provider credentials 或本地 runtime 数据。
 
-Completion signal:
+## Execution Plan（执行计划）
 
-- Specs mention runtime ownership.
-- Cache-hit artifacts can be associated with the consuming task.
-- Cancel semantics map clearly to `TaskStatus.CANCELLED`.
-- Resource binding has one authoritative fact source.
+### Phase 1：文档契约对齐
 
-Validation:
+目标：
 
-- Run `git diff --check`.
-- Review changed docs with `Select-String` for the patched terms.
+- 让现有 specs 在 runtime ownership、artifact/cache、cancel semantics、resource binding 等关键概念上保持一致。
 
-### Phase 2: Skeleton Design Confirmation
+完成信号：
 
-Goal: present a concise skeleton design before creating production code.
+- specs 明确 RuntimeManager ownership。
+- cache-hit artifacts 可关联到 consuming task。
+- cancel semantics 能映射到 `TaskStatus.CANCELLED`。
+- resource binding 有单一事实源。
 
-Completion signal:
+验证：
 
-- User confirms the module layout and runtime environment strategy.
+- `git diff --check`
+- 使用 `Select-String` 复查关键术语。
 
-Validation:
+状态：
 
-- No code scaffold is created before confirmation.
+- 已完成。
 
-### Phase 3: First Code Skeleton
+### Phase 2：骨架设计确认
 
-Goal: create the first executable Python skeleton without real GUI, real models, or real external tools.
+目标：
 
-Completion signal:
+- 在创建生产代码前确认模块布局、runtime environment strategy 和首版边界。
 
-- `atelier/` package exists with core/domain/runtime/storage/worker boundaries.
-- `pyproject.toml` describes the project and future dependency direction.
-- stdlib `unittest` tests cover worker events, runtime binding, runtime manifest storage, runtime health checks, package hash checks, SQLite initialization, and a simulated worker path.
-- No GUI callback, model inference, FFmpeg call, or global runtime path assumption exists.
+完成信号：
 
-Validation:
+- 用户确认 module layout、runtime strategy 和先搭骨架的方向。
+
+验证：
+
+- 代码骨架创建前已完成设计确认。
+
+状态：
+
+- 已完成。
+
+### Phase 3：首版代码骨架
+
+目标：
+
+- 创建不接真实 GUI、真实模型、真实外部工具的首版可执行 Python skeleton。
+
+完成信号：
+
+- `atelier/` package 存在，并包含 `app`、`core`、`domain`、`runtime`、`storage`、`workers` 等基础边界。
+- `pyproject.toml` 描述项目包和未来依赖方向。
+- stdlib `unittest` 覆盖 worker events、runtime binding、runtime manifest storage、runtime health checks、package hash checks、SQLite 初始化和 simulated Worker。
+- 没有 GUI callback、model inference、FFmpeg call 或 global runtime path assumption。
+
+验证：
 
 - `python -m unittest discover -s tests`
+- `python -m compileall -q atelier tests`
 - `git diff --check`
 
-### Phase 4: Development Environment And App Paths
+状态：
 
-Goal: make the local development environment reproducible and establish one path source for development data, runtime manifests, cache, logs, and SQLite.
+- 已完成。
 
-Completion signal:
+### Phase 4：开发环境与 AppPaths
 
-- `.venv/` exists locally and can run the current unittest suite through editable install.
-- `.venv/`, `venv/`, and `.atelier/` are ignored by git.
-- A small `AppPaths` module defines the default development `AtelierData` layout without putting runtime data under source directories.
-- Tests cover the path layout and directory creation behavior.
+目标：
 
-Validation:
+- 建立可复现的本地开发环境，并建立 development data、runtime manifests、cache、logs、SQLite 的单一路径事实源。
+
+完成信号：
+
+- `.venv/` 可在本地运行当前测试套件。
+- `.venv/`、`venv/`、`.atelier/` 被 git 忽略。
+- `AppPaths` 定义开发期 `.atelier/AtelierData/` 布局。
+- tests 覆盖路径布局和目录创建行为。
+
+验证：
 
 - `.venv/Scripts/python -m pip install -e .`
 - `.venv/Scripts/python -m unittest discover -s tests`
+- `.venv/Scripts/python -m compileall -q atelier tests`
 - `git diff --check`
 
-### Phase 5: AppPaths Integration
+状态：
 
-Goal: connect runtime store creation and SQLite database opening to `AppPaths` through the app orchestration layer.
+- 已完成。
 
-Completion signal:
+### Phase 5：AppPaths 集成
 
-- App-level factory functions create `RuntimeStore` from `AppPaths.data_root`.
-- App-level database opening uses `AppPaths.database_path`, creates required parent directories, and initializes the SQLite schema.
-- `runtime/` and `storage/` do not import `app/`; app layer performs the wiring.
+目标：
 
-Validation:
+- 通过 app orchestration layer 把 `AppPaths` 接到 `RuntimeStore` 和 SQLite database opening。
+
+完成信号：
+
+- `create_runtime_store(paths)` 使用 `AppPaths.data_root` 创建 `RuntimeStore`。
+- `open_app_database(paths)` 使用 `AppPaths.database_path`，创建父目录并初始化 SQLite schema。
+- `runtime/` 和 `storage/` 不 import `app/`。
+
+验证：
+
+- `.venv/Scripts/python -m unittest tests.test_app_services`
+- `.venv/Scripts/python -m unittest discover -s tests`
+- `.venv/Scripts/python -m compileall -q atelier tests`
+- `git diff --check`
+
+状态：
+
+- 已完成。
+
+### Phase 6：最小业务闭环
+
+目标：
+
+- 实现最小 `WorkflowGraph -> ExecutionPlan -> simulated Worker -> SQLite events/artifacts` 路径。
+
+完成信号：
+
+- 新增最小 `workflow/` domain 或 schema，能表达一个 sample workflow。
+- 新增最小 `planning/` 转换器，把 sample workflow 转为 `ExecutionTask`。
+- simulated Worker events 能被持久化到 SQLite `task_events`。
+- artifact event 能产生或记录到 `artifacts` / `task_artifacts` 的最小写入路径。
+- 所有新行为有测试，并先看到失败再实现。
+
+验证：
 
 - `.venv/Scripts/python -m unittest discover -s tests`
 - `.venv/Scripts/python -m compileall -q atelier tests`
 - `git diff --check`
 
-## Child Plans
+状态：
 
-- None yet.
+- 待开始。
 
-## Verification
+## Child Plans（子计划）
 
-- Documentation phase: `git diff --check`.
-- Code skeleton phase: start with tests for pure domain/protocol/storage/runtime modules before production code.
+- 暂无。
 
-## Progress / Decisions
+如后续某一阶段变复杂，例如 Scheduler、Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
 
-- 2026-05-03: Created this plan before non-trivial documentation and skeleton work.
-- 2026-05-03: Patched specs to add RuntimeManager ownership, RuntimeRequirement/RuntimeBinding, cache/runtime fingerprints, task_artifacts, and clearer cancellation/resource-binding rules.
-- 2026-05-03: Added release/update, runtime environment, plugin system, UI workspace, and i18n specs after reviewing reference software patterns.
-- 2026-05-03: Added hardware scheduling, failure recovery, and security/privacy specs after reviewing official/high-trust references.
-- 2026-05-03: Ran cross-document alignment; added missing ReleaseManager/SecurityManager references, credential_refs schema, and INTERRUPTED worker error code.
-- 2026-05-03: User approved starting the skeleton. Local environment has Python 3.11 and pydantic v2; pytest, PySide6, SQLAlchemy, networkx, and psutil are not installed, so the first skeleton uses stdlib unittest/sqlite3 plus pydantic models and declares future dependencies in pyproject.
-- 2026-05-03: Scaffolded the first executable skeleton with pyproject, package boundaries, pydantic domain models, sqlite schema initialization, RuntimeManager binding, simulated Worker events, and unittest coverage.
-- 2026-05-03: Prioritized runtime foundation before GUI work. Added RuntimeStore local manifest persistence, RuntimeHealthChecker path/hash checks, and package sha256 helpers, with tests written before implementation.
-- 2026-05-03: Added `docs/APP_CODE_MAP.md` and `docs/RECENT_CHANGES.md` so future agents and developers can quickly understand the current code tree and durable change history.
-- 2026-05-03: Clarified development `.venv/`, local `.atelier/AtelierData/`, release App Runtime, and managed AtelierData runtime directory boundaries.
-- 2026-05-03: Created local `.venv/`, installed the package in editable mode, and added `AppPaths` as the first single source for development/user data paths.
-- 2026-05-03: Added app-level factories that create `RuntimeStore` and open initialized SQLite connections from `AppPaths`, while keeping lower layers independent from `app/`.
+## Verification（验证）
 
-## Blockers
+当前验证命令：
 
-- None.
+```powershell
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+当前最近验证事实：
+
+- `.venv/Scripts/python -m unittest discover -s tests`：19 tests passed。
+- `.venv/Scripts/python -m compileall -q atelier tests`：passed。
+- `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
+
+项目未来配置完成后，再启用：
+
+```powershell
+python -m pytest
+python -m ruff check .
+python -m mypy .
+```
+
+在这些工具未配置前，不声称它们已通过。
+
+## Progress / Decisions（进展 / 决策）
+
+- 2026-05-03：创建本计划，用于首版文档契约和应用骨架工作。
+- 2026-05-03：补齐 RuntimeManager ownership、RuntimeRequirement / RuntimeBinding、cache/runtime fingerprints、task_artifacts 和 cancel/resource-binding 规则。
+- 2026-05-03：新增 release/update、runtime environment、plugin system、UI workspace、i18n specs。
+- 2026-05-03：新增 hardware scheduling、failure recovery、security/privacy specs。
+- 2026-05-03：完成跨文档对齐，补充 ReleaseManager、SecurityManager、credential_refs、INTERRUPTED worker error code。
+- 2026-05-03：用户确认开始搭建 skeleton。当前本地可用 Python 3.11 和 pydantic v2；首版使用 stdlib `unittest` / `sqlite3` 加 pydantic models，未来依赖写入 `pyproject.toml` optional groups。
+- 2026-05-03：搭建首版 executable skeleton：`pyproject.toml`、package boundaries、pydantic domain models、SQLite schema 初始化、RuntimeManager binding、simulated Worker events 和 unittest coverage。
+- 2026-05-03：优先补 runtime foundation：`RuntimeStore`、`RuntimeHealthChecker`、package SHA-256 helpers，并按 TDD 先写测试。
+- 2026-05-03：新增 `docs/APP_CODE_MAP.md` 和 `docs/RECENT_CHANGES.md`，作为代码结构地图和持久变更记忆。
+- 2026-05-03：明确 `.venv/`、`.atelier/AtelierData/`、release App Runtime、managed AtelierData runtime directory 的边界。
+- 2026-05-03：创建本地 `.venv/`，执行 editable install，并新增 `AppPaths` 作为 development/user data path 的首个单一事实源。
+- 2026-05-03：新增 app-level factories：从 `AppPaths` 创建 `RuntimeStore`，并打开初始化后的 SQLite connection，同时保持 lower layers 不依赖 `app/`。
+- 2026-05-03：按用户要求对照 `AGENTS.md` 重写本计划：保留主计划九段结构，正文改为中文，并补齐当前事实、验证事实和 Phase 6。
+
+## Blockers（阻塞）
+
+- 暂无。
