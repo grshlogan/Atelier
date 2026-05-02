@@ -1,1 +1,13 @@
-# No exclusions yet.
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+
+# Test and type-check caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build outputs
+build/
+dist/
+*.egg-info/

@@ -60,6 +60,22 @@ Validation:
 
 - No code scaffold is created before confirmation.
 
+### Phase 3: First Code Skeleton
+
+Goal: create the first executable Python skeleton without real GUI, real models, or real external tools.
+
+Completion signal:
+
+- `atelier/` package exists with core/domain/runtime/storage/worker boundaries.
+- `pyproject.toml` describes the project and future dependency direction.
+- stdlib `unittest` tests cover worker events, runtime binding, runtime manifest storage, runtime health checks, package hash checks, SQLite initialization, and a simulated worker path.
+- No GUI callback, model inference, FFmpeg call, or global runtime path assumption exists.
+
+Validation:
+
+- `python -m unittest discover -s tests`
+- `git diff --check`
+
 ## Child Plans
 
 - None yet.
@@ -67,7 +83,7 @@ Validation:
 ## Verification
 
 - Documentation phase: `git diff --check`.
-- Code skeleton phase later: start with tests for pure domain/protocol/storage modules before production code.
+- Code skeleton phase: start with tests for pure domain/protocol/storage/runtime modules before production code.
 
 ## Progress / Decisions
 
@@ -76,6 +92,10 @@ Validation:
 - 2026-05-03: Added release/update, runtime environment, plugin system, UI workspace, and i18n specs after reviewing reference software patterns.
 - 2026-05-03: Added hardware scheduling, failure recovery, and security/privacy specs after reviewing official/high-trust references.
 - 2026-05-03: Ran cross-document alignment; added missing ReleaseManager/SecurityManager references, credential_refs schema, and INTERRUPTED worker error code.
+- 2026-05-03: User approved starting the skeleton. Local environment has Python 3.11 and pydantic v2; pytest, PySide6, SQLAlchemy, networkx, and psutil are not installed, so the first skeleton uses stdlib unittest/sqlite3 plus pydantic models and declares future dependencies in pyproject.
+- 2026-05-03: Scaffolded the first executable skeleton with pyproject, package boundaries, pydantic domain models, sqlite schema initialization, RuntimeManager binding, simulated Worker events, and unittest coverage.
+- 2026-05-03: Prioritized runtime foundation before GUI work. Added RuntimeStore local manifest persistence, RuntimeHealthChecker path/hash checks, and package sha256 helpers, with tests written before implementation.
+- 2026-05-03: Added `docs/APP_CODE_MAP.md` and `docs/RECENT_CHANGES.md` so future agents and developers can quickly understand the current code tree and durable change history.
 
 ## Blockers
 
