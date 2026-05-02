@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 44
+Code file count: 47
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 32 files
-- `tests/`: 11 files
+- `atelier/`: 34 files
+- `tests/`: 12 files
 
 ## Current Code Tree
 
@@ -50,6 +50,9 @@ atelier/
   security/
     __init__.py
     package_integrity.py
+  scheduler/
+    __init__.py
+    simple.py
   storage/
     __init__.py
     db.py
@@ -71,6 +74,7 @@ tests/
   test_runtime_health.py
   test_runtime_manager.py
   test_runtime_store.py
+  test_scheduler_simple.py
   test_simulated_worker.py
   test_storage_schema.py
   test_worker_events.py
@@ -460,6 +464,34 @@ Boundary:
 - Does not implement signatures, trust roots, transparency logs, or update policy yet.
 - Do not put package verification logic inside runtime or release modules if it belongs to this shared security layer.
 
+## `atelier/scheduler/`
+
+### `atelier/scheduler/__init__.py`
+
+Responsibility:
+
+- Marks the queue and scheduling package.
+
+Boundary:
+
+- No scheduling work at import time.
+
+### `atelier/scheduler/simple.py`
+
+Responsibility:
+
+- Provides `SimpleScheduler` for the current Phase 7 minimum queue/Scheduler path.
+- Finds the next runnable task through storage repository helpers.
+- Creates a `ResourceBinding` and marks the claimed task as `running`.
+- Respects task dependency readiness as reported by storage.
+
+Boundary:
+
+- Not the final Scheduler.
+- Does not execute worker processes.
+- Does not manage resource locks, concurrency, retries, priorities, or recovery.
+- CPU binding is intentionally simple; GPU support only picks the first declared GPU and is not a full policy.
+
 ## `atelier/storage/`
 
 ### `atelier/storage/__init__.py`
@@ -492,6 +524,7 @@ Responsibility:
 - Provides the current minimal SQLite persistence functions for Phase 6.
 - `persist_planned_execution()` writes a project, workflow graph, job, execution plan, execution tasks, and task dependencies.
 - `record_worker_events()` writes structured worker events to `task_events`, records `ArtifactEvent` rows to `artifacts` / `task_artifacts`, and updates terminal task status.
+- Provides minimum queue helpers for Phase 7: `fetch_next_runnable_task()`, `mark_task_running()`, and `fetch_task_resource_binding()`.
 - Provides small query helpers for tests: `fetch_task_event_types()`, `fetch_artifact_paths()`, and `fetch_task_status()`.
 
 Boundary:
@@ -499,7 +532,7 @@ Boundary:
 - This is not the final repository layer.
 - Does not own SQLite connection lifecycle.
 - Does not implement migrations.
-- Does not implement queue claiming, retries, recovery actions, cache lookups, or scheduler locks.
+- Does not implement durable queue claiming, retries, recovery actions, cache lookups, or scheduler locks.
 - Does not parse logs; it records structured worker events only.
 
 ### `atelier/storage/schema.sql`
@@ -646,6 +679,19 @@ Boundary:
 
 - Does not perform package download or runtime installation.
 
+### `tests/test_scheduler_simple.py`
+
+Responsibility:
+
+- Tests the Phase 7 minimum queue/Scheduler path.
+- Confirms only dependency-ready pending tasks can be claimed.
+- Confirms claimed tasks are marked `running` and have persisted `ResourceBinding`.
+- Confirms downstream tasks become claimable after upstream simulated worker events complete.
+
+Boundary:
+
+- Does not test real concurrency, resource locks, worker subprocesses, or GPU policy.
+
 ### `tests/test_runtime_health.py`
 
 Responsibility:
@@ -715,10 +761,10 @@ These packages are specified in docs but not fully implemented yet:
 
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
-- `scheduler/`: queue policy, resource locks, task dispatch.
+- `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, resource locks, priorities, concurrency, and recovery are not implemented.
 - `gui/`: PySide6 application window, dock workspace, canvas, panels.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
-- `storage/repositories/`: only minimal Phase 6 persistence exists; durable repository APIs are not complete.
+- `storage/repositories/`: only minimal Phase 6 persistence and Phase 7 queue helpers exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.
 - `release` implementation: update manifests, staging, rollback.
 - `plugins` implementation: manifest validation, contribution registry, isolation.

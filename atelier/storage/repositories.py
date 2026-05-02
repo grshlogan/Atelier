@@ -6,6 +6,7 @@ from typing import Iterable
 
 from atelier.core.time import utc_now_iso
 from atelier.domain.execution_plan import ExecutionPlan, ExecutionTask
+from atelier.domain.resources import ResourceBinding, ResourceRequest, RuntimeRequest
 from atelier.domain.worker_event import (
     ArtifactEvent,
     CompletedEvent,
@@ -122,6 +123,55 @@ def fetch_task_status(connection: sqlite3.Connection, task_id: str) -> str:
     return row[0]
 
 
+def fetch_next_runnable_task(connection: sqlite3.Connection, plan_id: str) -> ExecutionTask | None:
+    rows = connection.execute(
+        """
+        SELECT
+            task_id, phase_id, lane_id, source_node_id, node_type, params_json,
+            resource_request, runtime_request, failure_policy, cache_key, retry_count
+        FROM execution_tasks
+        WHERE plan_id = ? AND status = 'pending'
+        ORDER BY created_at, task_id
+        """,
+        (plan_id,),
+    ).fetchall()
+    for row in rows:
+        task_id = row[0]
+        if _dependencies_are_completed(connection, task_id):
+            return _task_from_row(row)
+    return None
+
+
+def mark_task_running(
+    connection: sqlite3.Connection,
+    task_id: str,
+    resource_binding: ResourceBinding,
+) -> None:
+    now = utc_now_iso()
+    connection.execute(
+        """
+        UPDATE execution_tasks
+        SET status = 'running',
+            resource_binding = ?,
+            started_at = ?,
+            updated_at = ?
+        WHERE task_id = ? AND status = 'pending'
+        """,
+        (_dump_json(resource_binding), now, now, task_id),
+    )
+    connection.commit()
+
+
+def fetch_task_resource_binding(connection: sqlite3.Connection, task_id: str) -> ResourceBinding:
+    row = connection.execute(
+        "SELECT resource_binding FROM execution_tasks WHERE task_id = ?",
+        (task_id,),
+    ).fetchone()
+    if row is None or row[0] is None:
+        raise LookupError(f"missing task resource binding: {task_id}")
+    return ResourceBinding.model_validate(json.loads(row[0]))
+
+
 def _insert_execution_task(
     connection: sqlite3.Connection,
     plan_id: str,
@@ -232,3 +282,34 @@ def _dump_optional_json(value: object | None) -> str | None:
     if value is None:
         return None
     return _dump_json(value)
+
+
+def _dependencies_are_completed(connection: sqlite3.Connection, task_id: str) -> bool:
+    row = connection.execute(
+        """
+        SELECT COUNT(*)
+        FROM task_dependencies AS dependency
+        JOIN execution_tasks AS upstream
+          ON upstream.task_id = dependency.depends_on_task_id
+        WHERE dependency.task_id = ?
+          AND upstream.status != 'completed'
+        """,
+        (task_id,),
+    ).fetchone()
+    return row[0] == 0
+
+
+def _task_from_row(row: sqlite3.Row | tuple) -> ExecutionTask:
+    return ExecutionTask(
+        task_id=row[0],
+        phase_id=row[1],
+        lane_id=row[2],
+        source_node_id=row[3],
+        node_type=row[4],
+        params=json.loads(row[5]),
+        resource_request=ResourceRequest.model_validate(json.loads(row[6])),
+        runtime_request=RuntimeRequest.model_validate(json.loads(row[7])),
+        failure_policy=json.loads(row[8]),
+        cache_key=row[9],
+        retry_count=row[10],
+    )

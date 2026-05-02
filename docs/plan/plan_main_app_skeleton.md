@@ -30,7 +30,7 @@
 - 当前已有 `AppPaths`，开发期默认数据目录为 `.atelier/AtelierData/`。
 - 当前已有 app-level factory：`create_runtime_store(paths)` 和 `open_app_database(paths)`。
 - 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、package SHA-256 helper、SQLite schema 初始化和 simulated Worker。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 19 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 23 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -190,6 +190,36 @@
 - 当前 Phase 6 只覆盖 sample workflow、simple planner、simulated Worker、SQLite events/artifacts。
 - queue、Scheduler、真实 worker subprocess、failure recovery action 尚未进入本阶段。
 
+### Phase 7：最小 Queue / Scheduler
+
+目标：
+
+- 在不实现真实并发和外部 worker subprocess 的前提下，建立最小 queue claim 和 Scheduler 资源绑定路径。
+
+完成信号：
+
+- Scheduler 能从 SQLite 找到依赖已满足的 pending task。
+- Scheduler 为 runnable task 生成 `ResourceBinding`。
+- 被 claim 的 task 状态更新为 `running`，并持久化 resource binding。
+- 有依赖的下游 task 在上游完成前不会被 claim。
+- 上游 task 完成并记录 worker events 后，下游 task 可被 claim。
+
+验证：
+
+- `.venv/Scripts/python -m unittest tests.test_scheduler_simple`
+- `.venv/Scripts/python -m unittest discover -s tests`
+- `.venv/Scripts/python -m compileall -q atelier tests`
+- `git diff --check`
+
+状态：
+
+- 已完成首版最小 queue / Scheduler claim。
+
+说明：
+
+- 当前 Phase 7 只覆盖 dependency-ready pending task claim、CPU resource binding 和 task running 状态持久化。
+- durable queue claiming、resource locks、priority scheduling、concurrency、retries 和 recovery 尚未进入本阶段。
+
 ## Child Plans（子计划）
 
 - 暂无。
@@ -208,7 +238,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：19 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：23 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -238,6 +268,7 @@ python -m mypy .
 - 2026-05-03：新增 app-level factories：从 `AppPaths` 创建 `RuntimeStore`，并打开初始化后的 SQLite connection，同时保持 lower layers 不依赖 `app/`。
 - 2026-05-03：按用户要求对照 `AGENTS.md` 重写本计划：保留主计划九段结构，正文改为中文，并补齐当前事实、验证事实和 Phase 6。
 - 2026-05-03：完成 Phase 6 首版最小业务闭环：新增 minimal `workflow/`、simple `planning/`、SQLite repository helpers，并验证 `WorkflowGraph -> ExecutionPlan -> simulated Worker -> SQLite events/artifacts`。
+- 2026-05-03：完成 Phase 7 首版 queue / Scheduler claim：新增 `SimpleScheduler`，验证只 claim 依赖满足的 pending task，并持久化 `ResourceBinding` 和 `running` 状态。
 
 ## Blockers（阻塞）
 

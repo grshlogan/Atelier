@@ -2,6 +2,36 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_065626 [完成 Phase 7 最小 queue / Scheduler claim]
+
+- Added `atelier/scheduler/simple.py` with `SimpleScheduler` and `ClaimedTask`.
+- Added minimum queue helpers to `atelier/storage/repositories.py`:
+  - `fetch_next_runnable_task()`
+  - `mark_task_running()`
+  - `fetch_task_resource_binding()`
+- `SimpleScheduler` now finds dependency-ready pending tasks, creates a `ResourceBinding`, and marks the task as `running`.
+- Added `tests/test_scheduler_simple.py` before implementation and confirmed the first failure was `ModuleNotFoundError: No module named 'atelier.scheduler'`.
+- Updated `README.md`, `docs/ARCHITECTURE.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md`.
+
+Current Phase 7 boundary:
+
+- Implemented: dependency-ready pending task claim, CPU resource binding, persisted `running` task status, persisted `ResourceBinding`.
+- Not implemented: durable multi-process queue claiming, resource locks, priorities, concurrency, retries, failure recovery actions, real worker subprocess dispatch.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest discover -s tests`: 23 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_064008 [完成 Phase 6 最小业务闭环]
 
 - Added minimal workflow graph models in `atelier/workflow/graph.py`:
