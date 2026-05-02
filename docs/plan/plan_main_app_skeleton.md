@@ -76,6 +76,23 @@ Validation:
 - `python -m unittest discover -s tests`
 - `git diff --check`
 
+### Phase 4: Development Environment And App Paths
+
+Goal: make the local development environment reproducible and establish one path source for development data, runtime manifests, cache, logs, and SQLite.
+
+Completion signal:
+
+- `.venv/` exists locally and can run the current unittest suite through editable install.
+- `.venv/`, `venv/`, and `.atelier/` are ignored by git.
+- A small `AppPaths` module defines the default development `AtelierData` layout without putting runtime data under source directories.
+- Tests cover the path layout and directory creation behavior.
+
+Validation:
+
+- `.venv/Scripts/python -m pip install -e .`
+- `.venv/Scripts/python -m unittest discover -s tests`
+- `git diff --check`
+
 ## Child Plans
 
 - None yet.
@@ -96,6 +113,8 @@ Validation:
 - 2026-05-03: Scaffolded the first executable skeleton with pyproject, package boundaries, pydantic domain models, sqlite schema initialization, RuntimeManager binding, simulated Worker events, and unittest coverage.
 - 2026-05-03: Prioritized runtime foundation before GUI work. Added RuntimeStore local manifest persistence, RuntimeHealthChecker path/hash checks, and package sha256 helpers, with tests written before implementation.
 - 2026-05-03: Added `docs/APP_CODE_MAP.md` and `docs/RECENT_CHANGES.md` so future agents and developers can quickly understand the current code tree and durable change history.
+- 2026-05-03: Clarified development `.venv/`, local `.atelier/AtelierData/`, release App Runtime, and managed AtelierData runtime directory boundaries.
+- 2026-05-03: Created local `.venv/`, installed the package in editable mode, and added `AppPaths` as the first single source for development/user data paths.
 
 ## Blockers
 

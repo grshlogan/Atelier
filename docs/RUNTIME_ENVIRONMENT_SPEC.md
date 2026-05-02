@@ -14,6 +14,68 @@ Model Store       -> ASR / LLM / enhance / interpolation model assets
 Runtime Manifest  -> 版本、路径、hash、capabilities、状态
 ```
 
+## 1.1 三层环境模型
+
+Atelier 的环境不要混成一个目录。默认按三层理解和实现：
+
+```text
+App Install Dir
+  -> 软件本体，只读为主
+  -> Atelier.exe、应用代码、GUI 自身 Python runtime、PySide6、Qt plugins、必要 DLL
+
+AtelierData Dir
+  -> 用户可写 runtime / data
+  -> FFmpeg、ffprobe、whisper.cpp、llama.cpp、worker env、模型、插件、cache、staging、日志、数据库
+
+Dev Workspace
+  -> 仅开发期存在
+  -> 源码、.venv、测试缓存、本地 .atelier/AtelierData
+```
+
+规则：
+
+- `atelier/runtime/` 是 RuntimeManager 的源码目录，只放管理 runtime 的 Python 代码，不放 runtime 本体。
+- GUI 自身环境属于 App Runtime，随应用安装包分发，发布后位于 App Install Dir 内。
+- Tool Runtime、Backend Runtime、Worker Python env 和模型资产属于 AtelierData，由 RuntimeManager / RuntimeStore 管理。
+- 开发期 `.venv/` 只用于本仓库开发和测试，不是产品 runtime，不提交，不作为 RuntimeManager 的事实源。
+- 开发期可用 `.atelier/AtelierData/` 模拟用户数据目录；该目录同样不提交。
+
+开发期建议布局：
+
+```text
+E:/AI/Atelier/
+  .venv/                    # 开发 Python env，gitignore
+  .atelier/
+    AtelierData/             # 开发期本地 runtime/data，gitignore
+      runtimes/
+      models/
+      plugins/
+      cache/
+      staging/
+  atelier/
+    runtime/                 # runtime 管理源码，不放 runtime 本体
+```
+
+发布期建议布局：
+
+```text
+C:/Program Files/Atelier/
+  Atelier.exe
+  app-runtime/
+    python/
+    site-packages/
+    qt-plugins/
+    dlls/
+  app/
+
+%LOCALAPPDATA%/Atelier/AtelierData/
+  runtimes/
+  models/
+  plugins/
+  cache/
+  staging/
+```
+
 ## 2. 参考软件与取舍
 
 ### LM Studio

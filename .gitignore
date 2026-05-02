@@ -2,6 +2,13 @@
 __pycache__/
 *.py[cod]
 
+# Local development environments
+.venv/
+venv/
+
+# Local Atelier development data
+.atelier/
+
 # Test and type-check caches
 .pytest_cache/
 .mypy_cache/

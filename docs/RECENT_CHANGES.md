@@ -2,6 +2,57 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_060137 [建立开发 venv 与 AppPaths 路径管理]
+
+- Created local `.venv/` for development and installed Atelier in editable mode with `.venv/Scripts/python -m pip install -e .`.
+- Verified the current suite inside `.venv/` before adding new path code.
+- Added `atelier/app/paths.py` with `AppPaths`:
+  - `for_development(workspace_root)` resolves local development data to `.atelier/AtelierData`.
+  - `from_data_root(data_root)` supports release/user-data roots supplied by future installers or settings.
+  - Standard path properties cover runtime/model manifests, database, runtimes, models, plugins, cache, staging, and logs.
+  - `ensure_data_dirs()` creates the shared local data directory layout without creating `.venv/`.
+- Added `tests/test_app_paths.py` before implementation and confirmed the initial failure was `ModuleNotFoundError: No module named 'atelier.app.paths'`.
+- Updated `docs/APP_CODE_MAP.md` to include `atelier/app/paths.py`, `tests/test_app_paths.py`, and the new code file count.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m pip install -e .
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- Editable install succeeded in `.venv/`.
+- Existing suite passed in `.venv/` before `AppPaths`.
+- `tests/test_app_paths.py` failed first for the expected missing module.
+- `tests/test_app_paths.py` passed after adding `AppPaths`.
+- Final `.venv/Scripts/python -m unittest discover -s tests`: 17 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260503_055526 [明确开发 venv 与 runtime 目录边界]
+
+- Clarified the three environment layers in `docs/RUNTIME_ENVIRONMENT_SPEC.md`:
+  - App Install Dir for packaged GUI runtime, PySide6, Qt plugins, DLLs, and application code.
+  - AtelierData Dir for managed tool/backend/worker runtimes, models, plugins, cache, staging, logs, and database.
+  - Dev Workspace for source code, `.venv/`, test caches, and developer-local `.atelier/AtelierData`.
+- Documented that `atelier/runtime/` is source code for runtime management and must not store runtime binaries or virtual environments.
+- Added `.venv/`, `venv/`, and `.atelier/` to `.gitignore`.
+- Updated `docs/APP_CODE_MAP.md` with environment directory boundaries and `.gitignore` responsibilities.
+
+Validation run:
+
+```powershell
+git diff --check
+```
+
+Result:
+
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_050504 [首版 Python 骨架、runtime 基础与接手文档]
 
 - Started the first executable Python skeleton after the documentation baseline commits `cdadba9` and `6316a75`.

@@ -113,6 +113,7 @@ atelier/
   app/
     main.py
     bootstrap.py
+    paths.py
 
   core/
     ids.py

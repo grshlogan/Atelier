@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 33
+Code file count: 35
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 25 files
-- `tests/`: 7 files
+- `atelier/`: 26 files
+- `tests/`: 8 files
 
 ## Current Code Tree
 
@@ -20,6 +20,7 @@ atelier/
   app/
     __init__.py
     bootstrap.py
+    paths.py
   core/
     __init__.py
     time.py
@@ -54,6 +55,7 @@ atelier/
     simulated.py
 
 tests/
+  test_app_paths.py
   test_package_integrity.py
   test_runtime_health.py
   test_runtime_manager.py
@@ -77,6 +79,40 @@ Boundary:
 
 - Does not install or manage Atelier runtime packs, model assets, FFmpeg, CUDA tools, or GUI runtime packages for end users.
 - Do not treat optional dependencies as implemented product features.
+- Development `.venv/` is local-only and should stay outside git; it is not the product App Runtime.
+
+### `.gitignore`
+
+Responsibility:
+
+- Excludes Python bytecode/cache files, build outputs, local development virtual environments, and local Atelier development data.
+- Current local-only environment paths:
+  - `.venv/` and `venv/` for developer Python environments.
+  - `.atelier/` for developer-local `AtelierData` simulation.
+
+Boundary:
+
+- `.gitignore` does not define product install paths.
+- Do not put real product runtime packs into the repository just because they are ignored locally.
+
+## Environment Directory Boundaries
+
+Current intended split:
+
+```text
+atelier/runtime/              # runtime management source code
+.venv/                        # developer Python environment, ignored
+.atelier/AtelierData/         # developer-local managed runtime/data root, ignored
+App Install Dir/app-runtime/  # packaged GUI runtime in release builds
+AtelierData/runtimes/         # managed tool/backend/worker runtimes
+```
+
+Rules:
+
+- `atelier/runtime/` never stores runtime binaries or virtual environments.
+- `.venv/` is only for running tests and local development tools.
+- `.atelier/AtelierData/` is the preferred local sandbox for testing runtime manifests, model stores, plugins, cache, and staging.
+- Release packaging owns GUI runtime layout; RuntimeManager owns tool/model/backend runtime state.
 
 ## `atelier/`
 
@@ -114,6 +150,23 @@ Boundary:
 
 - Does not create GUI objects, open SQLite connections, install runtimes, or start workers.
 - Future bootstrap code should coordinate managers, not absorb GUI, scheduler, storage, or runtime logic.
+
+### `atelier/app/paths.py`
+
+Responsibility:
+
+- Defines `AppPaths`, the current single path source for development and user-data roots.
+- Provides `AppPaths.for_development(workspace_root)` for `.atelier/AtelierData` under a local workspace.
+- Provides `AppPaths.from_data_root(data_root)` for release/user-data roots supplied by installers, settings, or OS conventions later.
+- Exposes standard paths for runtime manifests, model manifests, database, cache, staging, logs, plugins, models, and runtimes.
+- Creates shared local data directories through `ensure_data_dirs()`.
+
+Boundary:
+
+- Does not create or manage `.venv/`.
+- Does not decide release install directories.
+- Does not open SQLite, instantiate `RuntimeStore`, or install runtimes.
+- Does not put runtime binaries under `atelier/runtime/`.
 
 ## `atelier/core/`
 
@@ -432,6 +485,20 @@ Boundary:
 - Should be replaced by real worker runner/adapters only through the worker protocol boundary.
 
 ## `tests/`
+
+### `tests/test_app_paths.py`
+
+Responsibility:
+
+- Tests development `AppPaths` layout under `.atelier/AtelierData`.
+- Tests shared runtime/model/plugin/cache/staging/log directory creation.
+- Tests `AppPaths.from_data_root()` for release or user-data roots.
+
+Boundary:
+
+- Does not test installer-specific app runtime layout.
+- Does not create `.venv/`.
+- Does not instantiate real runtime stores, SQLite databases, or GUI objects.
 
 ### `tests/test_worker_events.py`
 
