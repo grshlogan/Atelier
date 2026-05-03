@@ -2,6 +2,40 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260504_043336 [执行 Worker Protocol Phase E]
+
+- Extended `docs/plan/plan_worker_protocol_runner.md` with Phase E before implementation.
+- Added `tests/test_worker_task_file.py` before implementation and confirmed the first failure was missing `atelier.workers.task_file`.
+- Added `atelier/workers/task_file.py` with:
+  - `write_worker_task_file()`
+  - `build_worker_process_spec()`
+  - `DEFAULT_WORKER_TASK_FILE_NAME`
+- `write_worker_task_file()` serializes a full `ExecutionTask` to `task.json` through a temporary file and atomic replace.
+- `build_worker_process_spec()` creates `{work_root}/{task_id}`, writes `task.json`, and returns a `WorkerProcessSpec`.
+- Worker env generation now includes `ExecutionTask.runtime_binding.env`; explicit caller env overrides duplicate keys.
+- Updated `README.md`, `docs/APP_CODE_MAP.md`, `docs/WORKER_PROTOCOL.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_worker_protocol_runner.md`.
+
+Current Phase E boundary:
+
+- Implemented: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge.
+- Not implemented: Scheduler integration, RuntimeManager path resolution, worker execution, timeout, cancel, retry/recovery orchestration, or real adapters.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_worker_task_file
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_worker_task_file`: 2 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 55 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260504_004244 [执行 Worker Protocol Phase C]
 
 - Continued `docs/plan/plan_worker_protocol_runner.md` Phase C before implementation.

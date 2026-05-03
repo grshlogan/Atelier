@@ -40,9 +40,10 @@ WorkerEvent models
 - 当前已有 `atelier/domain/worker_event.py`，包含 `StartedEvent`、`ProgressEvent`、`LogEvent`、`HeartbeatEvent`、`ArtifactEvent`、`CompletedEvent`、`FailedEvent` 和 `ArtifactRef`。
 - 当前已有 `atelier/workers/protocol.py`，可对单个 WorkerEvent 做 JSON Lines 编解码，并可验证最小 stdout event stream lifecycle。
 - 当前已有 `atelier/workers/runner.py`，可启动可控 subprocess 命令并捕获 stdout/stderr/return code。
+- 当前已有 `atelier/workers/task_file.py`，可把 `ExecutionTask` 写成 `task.json` 并生成 `WorkerProcessSpec`。
 - 当前已有 `atelier/workers/simulated.py`，可产生 deterministic simulated worker events。
 - 当前已有 `record_worker_events()`，会根据结构化事件写入 SQLite，并在 terminal events 后释放 active resource locks。
-- 当前测试基线是 stdlib `unittest`，最近完整验证为 53 tests passed。
+- 当前测试基线是 stdlib `unittest`，最近完整验证为 55 tests passed。
 
 ## Constraints（约束）
 
@@ -146,6 +147,30 @@ git diff --check
 
 - 已完成状态对齐。`docs/WORKER_PROTOCOL.md` 已标记为“部分实现”，并明确最小 runner 已实现，stdin control、heartbeat timeout、stderr 落盘、生产级 lifecycle 和真实 adapters 尚未实现。
 
+### Phase E：ExecutionTask task.json 与 Launch Spec
+
+目标：
+
+- 在 Scheduler 正式接 runner 前，先建立 `ExecutionTask -> task.json -> WorkerProcessSpec` 的窄边界。
+
+完成信号：
+
+- 能把一个 `ExecutionTask` 完整序列化到 task 工作目录下的 `task.json`。
+- task 工作目录使用 `{work_root}/{task_id}`，由 helper 创建。
+- 能根据 `ExecutionTask`、typed command args、work root 和可选 env 生成 `WorkerProcessSpec`。
+- 如果 `ExecutionTask.runtime_binding.env` 存在，launch spec 会携带这些 env；调用方显式传入的 env 可以覆盖同名值。
+- 不启动 subprocess，不 claim Scheduler，不写 SQLite，不解析 runtime/model path。
+
+验证：
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_worker_task_file
+```
+
+状态：
+
+- 已完成。新增 `atelier/workers/task_file.py` 和 `tests/test_worker_task_file.py`；可写入完整 `ExecutionTask` JSON，并基于 task work dir、command args、runtime env 和 caller env 生成 `WorkerProcessSpec`。
+
 ## Child Plans（子计划）
 
 - 暂无。
@@ -159,6 +184,7 @@ git diff --check
 ```powershell
 .venv/Scripts/python -m unittest tests.test_worker_protocol
 .venv/Scripts/python -m unittest tests.test_worker_runner
+.venv/Scripts/python -m unittest tests.test_worker_task_file
 .venv/Scripts/python -m unittest discover -s tests
 .venv/Scripts/python -m compileall -q atelier tests
 git diff --check
@@ -168,7 +194,8 @@ git diff --check
 
 - `.venv/Scripts/python -m unittest tests.test_worker_protocol`：9 tests passed。
 - `.venv/Scripts/python -m unittest tests.test_worker_runner`：3 tests passed。
-- `.venv/Scripts/python -m unittest discover -s tests`：53 tests passed。
+- `.venv/Scripts/python -m unittest tests.test_worker_task_file`：2 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：55 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -181,6 +208,8 @@ git diff --check
 - 2026-05-04：完成 Phase B。新增 `parse_worker_event_stream()` 和对应测试，事件流验证只处理已读取的 stdout JSON Lines，不负责 worker process lifecycle。
 - 2026-05-04：完成 Phase C。新增最小 subprocess runner 边界；runner 不选择 runtime/model/hardware，不接 Scheduler，不实现 cancel/timeout/kill escalation。
 - 2026-05-04：更新 Phase D 状态对齐。`WORKER_PROTOCOL.md` 当前明确最小 runner 已实现，但生产级 lifecycle、stdin control、heartbeat timeout、stderr 落盘和真实 adapters 仍未实现。
+- 2026-05-04：开始执行 Phase E。范围限定为 `ExecutionTask` task file 写入和 `WorkerProcessSpec` 生成，不启动 runner、不接 Scheduler、不写 SQLite。
+- 2026-05-04：完成 Phase E。新增 task file 写入与 launch spec 生成边界；显式 caller env 可覆盖 `runtime_binding.env` 中的同名 key。
 
 ## Blockers（阻塞）
 

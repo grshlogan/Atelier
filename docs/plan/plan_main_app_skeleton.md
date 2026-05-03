@@ -17,7 +17,7 @@
 - 对齐首版 specs，确保 artifacts、cache hit、cancel、resource binding、runtime ownership、release/update、plugin、workspace、i18n、hardware scheduling、failure recovery、security/privacy 等基础契约不互相冲突。
 - 建立 Python 包骨架、测试基线、SQLite schema 初始化、runtime manifest 管理、runtime health check、package hash 校验、开发 `.venv` 和 `AppPaths` 路径事实源。
 - 保持根目录清爽：根目录文档只保留 `README.md`、`AGENTS.md`、`DESIGN.md`；计划与阶段文档放在 `docs/plan/`。
-- 当前阶段已实现只读 PySide6 工作台壳，并开始实现 Worker JSON Lines 协议边界、事件流验证和最小 subprocess runner 边界；仍不实现真实编辑型 GUI、真实 Scheduler、生产级 worker lifecycle runner、真实 FFmpeg/model adapters、打包发布链或插件加载链。
+- 当前阶段已实现只读 PySide6 工作台壳，并开始实现 Worker JSON Lines 协议边界、事件流验证、`ExecutionTask -> task.json -> WorkerProcessSpec` 边界和最小 subprocess runner 边界；仍不实现真实编辑型 GUI、真实 Scheduler、生产级 worker lifecycle runner、真实 FFmpeg/model adapters、打包发布链或插件加载链。
 
 ## Current Facts（当前事实）
 
@@ -34,7 +34,8 @@
 - 当前已有只读 `atelier/gui/` 工作台壳：optional dependency entry、formal development launch entry、`MainWindow`、dock workspace panel specs、workspace layout store、SQLite read-only `WorkbenchSnapshot`。
 - 当前已有 `atelier/workers/protocol.py`，支持单个 WorkerEvent 的 JSON Lines 编解码、最小 stdout event stream validation，并补齐 `LogEvent` / `HeartbeatEvent` 事件模型。
 - 当前已有 `atelier/workers/runner.py`，支持可控 subprocess 命令、`--task-file`、`cwd`、env、stdout event stream validation、stderr capture 和 return code capture。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 53 tests passed。
+- 当前已有 `atelier/workers/task_file.py`，支持 `ExecutionTask` 写入 `task.json`，并生成 `WorkerProcessSpec`。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 55 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -250,7 +251,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：53 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：55 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -291,6 +292,7 @@ python -m mypy .
 - 2026-05-03：创建并执行 `plan_worker_protocol_runner.md` Phase A。新增 WorkerEvent JSON Lines 单事件编解码，补齐 `LogEvent` / `HeartbeatEvent`，并将 `WORKER_PROTOCOL.md` 标记为部分实现。
 - 2026-05-04：完成 `plan_worker_protocol_runner.md` Phase B。新增最小 stdout event stream validation，验证 `started` 首事件、`seq` 连续、terminal event 结束和 terminal 后禁止追加事件。
 - 2026-05-04：完成 `plan_worker_protocol_runner.md` Phase C。新增最小 subprocess runner 边界，可用 stub worker 验证 `--task-file`、`cwd`、env、stdout JSON Lines、stderr 和 return code。
+- 2026-05-04：扩展并完成 `plan_worker_protocol_runner.md` Phase E。新增 `ExecutionTask -> task.json -> WorkerProcessSpec` 边界，为后续 Scheduler 接 runner 做前置准备。
 
 ## Blockers（阻塞）
 
