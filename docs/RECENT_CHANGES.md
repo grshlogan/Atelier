@@ -2,6 +2,28 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260504_044000 [新增后续两个 Worker 计划]
+
+- Added `docs/plan/plan_scheduler_worker_runner_integration.md`.
+  - Execution order: first.
+  - Scope: connect `SimpleScheduler` claim, `task.json`, `run_worker_process()`, and `record_worker_events()` into a stub-worker dispatch loop.
+  - Boundary: no real FFmpeg/model adapter, no RuntimeManager command selection, no GUI execution, no timeout/cancel lifecycle controls.
+- Added `docs/plan/plan_worker_lifecycle_controls.md`.
+  - Execution order: second.
+  - Scope: add worker startup/heartbeat timeout, cancel, terminate/kill escalation, and stderr file persistence.
+  - Boundary: should run after scheduler-runner integration and still use stub workers before real adapters.
+- Updated `docs/plan/plan_main_app_skeleton.md` and `docs/plan/plan_worker_protocol_runner.md` to link the two plans in order.
+
+Validation run:
+
+```powershell
+git diff --check
+```
+
+Result:
+
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260504_043336 [执行 Worker Protocol Phase E]
 
 - Extended `docs/plan/plan_worker_protocol_runner.md` with Phase E before implementation.

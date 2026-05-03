@@ -173,7 +173,8 @@ git diff --check
 
 ## Child Plans（子计划）
 
-- 暂无。
+- [plan_scheduler_worker_runner_integration.md](./plan_scheduler_worker_runner_integration.md)：第 1 个后续计划。把 Scheduler claim、task file、runner 和 SQLite event persistence 接成 stub worker 闭环。
+- [plan_worker_lifecycle_controls.md](./plan_worker_lifecycle_controls.md)：第 2 个后续计划。处理 timeout、cancel、terminate/kill escalation 和 stderr 文件落盘。
 
 如果 subprocess runner 进入真实 worker lifecycle、timeout、cancel 或 adapter registry，需要拆出独立子计划。
 
@@ -210,6 +211,7 @@ git diff --check
 - 2026-05-04：更新 Phase D 状态对齐。`WORKER_PROTOCOL.md` 当前明确最小 runner 已实现，但生产级 lifecycle、stdin control、heartbeat timeout、stderr 落盘和真实 adapters 仍未实现。
 - 2026-05-04：开始执行 Phase E。范围限定为 `ExecutionTask` task file 写入和 `WorkerProcessSpec` 生成，不启动 runner、不接 Scheduler、不写 SQLite。
 - 2026-05-04：完成 Phase E。新增 task file 写入与 launch spec 生成边界；显式 caller env 可覆盖 `runtime_binding.env` 中的同名 key。
+- 2026-05-04：按后续执行顺序新增两个 plan：先 Scheduler runner integration，再 worker lifecycle controls。
 
 ## Blockers（阻塞）
 

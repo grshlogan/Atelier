@@ -230,12 +230,16 @@
 - [plan_resource_locks_failure_recovery.md](./plan_resource_locks_failure_recovery.md)：第 1 个后续子计划。补 resource locks、terminal event lock release、failure facts、recovery options 和 stale lock 检测。
 - [plan_readonly_pyside6_workbench.md](./plan_readonly_pyside6_workbench.md)：第 2 个后续子计划。建立只读 PySide6 工作台壳，读取 SQLite / runtime / queue 状态并展示，不执行重型任务。
 - [plan_worker_protocol_runner.md](./plan_worker_protocol_runner.md)：第 3 个后续子计划。补 Worker JSON Lines 协议编解码、event stream validation 和未来 subprocess runner 边界。
+- [plan_scheduler_worker_runner_integration.md](./plan_scheduler_worker_runner_integration.md)：第 4 个后续子计划。把 Scheduler claim、task file、runner 和 SQLite event persistence 接成 stub worker 闭环。
+- [plan_worker_lifecycle_controls.md](./plan_worker_lifecycle_controls.md)：第 5 个后续子计划。补 timeout、cancel、terminate/kill escalation 和 stderr 文件落盘。
 
 执行顺序：
 
 1. 先执行 `plan_resource_locks_failure_recovery.md`，让后端执行状态更可信。
 2. 再执行 `plan_readonly_pyside6_workbench.md`，让 GUI 读取更完整的只读状态。
 3. 再执行 `plan_worker_protocol_runner.md`，让未来真实 Worker subprocess 接入前先有可验证协议边界。
+4. 再执行 `plan_scheduler_worker_runner_integration.md`，先用 stub worker 形成 Scheduler 到 runner 到 SQLite 的闭环。
+5. 再执行 `plan_worker_lifecycle_controls.md`，处理 timeout、cancel、kill escalation 和 stderr 文件落盘。
 
 如后续某一阶段继续变复杂，例如 Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
 
@@ -293,6 +297,7 @@ python -m mypy .
 - 2026-05-04：完成 `plan_worker_protocol_runner.md` Phase B。新增最小 stdout event stream validation，验证 `started` 首事件、`seq` 连续、terminal event 结束和 terminal 后禁止追加事件。
 - 2026-05-04：完成 `plan_worker_protocol_runner.md` Phase C。新增最小 subprocess runner 边界，可用 stub worker 验证 `--task-file`、`cwd`、env、stdout JSON Lines、stderr 和 return code。
 - 2026-05-04：扩展并完成 `plan_worker_protocol_runner.md` Phase E。新增 `ExecutionTask -> task.json -> WorkerProcessSpec` 边界，为后续 Scheduler 接 runner 做前置准备。
+- 2026-05-04：新增后续两个计划：先执行 `plan_scheduler_worker_runner_integration.md`，再执行 `plan_worker_lifecycle_controls.md`。
 
 ## Blockers（阻塞）
 
