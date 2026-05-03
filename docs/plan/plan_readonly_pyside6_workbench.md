@@ -39,11 +39,13 @@ AppPaths / SQLite
 
 ## Current Facts（当前事实）
 
-- 当前项目已有 `.venv/`，但 PySide6 尚未安装到硬依赖。
+- 当前项目已有 `.venv/`，并已通过 `.venv/Scripts/python -m pip install -e ".[gui]"` 安装开发期 GUI extras。
+- PySide6 仍然只在 `pyproject.toml` 的 optional dependency group 中，不是 core hard dependency。
 - `pyproject.toml` 已有 optional dependency group：`gui = ["PySide6"]`。
 - `AppPaths` 已能提供开发期 `.atelier/AtelierData`、database、cache、logs 等路径。
 - `open_app_database(paths)` 已能打开并初始化 SQLite。
 - 当前已有最小 workflow / planning / scheduler / storage / worker event 状态可供只读展示。
+- 当前已有 `atelier/gui/entry.py`、`main_window.py`、`workspace.py` 和 `state_reader.py`。
 - `DESIGN.md` 已定义 Atelier 的工作站基调，GUI 应参考该设计事实源，而不是另起 landing page。
 
 ## Constraints（约束）
@@ -74,6 +76,10 @@ AppPaths / SQLite
 - 未安装 PySide6 时，非 GUI 测试仍通过。
 - 安装 PySide6 后，GUI smoke test 可运行。
 
+状态：
+
+- 已完成。新增 `atelier/gui/entry.py` 与 `tests/test_gui_optional_dependency.py`，确认 GUI 入口可选依赖边界清晰，缺失 PySide6 时会提示 `.venv/Scripts/python -m pip install -e ".[gui]"`。
+
 ### Phase B：只读 MainWindow 壳
 
 目标：
@@ -89,6 +95,10 @@ AppPaths / SQLite
 验证：
 
 - smoke test 构造窗口对象，不进入长时间 event loop。
+
+状态：
+
+- 已完成。新增 `atelier/gui/main_window.py`、`atelier/gui/workspace.py` 和 `tests/test_gui_smoke.py`，可在 offscreen `QApplication` 下构造 `MainWindow`，并验证 workflow / execution / queue / resources-runtime 四个只读 dock。
 
 ### Phase C：SQLite 只读状态读取
 
@@ -106,6 +116,10 @@ AppPaths / SQLite
 
 - 使用测试数据库构造状态，view model 返回可展示数据。
 
+状态：
+
+- 已完成。新增 `atelier/gui/state_reader.py` 和 `tests/test_gui_state_reader.py`，从 SQLite 读取 task id、node type、status、resource binding、event count 和 artifact path；`MainWindow` Queue panel 可渲染 `WorkbenchSnapshot`。
+
 ### Phase D：工作台布局边界
 
 目标：
@@ -122,6 +136,10 @@ AppPaths / SQLite
 
 - import / construction tests。
 - 如能启动本地 GUI，再做一次手动运行记录。
+
+状态：
+
+- 已完成首版边界。当前 UI 结构已分离为 `main_window.py`、`workspace.py` 和 `state_reader.py`；布局代码不读取/写入 SQLite，窗口类不调用 Scheduler 或 worker。
 
 ## Child Plans（子计划）
 
@@ -148,11 +166,24 @@ GUI extras 验证（执行本计划时再启用）：
 
 如果 PySide6 未安装，不得声称 GUI smoke test 已通过。
 
+当前最近验证事实：
+
+- `.venv/Scripts/python -m pip install -e ".[gui]"`：passed，当前开发 `.venv` 已安装 PySide6 6.11.0。
+- `.venv/Scripts/python -m unittest tests.test_gui_optional_dependency`：2 tests passed。
+- `.venv/Scripts/python -m unittest tests.test_gui_smoke`：2 tests passed。
+- `.venv/Scripts/python -m unittest tests.test_gui_state_reader`：1 test passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：36 tests passed。
+- `.venv/Scripts/python -m compileall -q atelier tests`：passed。
+- `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
+
 ## Progress / Decisions（进展 / 决策）
 
 - 2026-05-03：创建本子计划。决策：首版 GUI 只读展示状态，不承担任务执行、调度和 runtime 安装。
+- 2026-05-03：完成 Phase A。安装开发期 GUI extras，但保持 PySide6 只属于 optional dependency；新增 optional dependency entry helper。
+- 2026-05-03：完成 Phase B。新增只读 `MainWindow` 和四个 dockable workstation panels，不启动 worker，不触发 Scheduler claim。
+- 2026-05-03：完成 Phase C。新增 SQLite read-only `WorkbenchSnapshot` view model，Queue panel 能显示 task id、node type、status、resource device、event count 和 artifact path。
+- 2026-05-03：完成 Phase D 首版布局边界。窗口、workspace panel spec、state reader 已拆分，未把 UI、SQL、scheduler 和 worker 混进一个文件。
 
 ## Blockers（阻塞）
 
-- PySide6 尚未安装到当前 `.venv/`；执行本计划前需要安装 `.[gui]` 或确认打包策略。
-- 建议先完成 `plan_resource_locks_failure_recovery.md`，否则 UI 只能展示不完整的执行可靠性状态。
+- 暂无。

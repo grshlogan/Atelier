@@ -2,6 +2,48 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_084529 [执行只读 PySide6 工作台 Phase A-D]
+
+- Started execution of `docs/plan/plan_readonly_pyside6_workbench.md` after completing the resource locks / failure recovery plan.
+- Added `tests/test_gui_optional_dependency.py` before implementation and confirmed the first failure was `ModuleNotFoundError: No module named 'atelier.gui'`.
+- Added `atelier/gui/__init__.py` and `atelier/gui/entry.py`.
+- Added `check_gui_dependency()` and `ensure_gui_dependency()` so GUI entry code can be imported without PySide6 installed and missing GUI extras produce a clear install command.
+- Kept PySide6 as an optional dependency under `pyproject.toml` `gui` extras; it is not a core hard dependency.
+- Installed GUI extras in the local development `.venv` with `.venv/Scripts/python -m pip install -e ".[gui]"`; PySide6 6.11.0 is now available locally.
+- Added `tests/test_gui_smoke.py` before implementation and confirmed the first failure was missing `atelier.gui.main_window`.
+- Added `atelier/gui/main_window.py` and `atelier/gui/workspace.py` with a read-only `QMainWindow` shell and workflow / execution / queue / resources-runtime docks.
+- Added `tests/test_gui_state_reader.py` before implementation and confirmed the first failure was missing `atelier.gui.state_reader`.
+- Added `atelier/gui/state_reader.py` with `WorkbenchSnapshot`, `WorkbenchTaskItem`, and `read_workbench_snapshot()`.
+- Updated `MainWindow` so Queue panel can render task id, node type, status, resource device, event count, and artifact path from a `WorkbenchSnapshot`.
+- Updated `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, `docs/plan/plan_readonly_pyside6_workbench.md`, and `README.md`.
+
+Current GUI boundary:
+
+- Implemented: optional GUI dependency detection, read-only `MainWindow`, four dockable workstation panels, read-only SQLite view model, and offscreen construction tests.
+- Not implemented: real Workflow Canvas drawing/editing, task start actions, Scheduler/worker control from GUI, theme system, i18n catalog, dock layout persistence, screenshot-level visual verification, or real runtime/model panels.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m pip install -e ".[gui]"
+.venv/Scripts/python -m unittest tests.test_gui_optional_dependency
+.venv/Scripts/python -m unittest tests.test_gui_smoke
+.venv/Scripts/python -m unittest tests.test_gui_state_reader
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m pip install -e ".[gui]"`: passed; PySide6 6.11.0 installed in local `.venv`.
+- `.venv/Scripts/python -m unittest tests.test_gui_optional_dependency`: 2 tests passed.
+- `.venv/Scripts/python -m unittest tests.test_gui_smoke`: 2 tests passed.
+- `.venv/Scripts/python -m unittest tests.test_gui_state_reader`: 1 test passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 36 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_080447 [执行 resource locks Phase D]
 
 - Extended `tests/test_resource_locks.py` before implementation and confirmed the first failure was the missing `fetch_stale_resource_locks` repository helper.

@@ -17,7 +17,7 @@
 - 对齐首版 specs，确保 artifacts、cache hit、cancel、resource binding、runtime ownership、release/update、plugin、workspace、i18n、hardware scheduling、failure recovery、security/privacy 等基础契约不互相冲突。
 - 建立 Python 包骨架、测试基线、SQLite schema 初始化、runtime manifest 管理、runtime health check、package hash 校验、开发 `.venv` 和 `AppPaths` 路径事实源。
 - 保持根目录清爽：根目录文档只保留 `README.md`、`AGENTS.md`、`DESIGN.md`；计划与阶段文档放在 `docs/plan/`。
-- 当前阶段不实现真实 PySide6 GUI、真实 Scheduler、真实 FFmpeg/model adapters、打包发布链或插件加载链。
+- 当前阶段只实现只读 PySide6 工作台壳，不实现真实编辑型 GUI、真实 Scheduler、真实 FFmpeg/model adapters、打包发布链或插件加载链。
 
 ## Current Facts（当前事实）
 
@@ -25,12 +25,14 @@
 - 当前本地 Python 是 `Python 3.11.9`。
 - `pyproject.toml` 要求 `requires-python = ">=3.11"`，当前硬依赖只有 `pydantic>=2.0`。
 - `.venv/` 已创建，本地包已通过 `.venv/Scripts/python -m pip install -e .` editable install。
+- 开发 `.venv/` 已通过 `.venv/Scripts/python -m pip install -e ".[gui]"` 安装 PySide6 6.11.0；PySide6 仍只属于 optional `gui` extra，不是 core hard dependency。
 - `.venv/`、`venv/`、`.atelier/` 已加入 `.gitignore`。
 - 当前已有 `atelier/` 包、`tests/` 测试目录、`pyproject.toml`、`docs/APP_CODE_MAP.md` 和 `docs/RECENT_CHANGES.md`。
 - 当前已有 `AppPaths`，开发期默认数据目录为 `.atelier/AtelierData/`。
 - 当前已有 app-level factory：`create_runtime_store(paths)` 和 `open_app_database(paths)`。
 - 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、package SHA-256 helper、SQLite schema 初始化和 simulated Worker。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 31 tests passed。
+- 当前已有只读 `atelier/gui/` 工作台壳：optional dependency entry、`MainWindow`、dock workspace panel specs、SQLite read-only `WorkbenchSnapshot`。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 36 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -244,7 +246,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：31 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：36 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -279,6 +281,7 @@ python -m mypy .
 - 2026-05-03：`plan_resource_locks_failure_recovery.md` 已执行到 Phase C：resource lock claim/release、failure facts、partial artifacts 和 recovery option 查询已具备首版测试覆盖。
 - 2026-05-03：`plan_resource_locks_failure_recovery.md` 已完成 Phase D：stale resource lock 可以被查询和释放，但不会自动改变 task status 或触发任务重跑。
 - 2026-05-03：补充 Phase D stale release 防护测试：未过期 lock 和已释放 lock 不会被 stale release 路径释放。
+- 2026-05-03：完成 `plan_readonly_pyside6_workbench.md` Phase A-D。安装开发期 GUI extras，新增只读 PySide6 `MainWindow`、dock workspace panel specs 和 SQLite read-only state reader；GUI 只渲染状态，不启动 worker 或 Scheduler。
 
 ## Blockers（阻塞）
 

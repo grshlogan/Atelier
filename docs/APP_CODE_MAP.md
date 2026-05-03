@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 49
+Code file count: 56
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 34 files
-- `tests/`: 14 files
+- `atelier/`: 38 files
+- `tests/`: 17 files
 
 ## Current Code Tree
 
@@ -32,6 +32,12 @@ atelier/
     worker_event.py
   hardware/
     __init__.py
+  gui/
+    __init__.py
+    entry.py
+    main_window.py
+    state_reader.py
+    workspace.py
   i18n/
     __init__.py
   planning/
@@ -69,6 +75,9 @@ tests/
   test_app_paths.py
   test_app_services.py
   test_failure_recovery.py
+  test_gui_optional_dependency.py
+  test_gui_smoke.py
+  test_gui_state_reader.py
   test_package_integrity.py
   test_phase6_minimal_loop.py
   test_planning_simple.py
@@ -300,6 +309,79 @@ Boundary:
 
 - Hardware detection belongs here later; scheduling decisions do not.
 - Do not import NVML, psutil, or driver-specific libraries at package import time.
+
+## `atelier/gui/`
+
+### `atelier/gui/__init__.py`
+
+Responsibility:
+
+- Marks the optional GUI package.
+
+Boundary:
+
+- Importing `atelier.gui` must not import PySide6 or start a Qt application.
+- Keep package initialization side-effect free.
+
+### `atelier/gui/entry.py`
+
+Responsibility:
+
+- Defines the Phase A optional GUI dependency boundary.
+- Provides `check_gui_dependency()` to report whether `PySide6` is installed.
+- Provides `ensure_gui_dependency()` to fail with the documented `.[gui]` install command when PySide6 is missing.
+
+Boundary:
+
+- Does not import PySide6 at module import time.
+- Does not create `QApplication`, windows, docks, panels, or event loops.
+- Does not read SQLite, run Scheduler, start workers, or install runtimes.
+
+### `atelier/gui/main_window.py`
+
+Responsibility:
+
+- Defines the first read-only PySide6 `MainWindow`.
+- Accepts `AppPaths` and an optional `WorkbenchSnapshot`.
+- Creates a `QMainWindow` with dock widgets for workflow, execution, queue, and resources/runtime panels.
+- Renders the queue snapshot as read-only text when provided.
+
+Boundary:
+
+- Does not start `QApplication` or the Qt event loop.
+- Does not open SQLite directly.
+- Does not call Scheduler, worker runners, FFmpeg, model backends, or runtime installers.
+- Does not persist workspace layout yet.
+
+### `atelier/gui/state_reader.py`
+
+Responsibility:
+
+- Defines GUI-facing read-only view models:
+  - `WorkbenchTaskItem`
+  - `WorkbenchSnapshot`
+- Provides `read_workbench_snapshot(connection)` to read task status, resource device, event count, and artifact paths from SQLite.
+
+Boundary:
+
+- Does not import PySide6.
+- Does not write to SQLite.
+- Does not call Scheduler or recovery actions.
+- Does not attempt to render widgets.
+
+### `atelier/gui/workspace.py`
+
+Responsibility:
+
+- Defines `WorkspacePanelSpec` and `DEFAULT_WORKSPACE_PANELS`.
+- Creates read-only placeholder panel widgets for the workstation shell.
+- Formats queue snapshot rows for the current minimal Queue panel.
+
+Boundary:
+
+- Does not read SQLite directly.
+- Does not run tasks or mutate state.
+- Does not implement theme, i18n catalog, real canvases, or dock layout persistence yet.
 
 ## `atelier/i18n/`
 
@@ -729,6 +811,50 @@ Boundary:
 - Does not test stale lock detection.
 - Does not test GUI failure panels.
 
+### `tests/test_gui_optional_dependency.py`
+
+Responsibility:
+
+- Tests Phase A of `plan_readonly_pyside6_workbench.md`.
+- Confirms GUI entry helpers can be imported when PySide6 is not installed.
+- Confirms missing PySide6 errors point to the documented `.[gui]` install command.
+
+Boundary:
+
+- Does not install PySide6.
+- Does not construct a `QApplication` or `MainWindow`.
+- Does not test GUI layout or SQLite state rendering.
+
+### `tests/test_gui_smoke.py`
+
+Responsibility:
+
+- Tests Phase B and the visible part of Phase C for `plan_readonly_pyside6_workbench.md`.
+- Constructs `QApplication` in offscreen mode and creates `MainWindow` without entering the event loop.
+- Confirms the four read-only dock areas exist and remain movable/floatable.
+- Confirms Queue panel can render task id, status, resource device, and artifact path from a `WorkbenchSnapshot`.
+- Skips GUI smoke tests when PySide6 is not installed, preserving the optional dependency boundary.
+
+Boundary:
+
+- Does not start a long-running Qt event loop.
+- Does not perform screenshot-level visual verification.
+- Does not execute Scheduler or worker tasks.
+
+### `tests/test_gui_state_reader.py`
+
+Responsibility:
+
+- Tests Phase C of `plan_readonly_pyside6_workbench.md`.
+- Builds a temporary SQLite state through existing workflow/planning/scheduler/worker test helpers.
+- Confirms `read_workbench_snapshot()` returns task id, node type, status, resource device, event count, and artifact paths for GUI consumption.
+
+Boundary:
+
+- Does not construct Qt widgets.
+- Does not write GUI state.
+- Does not execute real external tools.
+
 ### `tests/test_runtime_health.py`
 
 Responsibility:
@@ -799,7 +925,7 @@ These packages are specified in docs but not fully implemented yet:
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
 - `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, priorities, concurrency, retry execution, and crash recovery are not implemented.
-- `gui/`: PySide6 application window, dock workspace, canvas, panels.
+- `gui/`: optional dependency entry helpers, a read-only `MainWindow`, basic dock workspace specs, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, dock persistence, and visual verification are not implemented yet.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.
