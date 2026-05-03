@@ -2,6 +2,39 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_091411 [执行只读 PySide6 工作台 Phase E]
+
+- Extended `docs/plan/plan_readonly_pyside6_workbench.md` with Phase E before implementation.
+- Added `tests/test_gui_layout_store.py` before implementation and confirmed the first failure was missing `atelier.gui.layout_store`.
+- Added `AppPaths.workspace_layouts_path` so workspace layout persistence uses the managed `AtelierData/cache` root.
+- Added `atelier/gui/layout_store.py` with `WorkspaceLayoutStore` and `WorkspaceLayoutRecord`.
+- Added `MainWindow.save_workspace_layout()` and `MainWindow.restore_workspace_layout()` for Qt geometry/state bytes.
+- Extended `tests/test_gui_smoke.py` to verify `MainWindow` can save and restore a stored layout.
+- Updated `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_readonly_pyside6_workbench.md`.
+
+Current Phase E boundary:
+
+- Implemented: minimal named workspace layout save/load and `MainWindow` save/restore integration.
+- Not implemented: workspace preset UI, panel visibility management, layout migration, multi-profile layout policies, or screenshot-level visual verification.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_gui_layout_store
+.venv/Scripts/python -m unittest tests.test_gui_smoke
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_gui_layout_store`: 2 tests passed.
+- `.venv/Scripts/python -m unittest tests.test_gui_smoke`: 3 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 39 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_084529 [执行只读 PySide6 工作台 Phase A-D]
 
 - Started execution of `docs/plan/plan_readonly_pyside6_workbench.md` after completing the resource locks / failure recovery plan.

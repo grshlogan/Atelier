@@ -5,9 +5,10 @@ from atelier.gui.entry import ensure_gui_dependency
 
 ensure_gui_dependency()
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtWidgets import QLabel, QDockWidget, QMainWindow
 
+from atelier.gui.layout_store import WorkspaceLayoutStore
 from atelier.gui.state_reader import WorkbenchSnapshot
 from atelier.gui.workspace import DEFAULT_WORKSPACE_PANELS, create_workspace_panel
 
@@ -39,3 +40,28 @@ class MainWindow(QMainWindow):
             )
             dock.setWidget(create_workspace_panel(spec, self.app_paths.data_root, self.snapshot))
             self.addDockWidget(spec.area, dock)
+
+    def save_workspace_layout(
+        self,
+        store: WorkspaceLayoutStore,
+        *,
+        name: str = "default",
+    ) -> None:
+        store.save_layout(
+            name,
+            geometry=bytes(self.saveGeometry()),
+            state=bytes(self.saveState()),
+        )
+
+    def restore_workspace_layout(
+        self,
+        store: WorkspaceLayoutStore,
+        *,
+        name: str = "default",
+    ) -> bool:
+        record = store.load_layout(name)
+        if record is None:
+            return False
+        geometry_restored = self.restoreGeometry(QByteArray(record.geometry))
+        state_restored = self.restoreState(QByteArray(record.state))
+        return bool(geometry_restored and state_restored)

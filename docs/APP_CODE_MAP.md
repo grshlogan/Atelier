@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 56
+Code file count: 58
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 38 files
-- `tests/`: 17 files
+- `atelier/`: 39 files
+- `tests/`: 18 files
 
 ## Current Code Tree
 
@@ -35,6 +35,7 @@ atelier/
   gui/
     __init__.py
     entry.py
+    layout_store.py
     main_window.py
     state_reader.py
     workspace.py
@@ -76,6 +77,7 @@ tests/
   test_app_services.py
   test_failure_recovery.py
   test_gui_optional_dependency.py
+  test_gui_layout_store.py
   test_gui_smoke.py
   test_gui_state_reader.py
   test_package_integrity.py
@@ -185,6 +187,7 @@ Responsibility:
 - Provides `AppPaths.for_development(workspace_root)` for `.atelier/AtelierData` under a local workspace.
 - Provides `AppPaths.from_data_root(data_root)` for release/user-data roots supplied by installers, settings, or OS conventions later.
 - Exposes standard paths for runtime manifests, model manifests, database, cache, staging, logs, plugins, models, and runtimes.
+- Exposes `workspace_layouts_path` for GUI layout persistence under the managed cache root.
 - Creates shared local data directories through `ensure_data_dirs()`.
 
 Boundary:
@@ -337,6 +340,20 @@ Boundary:
 - Does not create `QApplication`, windows, docks, panels, or event loops.
 - Does not read SQLite, run Scheduler, start workers, or install runtimes.
 
+### `atelier/gui/layout_store.py`
+
+Responsibility:
+
+- Defines `WorkspaceLayoutStore` and `WorkspaceLayoutRecord`.
+- Saves and loads named workspace layout geometry/state bytes as JSON under `AppPaths.workspace_layouts_path`.
+- Encodes Qt byte arrays with base64 so the layout file stays text-based.
+
+Boundary:
+
+- Does not import PySide6.
+- Does not decide dock policy, panel visibility, or workspace presets.
+- Does not write outside the managed `AtelierData` cache root.
+
 ### `atelier/gui/main_window.py`
 
 Responsibility:
@@ -345,13 +362,14 @@ Responsibility:
 - Accepts `AppPaths` and an optional `WorkbenchSnapshot`.
 - Creates a `QMainWindow` with dock widgets for workflow, execution, queue, and resources/runtime panels.
 - Renders the queue snapshot as read-only text when provided.
+- Saves and restores workspace geometry/state through `WorkspaceLayoutStore`.
 
 Boundary:
 
 - Does not start `QApplication` or the Qt event loop.
 - Does not open SQLite directly.
 - Does not call Scheduler, worker runners, FFmpeg, model backends, or runtime installers.
-- Does not persist workspace layout yet.
+- Does not implement complex workspace presets, panel visibility policy, or user-facing layout management UI yet.
 
 ### `atelier/gui/state_reader.py`
 
@@ -825,6 +843,21 @@ Boundary:
 - Does not construct a `QApplication` or `MainWindow`.
 - Does not test GUI layout or SQLite state rendering.
 
+### `tests/test_gui_layout_store.py`
+
+Responsibility:
+
+- Tests Phase E of `plan_readonly_pyside6_workbench.md`.
+- Confirms `WorkspaceLayoutStore` round-trips geometry/state bytes.
+- Confirms missing layout names return `None`.
+- Confirms layout persistence uses `AppPaths.workspace_layouts_path`.
+
+Boundary:
+
+- Does not import PySide6.
+- Does not test real dock movement.
+- Does not test complex workspace presets.
+
 ### `tests/test_gui_smoke.py`
 
 Responsibility:
@@ -834,6 +867,7 @@ Responsibility:
 - Confirms the four read-only dock areas exist and remain movable/floatable.
 - Confirms Queue panel can render task id, status, resource device, and artifact path from a `WorkbenchSnapshot`.
 - Skips GUI smoke tests when PySide6 is not installed, preserving the optional dependency boundary.
+- Confirms `MainWindow` can save and restore workspace layout through `WorkspaceLayoutStore`.
 
 Boundary:
 
@@ -925,7 +959,7 @@ These packages are specified in docs but not fully implemented yet:
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
 - `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, priorities, concurrency, retry execution, and crash recovery are not implemented.
-- `gui/`: optional dependency entry helpers, a read-only `MainWindow`, basic dock workspace specs, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, dock persistence, and visual verification are not implemented yet.
+- `gui/`: optional dependency entry helpers, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, and visual verification are not implemented yet.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.

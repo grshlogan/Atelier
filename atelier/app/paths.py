@@ -50,6 +50,10 @@ class AppPaths:
         return self.data_root / "atelier.sqlite3"
 
     @property
+    def workspace_layouts_path(self) -> Path:
+        return self.cache_root / "workspace-layouts.json"
+
+    @property
     def runtime_manifest_path(self) -> Path:
         return self.runtime_root / "manifests" / "installed.json"
 

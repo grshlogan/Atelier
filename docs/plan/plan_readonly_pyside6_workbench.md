@@ -141,6 +141,28 @@ AppPaths / SQLite
 
 - 已完成首版边界。当前 UI 结构已分离为 `main_window.py`、`workspace.py` 和 `state_reader.py`；布局代码不读取/写入 SQLite，窗口类不调用 Scheduler 或 worker。
 
+### Phase E：Workspace Layout 最小持久化
+
+目标：
+
+- 让当前 dockable 工作台壳具备最小布局保存/恢复骨架，为后续用户自定义区域开关、浮动面板和 workspace preset 打基础。
+
+完成信号：
+
+- 有独立 layout store，不把布局 JSON 读写塞进 `MainWindow`。
+- `MainWindow` 能导出 Qt geometry/state 并从已保存布局恢复。
+- 布局持久化路径来自 `AppPaths`，不写入源码目录或 `.venv`。
+- 不引入复杂 workspace preset、主题系统或真实面板配置。
+
+验证：
+
+- 新增测试：layout store 能保存/读取 layout bytes。
+- 新增 GUI smoke 测试：`MainWindow` 能保存 layout 并从 store 恢复。
+
+状态：
+
+- 已完成。新增 `atelier/gui/layout_store.py` 与 `tests/test_gui_layout_store.py`，`MainWindow` 已接入 `save_workspace_layout()` / `restore_workspace_layout()`；layout 文件写入 `AppPaths.workspace_layouts_path`，不写入源码目录或 `.venv`。
+
 ## Child Plans（子计划）
 
 - 暂无。
@@ -170,9 +192,10 @@ GUI extras 验证（执行本计划时再启用）：
 
 - `.venv/Scripts/python -m pip install -e ".[gui]"`：passed，当前开发 `.venv` 已安装 PySide6 6.11.0。
 - `.venv/Scripts/python -m unittest tests.test_gui_optional_dependency`：2 tests passed。
+- `.venv/Scripts/python -m unittest tests.test_gui_layout_store`：2 tests passed。
 - `.venv/Scripts/python -m unittest tests.test_gui_smoke`：2 tests passed。
 - `.venv/Scripts/python -m unittest tests.test_gui_state_reader`：1 test passed。
-- `.venv/Scripts/python -m unittest discover -s tests`：36 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：39 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -183,6 +206,7 @@ GUI extras 验证（执行本计划时再启用）：
 - 2026-05-03：完成 Phase B。新增只读 `MainWindow` 和四个 dockable workstation panels，不启动 worker，不触发 Scheduler claim。
 - 2026-05-03：完成 Phase C。新增 SQLite read-only `WorkbenchSnapshot` view model，Queue panel 能显示 task id、node type、status、resource device、event count 和 artifact path。
 - 2026-05-03：完成 Phase D 首版布局边界。窗口、workspace panel spec、state reader 已拆分，未把 UI、SQL、scheduler 和 worker 混进一个文件。
+- 2026-05-03：完成 Phase E。新增最小 workspace layout persistence，保存/恢复 Qt geometry/state bytes，持久化路径来自 `AppPaths.workspace_layouts_path`。
 
 ## Blockers（阻塞）
 

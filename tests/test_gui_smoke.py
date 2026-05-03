@@ -7,6 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from atelier.app.paths import AppPaths
 from atelier.gui.entry import check_gui_dependency
+from atelier.gui.layout_store import WorkspaceLayoutStore
 from atelier.gui.state_reader import WorkbenchSnapshot, WorkbenchTaskItem
 
 GUI_AVAILABLE = check_gui_dependency().available
@@ -93,6 +94,32 @@ class GuiSmokeTests(unittest.TestCase):
                 self.assertIn("artifacts/node-gui-state/output.json", body.text())
             finally:
                 window.close()
+
+    def test_main_window_saves_and_restores_workspace_layout(self) -> None:
+        app = QApplication.instance() or QApplication([])
+        self.assertIsNotNone(app)
+
+        with TemporaryDirectory() as temp_dir:
+            paths = AppPaths.for_development(Path(temp_dir))
+            store = WorkspaceLayoutStore(paths)
+
+            window = MainWindow(app_paths=paths)
+            try:
+                window.resize(1280, 720)
+                window.save_workspace_layout(store, name="default")
+
+                record = store.load_layout("default")
+                self.assertIsNotNone(record)
+                self.assertGreater(len(record.geometry), 0)
+                self.assertGreater(len(record.state), 0)
+            finally:
+                window.close()
+
+            restored_window = MainWindow(app_paths=paths)
+            try:
+                self.assertTrue(restored_window.restore_workspace_layout(store, name="default"))
+            finally:
+                restored_window.close()
 
 
 if __name__ == "__main__":
