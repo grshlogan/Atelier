@@ -2,6 +2,39 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260504_004244 [执行 Worker Protocol Phase C]
+
+- Continued `docs/plan/plan_worker_protocol_runner.md` Phase C before implementation.
+- Added `tests/test_worker_runner.py` before implementation and confirmed the first failure was missing `atelier.workers.runner`.
+- Added `atelier/workers/runner.py` with:
+  - `WorkerProcessSpec`
+  - `WorkerProcessResult`
+  - `run_worker_process()`
+- The minimum runner now starts a typed command with `--task-file`, sets `cwd=work_dir`, merges supplied env variables, captures stdout/stderr, validates stdout through `parse_worker_event_stream()`, and returns the process exit code.
+- Tests use temporary Python stub workers only; no real FFmpeg/model adapter is invoked.
+- Updated `README.md`, `docs/APP_CODE_MAP.md`, `docs/WORKER_PROTOCOL.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_worker_protocol_runner.md`.
+
+Current Phase C boundary:
+
+- Implemented: minimum subprocess runner boundary, stdout event validation, stderr capture, return code capture, and protocol error propagation for malformed stdout.
+- Not implemented: Scheduler integration, RuntimeManager path resolution, stdin cancel/pause, heartbeat timeout, kill escalation, stderr file persistence, retry/recovery orchestration, or real worker adapters.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_worker_runner
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_worker_runner`: 3 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 53 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed.
+
 ## 20260504_003223 [执行 Worker Protocol Phase B]
 
 - Continued `docs/plan/plan_worker_protocol_runner.md` Phase B before implementation.

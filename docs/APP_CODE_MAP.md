@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 62
+Code file count: 64
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 41 files
-- `tests/`: 20 files
+- `atelier/`: 42 files
+- `tests/`: 21 files
 
 ## Current Code Tree
 
@@ -69,6 +69,7 @@ atelier/
   workers/
     __init__.py
     protocol.py
+    runner.py
     simulated.py
   workflow/
     __init__.py
@@ -95,6 +96,7 @@ tests/
   test_storage_schema.py
   test_worker_events.py
   test_worker_protocol.py
+  test_worker_runner.py
 ```
 
 ## Root Project Files
@@ -722,6 +724,26 @@ Boundary:
 - Does not call Scheduler, RuntimeManager, GUI, FFmpeg, model backends, or adapters.
 - Does not supervise process lifetime, heartbeat timeout, stdin control, or stderr capture.
 
+### `atelier/workers/runner.py`
+
+Responsibility:
+
+- Defines the current minimum subprocess runner boundary:
+  - `WorkerProcessSpec`
+  - `WorkerProcessResult`
+  - `run_worker_process()`
+- Starts a typed command with `--task-file <path>` and `cwd=work_dir`.
+- Merges supplied environment variables into the child process environment.
+- Captures stdout and validates it through `parse_worker_event_stream()`.
+- Captures stderr as text and returns the process exit code.
+
+Boundary:
+
+- Does not choose runtime paths, model paths, command args, or hardware resources.
+- Does not call Scheduler, RuntimeManager, GUI, SQLite, FFmpeg, model backends, or adapters.
+- Does not implement stdin cancel/pause, heartbeat timeout, process kill escalation, stderr log file persistence, retry, or recovery.
+- Does not treat nonzero exit code as a protocol error when the Worker emitted a valid terminal event stream.
+
 ### `atelier/workers/simulated.py`
 
 Responsibility:
@@ -821,6 +843,21 @@ Boundary:
 
 - Does not test subprocess runner behavior.
 - Does not execute real external tools or write worker artifacts.
+
+### `tests/test_worker_runner.py`
+
+Responsibility:
+
+- Tests Phase C of `plan_worker_protocol_runner.md`.
+- Uses temporary Python stub workers to verify `run_worker_process()` passes `--task-file`, `cwd`, and environment variables.
+- Confirms stdout JSON Lines are parsed into worker events.
+- Confirms stderr text and nonzero exit codes are captured.
+- Confirms malformed stdout raises `WorkerProtocolError`.
+
+Boundary:
+
+- Does not run real FFmpeg/model adapters.
+- Does not test Scheduler integration, RuntimeManager path resolution, stdin cancel, heartbeat timeout, kill escalation, or stderr file persistence.
 
 ### `tests/test_runtime_manager.py`
 
@@ -1034,7 +1071,7 @@ These packages are specified in docs but not fully implemented yet:
 - `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, priorities, concurrency, retry execution, and crash recovery are not implemented.
 - `gui/`: optional dependency entry helpers, formal development launch entry, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
-- `workers/protocol`: single-event JSON Lines encode/decode and minimal whole-stream validation exist; subprocess runner, cancel control, heartbeat timeout, and stderr capture are not implemented.
+- `workers/runner`: minimum subprocess boundary exists; production worker lifecycle, stdin cancel control, heartbeat timeout, kill escalation, stderr file persistence, and real adapters are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.
 - `release` implementation: update manifests, staging, rollback.
