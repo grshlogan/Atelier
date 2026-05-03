@@ -17,7 +17,7 @@
 - 对齐首版 specs，确保 artifacts、cache hit、cancel、resource binding、runtime ownership、release/update、plugin、workspace、i18n、hardware scheduling、failure recovery、security/privacy 等基础契约不互相冲突。
 - 建立 Python 包骨架、测试基线、SQLite schema 初始化、runtime manifest 管理、runtime health check、package hash 校验、开发 `.venv` 和 `AppPaths` 路径事实源。
 - 保持根目录清爽：根目录文档只保留 `README.md`、`AGENTS.md`、`DESIGN.md`；计划与阶段文档放在 `docs/plan/`。
-- 当前阶段已实现只读 PySide6 工作台壳，并开始实现 Worker JSON Lines 协议边界；仍不实现真实编辑型 GUI、真实 Scheduler、真实 worker subprocess runner、真实 FFmpeg/model adapters、打包发布链或插件加载链。
+- 当前阶段已实现只读 PySide6 工作台壳，并开始实现 Worker JSON Lines 协议边界与事件流验证；仍不实现真实编辑型 GUI、真实 Scheduler、真实 worker subprocess runner、真实 FFmpeg/model adapters、打包发布链或插件加载链。
 
 ## Current Facts（当前事实）
 
@@ -32,8 +32,8 @@
 - 当前已有 app-level factory：`create_runtime_store(paths)` 和 `open_app_database(paths)`。
 - 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、package SHA-256 helper、SQLite schema 初始化和 simulated Worker。
 - 当前已有只读 `atelier/gui/` 工作台壳：optional dependency entry、formal development launch entry、`MainWindow`、dock workspace panel specs、workspace layout store、SQLite read-only `WorkbenchSnapshot`。
-- 当前已有 `atelier/workers/protocol.py`，支持单个 WorkerEvent 的 JSON Lines 编解码，并补齐 `LogEvent` / `HeartbeatEvent` 事件模型。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 45 tests passed。
+- 当前已有 `atelier/workers/protocol.py`，支持单个 WorkerEvent 的 JSON Lines 编解码、最小 stdout event stream validation，并补齐 `LogEvent` / `HeartbeatEvent` 事件模型。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 50 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -249,7 +249,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：45 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：50 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -288,6 +288,7 @@ python -m mypy .
 - 2026-05-03：完成 `plan_readonly_pyside6_workbench.md` Phase E。新增最小 workspace layout persistence，`MainWindow` 可保存/恢复 Qt geometry/state，布局文件位于 managed `AtelierData/cache`。
 - 2026-05-03：完成 `plan_readonly_pyside6_workbench.md` Phase F。新增正式开发启动入口 `.venv/Scripts/python -m atelier.gui.app`，保持只读启动链，不触发 Scheduler 或 worker。
 - 2026-05-03：创建并执行 `plan_worker_protocol_runner.md` Phase A。新增 WorkerEvent JSON Lines 单事件编解码，补齐 `LogEvent` / `HeartbeatEvent`，并将 `WORKER_PROTOCOL.md` 标记为部分实现。
+- 2026-05-04：完成 `plan_worker_protocol_runner.md` Phase B。新增最小 stdout event stream validation，验证 `started` 首事件、`seq` 连续、terminal event 结束和 terminal 后禁止追加事件。
 
 ## Blockers（阻塞）
 

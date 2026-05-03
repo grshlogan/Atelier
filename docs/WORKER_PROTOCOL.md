@@ -1,6 +1,6 @@
 # Atelier Worker Protocol
 
-> 状态：部分实现。已实现 `WorkerEvent` JSON Lines 编解码、`log` / `heartbeat` 事件模型和协议错误边界；subprocess runner、stdin 控制通道、heartbeat timeout、stderr 落盘和真实 adapters 尚未实现。
+> 状态：部分实现。已实现 `WorkerEvent` JSON Lines 编解码、最小 stdout event stream validation、`log` / `heartbeat` 事件模型和协议错误边界；subprocess runner、stdin 控制通道、heartbeat timeout、stderr 落盘和真实 adapters 尚未实现。
 
 ## 1. 概述
 
@@ -92,7 +92,7 @@ class WorkerEvent(BaseModel):
     seq:        int         # 递增序列号（从 0 开始）
 ```
 
-`seq` 用于事件排序和丢失检测。Scheduler 收到的 seq 不连续时应记录 warning。
+`seq` 用于事件排序和丢失检测。当前 protocol helper 会把非连续 `seq` 视为 `WorkerProtocolError`；未来 Scheduler 可以捕获该错误并记录 warning、失败原因或恢复事实。
 
 ---
 

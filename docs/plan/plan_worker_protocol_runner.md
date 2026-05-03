@@ -38,10 +38,10 @@ WorkerEvent models
 
 - `docs/WORKER_PROTOCOL.md` 已定义 JSON Lines worker 协议，当前状态已更新为部分实现。
 - 当前已有 `atelier/domain/worker_event.py`，包含 `StartedEvent`、`ProgressEvent`、`LogEvent`、`HeartbeatEvent`、`ArtifactEvent`、`CompletedEvent`、`FailedEvent` 和 `ArtifactRef`。
-- 当前已有 `atelier/workers/protocol.py`，可对单个 WorkerEvent 做 JSON Lines 编解码。
+- 当前已有 `atelier/workers/protocol.py`，可对单个 WorkerEvent 做 JSON Lines 编解码，并可验证最小 stdout event stream lifecycle。
 - 当前已有 `atelier/workers/simulated.py`，可产生 deterministic simulated worker events。
 - 当前已有 `record_worker_events()`，会根据结构化事件写入 SQLite，并在 terminal events 后释放 active resource locks。
-- 当前测试基线是 stdlib `unittest`，最近完整验证为 45 tests passed。
+- 当前测试基线是 stdlib `unittest`，最近完整验证为 50 tests passed。
 
 ## Constraints（约束）
 
@@ -100,7 +100,7 @@ git diff --check
 
 状态：
 
-- 待执行。
+- 已完成。新增 `parse_worker_event_stream()`，验证 `started` 必须是首个事件、`seq` 必须从 0 连续递增、`completed` / `failed` 必须结束事件流，且 terminal event 后不得再出现事件。
 
 ### Phase C：Subprocess runner 边界骨架
 
@@ -164,8 +164,8 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest tests.test_worker_protocol`：4 tests passed。
-- `.venv/Scripts/python -m unittest discover -s tests`：45 tests passed。
+- `.venv/Scripts/python -m unittest tests.test_worker_protocol`：9 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：50 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -174,6 +174,8 @@ git diff --check
 - 2026-05-03：创建本计划。决策：先实现 Worker JSON Lines 事件协议边界，暂不启动真实 subprocess，不接外部工具。
 - 2026-05-03：完成 Phase A。新增 WorkerEvent JSON Lines 编解码，补齐 `LogEvent` / `HeartbeatEvent` 事件模型；协议 helper 只处理单个事件，不启动 subprocess、不读写 SQLite。
 - 2026-05-03：完成 Phase D 首轮状态对齐。`WORKER_PROTOCOL.md` 已标记为部分实现，并列出 runner/control/timeout/stderr/adapters 未实现。
+- 2026-05-04：开始执行 Phase B。范围限定为 stdout JSON Lines event stream validation，不启动 subprocess、不读取 stderr、不写 SQLite。
+- 2026-05-04：完成 Phase B。新增 `parse_worker_event_stream()` 和对应测试，事件流验证只处理已读取的 stdout JSON Lines，不负责 worker process lifecycle。
 
 ## Blockers（阻塞）
 

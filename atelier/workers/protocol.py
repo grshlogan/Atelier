@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from typing import TypeAlias
 
 from pydantic import ValidationError
@@ -68,3 +69,29 @@ def parse_worker_event_json_line(line: str) -> WorkerEventPayload:
         return event_model.model_validate(payload)
     except ValidationError as exc:
         raise WorkerProtocolError(f"Invalid {event_type} worker event payload") from exc
+
+
+def parse_worker_event_stream(lines: Iterable[str]) -> list[WorkerEventPayload]:
+    events: list[WorkerEventPayload] = []
+    terminal_seen = False
+
+    for line in lines:
+        event = parse_worker_event_json_line(line)
+        expected_seq = len(events)
+
+        if terminal_seen:
+            raise WorkerProtocolError("Worker event stream contains events after terminal event")
+        if expected_seq == 0 and not isinstance(event, StartedEvent):
+            raise WorkerProtocolError("Worker event stream must start with a started event")
+        if event.seq != expected_seq:
+            raise WorkerProtocolError(f"Worker event seq must be contiguous: expected {expected_seq}, got {event.seq}")
+
+        events.append(event)
+        terminal_seen = isinstance(event, (CompletedEvent, FailedEvent))
+
+    if not events:
+        raise WorkerProtocolError("Worker event stream is empty")
+    if not terminal_seen:
+        raise WorkerProtocolError("Worker event stream must end with a terminal event")
+
+    return events

@@ -11,6 +11,7 @@ from atelier.domain.worker_event import (
 from atelier.workers.protocol import (
     WorkerProtocolError,
     format_worker_event_json_line,
+    parse_worker_event_stream,
     parse_worker_event_json_line,
 )
 
@@ -100,6 +101,148 @@ class WorkerProtocolTests(unittest.TestCase):
             with self.subTest(line=line):
                 with self.assertRaises(WorkerProtocolError):
                     parse_worker_event_json_line(line)
+
+    def test_parses_valid_worker_event_stream(self) -> None:
+        lines = [
+            format_worker_event_json_line(
+                StartedEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:00Z",
+                    seq=0,
+                    worker_pid=1234,
+                    worker_version="test",
+                    node_type="simulate.echo",
+                )
+            ),
+            format_worker_event_json_line(
+                LogEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:01Z",
+                    seq=1,
+                    level="info",
+                    message="running",
+                )
+            ),
+            format_worker_event_json_line(
+                CompletedEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:02Z",
+                    seq=2,
+                    artifacts=[],
+                    duration_seconds=2.0,
+                )
+            ),
+        ]
+
+        events = parse_worker_event_stream(lines)
+
+        self.assertEqual([event.type for event in events], ["started", "log", "completed"])
+        self.assertIsInstance(events[-1], CompletedEvent)
+
+    def test_rejects_event_stream_without_started_first(self) -> None:
+        lines = [
+            format_worker_event_json_line(
+                ProgressEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:00Z",
+                    seq=0,
+                    current=1,
+                    total=2,
+                    unit="steps",
+                    percent=50.0,
+                )
+            )
+        ]
+
+        with self.assertRaises(WorkerProtocolError):
+            parse_worker_event_stream(lines)
+
+    def test_rejects_event_stream_with_non_contiguous_sequence(self) -> None:
+        lines = [
+            format_worker_event_json_line(
+                StartedEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:00Z",
+                    seq=0,
+                    worker_pid=1234,
+                    worker_version="test",
+                    node_type="simulate.echo",
+                )
+            ),
+            format_worker_event_json_line(
+                CompletedEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:02Z",
+                    seq=2,
+                    artifacts=[],
+                    duration_seconds=2.0,
+                )
+            ),
+        ]
+
+        with self.assertRaises(WorkerProtocolError):
+            parse_worker_event_stream(lines)
+
+    def test_rejects_event_stream_without_terminal_event(self) -> None:
+        lines = [
+            format_worker_event_json_line(
+                StartedEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:00Z",
+                    seq=0,
+                    worker_pid=1234,
+                    worker_version="test",
+                    node_type="simulate.echo",
+                )
+            ),
+            format_worker_event_json_line(
+                HeartbeatEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:01Z",
+                    seq=1,
+                    uptime_seconds=1.0,
+                    memory_mb=256.0,
+                )
+            ),
+        ]
+
+        with self.assertRaises(WorkerProtocolError):
+            parse_worker_event_stream(lines)
+
+    def test_rejects_event_stream_after_terminal_event(self) -> None:
+        lines = [
+            format_worker_event_json_line(
+                StartedEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:00Z",
+                    seq=0,
+                    worker_pid=1234,
+                    worker_version="test",
+                    node_type="simulate.echo",
+                )
+            ),
+            format_worker_event_json_line(
+                CompletedEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:01Z",
+                    seq=1,
+                    artifacts=[],
+                    duration_seconds=1.0,
+                )
+            ),
+            format_worker_event_json_line(
+                LogEvent(
+                    task_id="01TESTTASK0000000000000001",
+                    timestamp="2026-05-03T00:00:02Z",
+                    seq=2,
+                    level="info",
+                    message="too late",
+                )
+            ),
+        ]
+
+        with self.assertRaises(WorkerProtocolError):
+            parse_worker_event_stream(lines)
 
 
 if __name__ == "__main__":

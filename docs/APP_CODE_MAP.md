@@ -707,6 +707,11 @@ Responsibility:
 - Defines the current Worker JSON Lines encode/decode boundary.
 - Provides `format_worker_event_json_line()` for serializing typed worker events as single-line JSON.
 - Provides `parse_worker_event_json_line()` for validating one Worker stdout JSON line into a concrete event model.
+- Provides `parse_worker_event_stream()` for validating a minimal stdout lifecycle:
+  - `started` must be first.
+  - `seq` must be contiguous from 0.
+  - `completed` / `failed` must be terminal.
+  - no events may appear after a terminal event.
 - Raises `WorkerProtocolError` for malformed JSON, non-object JSON, missing/invalid `type`, unknown event types, or invalid event payloads.
 
 Boundary:
@@ -715,7 +720,7 @@ Boundary:
 - Does not read stderr, write logs, or manage stdin control messages.
 - Does not read or write SQLite.
 - Does not call Scheduler, RuntimeManager, GUI, FFmpeg, model backends, or adapters.
-- Does not validate whole event stream lifecycle yet.
+- Does not supervise process lifetime, heartbeat timeout, stdin control, or stderr capture.
 
 ### `atelier/workers/simulated.py`
 
@@ -805,15 +810,16 @@ Boundary:
 
 Responsibility:
 
-- Tests Phase A of `plan_worker_protocol_runner.md`.
+- Tests Phase A and Phase B of `plan_worker_protocol_runner.md`.
 - Confirms Worker events serialize to newline-terminated JSON Lines.
 - Confirms JSON Lines parse back into concrete event models, including `completed`, `log`, `heartbeat`, and `started`.
 - Confirms malformed JSON, non-object JSON, and unknown event types raise `WorkerProtocolError`.
+- Confirms valid Worker event streams start with `started`, use contiguous `seq`, and end with `completed` / `failed`.
+- Confirms invalid event streams fail when they miss `started`, skip `seq`, omit terminal event, or append events after terminal state.
 
 Boundary:
 
 - Does not test subprocess runner behavior.
-- Does not validate full event stream ordering or terminal lifecycle.
 - Does not execute real external tools or write worker artifacts.
 
 ### `tests/test_runtime_manager.py`
@@ -1028,7 +1034,7 @@ These packages are specified in docs but not fully implemented yet:
 - `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, priorities, concurrency, retry execution, and crash recovery are not implemented.
 - `gui/`: optional dependency entry helpers, formal development launch entry, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
-- `workers/protocol`: only single-event JSON Lines encode/decode exists; whole-stream validation, subprocess runner, cancel control, heartbeat timeout, and stderr capture are not implemented.
+- `workers/protocol`: single-event JSON Lines encode/decode and minimal whole-stream validation exist; subprocess runner, cancel control, heartbeat timeout, and stderr capture are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.
 - `release` implementation: update manifests, staging, rollback.

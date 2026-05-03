@@ -2,6 +2,39 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260504_003223 [执行 Worker Protocol Phase B]
+
+- Continued `docs/plan/plan_worker_protocol_runner.md` Phase B before implementation.
+- Extended `tests/test_worker_protocol.py` before implementation and confirmed the first failure was missing `parse_worker_event_stream`.
+- Added `parse_worker_event_stream()` in `atelier/workers/protocol.py`.
+- Worker event stream validation now enforces:
+  - first event must be `started`;
+  - `seq` must be contiguous from 0;
+  - stream must end with `completed` or `failed`;
+  - no events may appear after a terminal event.
+- Updated `README.md`, `docs/APP_CODE_MAP.md`, `docs/WORKER_PROTOCOL.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_worker_protocol_runner.md`.
+
+Current Phase B boundary:
+
+- Implemented: minimal stdout JSON Lines event stream lifecycle validation.
+- Not implemented: subprocess runner, stdin cancel/pause control, heartbeat timeout kill logic, stderr capture, real worker adapters, or real FFmpeg/model execution.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_worker_protocol
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_worker_protocol`: 9 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 50 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_124750 [执行 Worker Protocol Phase A]
 
 - Added `docs/plan/plan_worker_protocol_runner.md` before implementation.
