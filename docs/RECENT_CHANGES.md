@@ -2,6 +2,44 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_092651 [执行只读 PySide6 工作台 Phase F]
+
+- Extended `docs/plan/plan_readonly_pyside6_workbench.md` with Phase F before implementation.
+- Added `tests/test_gui_app_entry.py` before implementation and confirmed the first failure was missing `atelier.gui.app`.
+- Added `atelier/gui/app.py` as the formal development launch entry for the read-only workbench.
+- Launch entry now supports `.venv/Scripts/python -m atelier.gui.app`.
+- Added CLI options:
+  - `--workspace-root`
+  - `--data-root`
+  - `--no-restore-layout`
+- `build_launch_context()` opens SQLite, reads a `WorkbenchSnapshot`, creates `MainWindow`, and optionally restores workspace layout without entering the Qt event loop.
+- `main()` shows the window and enters the Qt event loop only at the launch boundary.
+- Updated `docs/APP_CODE_MAP.md` and `docs/plan/plan_readonly_pyside6_workbench.md`.
+
+Current Phase F boundary:
+
+- Implemented: formal development GUI entry, launch args, snapshot-backed window creation, optional layout restore, and offscreen smoke validation.
+- Not implemented: packaged application entry, app icon/resource bundling, single-instance behavior, tray/menu system, startup error UI, or real task execution from GUI.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_gui_app_entry
+.venv/Scripts/python -m unittest tests.test_gui_smoke
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_gui_app_entry`: 2 tests passed.
+- `.venv/Scripts/python -m unittest tests.test_gui_smoke`: 3 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 41 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+- offscreen `atelier.gui.app.main(["--workspace-root", ".", "--no-restore-layout"])` timer smoke: passed.
+
 ## 20260503_091411 [执行只读 PySide6 工作台 Phase E]
 
 - Extended `docs/plan/plan_readonly_pyside6_workbench.md` with Phase E before implementation.

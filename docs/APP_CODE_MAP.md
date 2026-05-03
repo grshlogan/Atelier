@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 58
+Code file count: 60
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 39 files
-- `tests/`: 18 files
+- `atelier/`: 40 files
+- `tests/`: 19 files
 
 ## Current Code Tree
 
@@ -34,6 +34,7 @@ atelier/
     __init__.py
   gui/
     __init__.py
+    app.py
     entry.py
     layout_store.py
     main_window.py
@@ -76,6 +77,7 @@ tests/
   test_app_paths.py
   test_app_services.py
   test_failure_recovery.py
+  test_gui_app_entry.py
   test_gui_optional_dependency.py
   test_gui_layout_store.py
   test_gui_smoke.py
@@ -325,6 +327,21 @@ Boundary:
 
 - Importing `atelier.gui` must not import PySide6 or start a Qt application.
 - Keep package initialization side-effect free.
+
+### `atelier/gui/app.py`
+
+Responsibility:
+
+- Provides the formal development launch entry for the read-only workbench.
+- Supports `.venv/Scripts/python -m atelier.gui.app`.
+- Parses `--workspace-root`, `--data-root`, and `--no-restore-layout`.
+- Opens the app database, reads a `WorkbenchSnapshot`, creates `MainWindow`, optionally restores workspace layout, and starts the Qt event loop from `main()`.
+
+Boundary:
+
+- Does not trigger Scheduler claim, worker execution, FFmpeg/model adapters, runtime install, plugin loading, or recovery actions.
+- Test helpers build the launch context without entering the Qt event loop.
+- Keeps launch orchestration separate from `MainWindow` rendering and `state_reader` queries.
 
 ### `atelier/gui/entry.py`
 
@@ -829,6 +846,20 @@ Boundary:
 - Does not test stale lock detection.
 - Does not test GUI failure panels.
 
+### `tests/test_gui_app_entry.py`
+
+Responsibility:
+
+- Tests Phase F of `plan_readonly_pyside6_workbench.md`.
+- Confirms launch argument parsing for `--workspace-root` and `--no-restore-layout`.
+- Confirms launch context construction creates a `MainWindow`, reads an empty snapshot, and does not enter the Qt event loop.
+
+Boundary:
+
+- Does not perform long-running GUI execution.
+- Does not run Scheduler, workers, FFmpeg/model adapters, or recovery actions.
+- Skips when PySide6 is not installed.
+
 ### `tests/test_gui_optional_dependency.py`
 
 Responsibility:
@@ -959,7 +990,7 @@ These packages are specified in docs but not fully implemented yet:
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
 - `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, priorities, concurrency, retry execution, and crash recovery are not implemented.
-- `gui/`: optional dependency entry helpers, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, and visual verification are not implemented yet.
+- `gui/`: optional dependency entry helpers, formal development launch entry, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.

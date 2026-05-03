@@ -31,8 +31,8 @@
 - 当前已有 `AppPaths`，开发期默认数据目录为 `.atelier/AtelierData/`。
 - 当前已有 app-level factory：`create_runtime_store(paths)` 和 `open_app_database(paths)`。
 - 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、package SHA-256 helper、SQLite schema 初始化和 simulated Worker。
-- 当前已有只读 `atelier/gui/` 工作台壳：optional dependency entry、`MainWindow`、dock workspace panel specs、workspace layout store、SQLite read-only `WorkbenchSnapshot`。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 39 tests passed。
+- 当前已有只读 `atelier/gui/` 工作台壳：optional dependency entry、formal development launch entry、`MainWindow`、dock workspace panel specs、workspace layout store、SQLite read-only `WorkbenchSnapshot`。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 41 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -246,7 +246,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：39 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：41 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -283,6 +283,7 @@ python -m mypy .
 - 2026-05-03：补充 Phase D stale release 防护测试：未过期 lock 和已释放 lock 不会被 stale release 路径释放。
 - 2026-05-03：完成 `plan_readonly_pyside6_workbench.md` Phase A-D。安装开发期 GUI extras，新增只读 PySide6 `MainWindow`、dock workspace panel specs 和 SQLite read-only state reader；GUI 只渲染状态，不启动 worker 或 Scheduler。
 - 2026-05-03：完成 `plan_readonly_pyside6_workbench.md` Phase E。新增最小 workspace layout persistence，`MainWindow` 可保存/恢复 Qt geometry/state，布局文件位于 managed `AtelierData/cache`。
+- 2026-05-03：完成 `plan_readonly_pyside6_workbench.md` Phase F。新增正式开发启动入口 `.venv/Scripts/python -m atelier.gui.app`，保持只读启动链，不触发 Scheduler 或 worker。
 
 ## Blockers（阻塞）
 

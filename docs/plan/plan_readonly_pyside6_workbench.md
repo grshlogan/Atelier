@@ -163,6 +163,29 @@ AppPaths / SQLite
 
 - 已完成。新增 `atelier/gui/layout_store.py` 与 `tests/test_gui_layout_store.py`，`MainWindow` 已接入 `save_workspace_layout()` / `restore_workspace_layout()`；layout 文件写入 `AppPaths.workspace_layouts_path`，不写入源码目录或 `.venv`。
 
+### Phase F：开发启动入口
+
+目标：
+
+- 提供正式开发启动入口，避免继续依赖临时 `python -c` 命令打开 GUI。
+
+完成信号：
+
+- 支持 `.venv/Scripts/python -m atelier.gui.app` 启动只读工作台。
+- 支持 `--workspace-root` 或 `--data-root` 指定路径。
+- 启动路径只读取 SQLite 状态并渲染，不触发 Scheduler claim、worker、FFmpeg/model 或 runtime 安装。
+- 可选恢复已保存 workspace layout。
+
+验证：
+
+- 新增测试：CLI 参数解析得到正确 `AppPaths`。
+- 新增测试：入口构建窗口时能读取 SQLite snapshot 并返回 `MainWindow`，不进入 event loop。
+- 手动 smoke：用 offscreen Qt 创建 `QApplication`，短暂运行 `atelier.gui.app.main()` 并通过 timer 退出。
+
+状态：
+
+- 已完成。新增 `atelier/gui/app.py` 与 `tests/test_gui_app_entry.py`，现在可以通过 `.venv/Scripts/python -m atelier.gui.app` 启动只读工作台；测试覆盖参数解析与不进入 event loop 的 launch context 构造。
+
 ## Child Plans（子计划）
 
 - 暂无。
@@ -192,12 +215,14 @@ GUI extras 验证（执行本计划时再启用）：
 
 - `.venv/Scripts/python -m pip install -e ".[gui]"`：passed，当前开发 `.venv` 已安装 PySide6 6.11.0。
 - `.venv/Scripts/python -m unittest tests.test_gui_optional_dependency`：2 tests passed。
+- `.venv/Scripts/python -m unittest tests.test_gui_app_entry`：2 tests passed。
 - `.venv/Scripts/python -m unittest tests.test_gui_layout_store`：2 tests passed。
-- `.venv/Scripts/python -m unittest tests.test_gui_smoke`：2 tests passed。
+- `.venv/Scripts/python -m unittest tests.test_gui_smoke`：3 tests passed。
 - `.venv/Scripts/python -m unittest tests.test_gui_state_reader`：1 test passed。
-- `.venv/Scripts/python -m unittest discover -s tests`：39 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：41 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
+- offscreen `atelier.gui.app.main(["--workspace-root", ".", "--no-restore-layout"])` timer smoke：passed。
 
 ## Progress / Decisions（进展 / 决策）
 
@@ -207,6 +232,7 @@ GUI extras 验证（执行本计划时再启用）：
 - 2026-05-03：完成 Phase C。新增 SQLite read-only `WorkbenchSnapshot` view model，Queue panel 能显示 task id、node type、status、resource device、event count 和 artifact path。
 - 2026-05-03：完成 Phase D 首版布局边界。窗口、workspace panel spec、state reader 已拆分，未把 UI、SQL、scheduler 和 worker 混进一个文件。
 - 2026-05-03：完成 Phase E。新增最小 workspace layout persistence，保存/恢复 Qt geometry/state bytes，持久化路径来自 `AppPaths.workspace_layouts_path`。
+- 2026-05-03：完成 Phase F。新增正式开发启动入口 `.venv/Scripts/python -m atelier.gui.app`，支持 `--workspace-root`、`--data-root` 和 `--no-restore-layout`。
 
 ## Blockers（阻塞）
 
