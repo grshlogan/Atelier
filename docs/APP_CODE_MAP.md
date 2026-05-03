@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 48
+Code file count: 49
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
 - `atelier/`: 34 files
-- `tests/`: 13 files
+- `tests/`: 14 files
 
 ## Current Code Tree
 
@@ -68,6 +68,7 @@ atelier/
 tests/
   test_app_paths.py
   test_app_services.py
+  test_failure_recovery.py
   test_package_integrity.py
   test_phase6_minimal_loop.py
   test_planning_simple.py
@@ -526,7 +527,10 @@ Responsibility:
 - `persist_planned_execution()` writes a project, workflow graph, job, execution plan, execution tasks, and task dependencies.
 - `record_worker_events()` writes structured worker events to `task_events`, records `ArtifactEvent` rows to `artifacts` / `task_artifacts`, updates terminal task status, and releases active task resource locks on terminal events.
 - Provides minimum queue helpers for Phase 7: `fetch_next_runnable_task()`, `mark_task_running()`, and `fetch_task_resource_binding()`.
-- Provides minimum resource lock helpers for the resource-lock plan: `ResourceLockRecord` and `fetch_active_resource_lock()`.
+- Provides minimum resource lock helpers for the resource-lock plan: `ResourceLockRecord`, `StaleResourceLockRecord`, `fetch_active_resource_lock()`, `fetch_stale_resource_locks()`, and `release_stale_resource_lock()`.
+- Provides minimum failure recovery helpers for the resource-lock plan: `FailureFacts`, `RecoveryOption`, `fetch_failure_facts()`, and `suggest_recovery_options()`.
+- Records `FailedEvent.partial_artifacts` as partial artifacts and links them through `task_artifacts`.
+- Persists terminal failure `error_code` and `error_message` onto `execution_tasks`.
 - Provides small query helpers for tests: `fetch_task_event_types()`, `fetch_artifact_paths()`, and `fetch_task_status()`.
 
 Boundary:
@@ -534,7 +538,7 @@ Boundary:
 - This is not the final repository layer.
 - Does not own SQLite connection lifecycle.
 - Does not implement migrations.
-- Does not implement durable queue claiming, retries, recovery actions, cache lookups, or scheduler locks.
+- Does not implement durable queue claiming, retry execution, crash recovery scans, cache lookups, or production scheduler locks.
 - Does not parse logs; it records structured worker events only.
 
 ### `atelier/storage/schema.sql`
@@ -698,15 +702,32 @@ Boundary:
 
 Responsibility:
 
-- Tests Phase A and Phase B of `plan_resource_locks_failure_recovery.md`.
+- Tests Phase A, Phase B, and Phase D of `plan_resource_locks_failure_recovery.md`.
 - Confirms `SimpleScheduler.claim_next_task()` creates an active `resource_locks` row.
 - Confirms the active lock records task id, device id, lock type, VRAM field, acquisition timestamp, and unreleased state.
 - Confirms completed, cancelled, and failed terminal worker events release active resource locks.
+- Confirms stale resource locks can be detected by `stale_after` and released without automatically changing task status.
+- Confirms stale release rejects locks that are not stale yet or were already released.
 
 Boundary:
 
-- Does not test stale lock detection.
 - Does not test failure recovery options.
+- Does not test crash recovery scans or automatic task recovery.
+
+### `tests/test_failure_recovery.py`
+
+Responsibility:
+
+- Tests Phase C of `plan_resource_locks_failure_recovery.md`.
+- Confirms recoverable failed tasks expose `error_code`, `error_message`, recoverable state, and partial artifact paths.
+- Confirms recoverable failed tasks receive retry and use-partial-artifacts recovery options.
+- Confirms non-recoverable failed tasks do not receive retry and instead expose read-only inspect/export options.
+
+Boundary:
+
+- Does not execute recovery actions.
+- Does not test stale lock detection.
+- Does not test GUI failure panels.
 
 ### `tests/test_runtime_health.py`
 
@@ -777,10 +798,10 @@ These packages are specified in docs but not fully implemented yet:
 
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
-- `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, resource locks, priorities, concurrency, and recovery are not implemented.
+- `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, priorities, concurrency, retry execution, and crash recovery are not implemented.
 - `gui/`: PySide6 application window, dock workspace, canvas, panels.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
-- `storage/repositories/`: only minimal Phase 6 persistence and Phase 7 queue helpers exist; durable repository APIs are not complete.
+- `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.
 - `release` implementation: update manifests, staging, rollback.
 - `plugins` implementation: manifest validation, contribution registry, isolation.

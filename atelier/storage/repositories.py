@@ -29,6 +29,35 @@ class ResourceLockRecord:
     released_at: str | None
 
 
+@dataclass(frozen=True)
+class StaleResourceLockRecord:
+    lock_id: str
+    task_id: str
+    device_id: str
+    lock_type: str
+    vram_mb: int | None
+    acquired_at: str
+    heartbeat_at: str | None
+    stale_after: str
+    released_at: str | None
+
+
+@dataclass(frozen=True)
+class FailureFacts:
+    task_id: str
+    error_code: str
+    error_message: str
+    recoverable: bool
+    partial_artifact_paths: list[str]
+
+
+@dataclass(frozen=True)
+class RecoveryOption:
+    action: str
+    label: str
+    reason: str
+
+
 def persist_planned_execution(
     connection: sqlite3.Connection,
     *,
@@ -104,6 +133,8 @@ def record_worker_events(connection: sqlite3.Connection, events: Iterable[Worker
         )
         if isinstance(event, ArtifactEvent):
             _record_artifact_event(connection, event)
+        if isinstance(event, FailedEvent):
+            _record_partial_artifact_refs(connection, event)
         if isinstance(event, CompletedEvent | FailedEvent):
             _update_task_from_terminal_event(connection, event)
     connection.commit()
@@ -133,6 +164,69 @@ def fetch_task_status(connection: sqlite3.Connection, task_id: str) -> str:
     if row is None:
         raise LookupError(f"missing execution task: {task_id}")
     return row[0]
+
+
+def fetch_failure_facts(connection: sqlite3.Connection, task_id: str) -> FailureFacts:
+    row = connection.execute(
+        """
+        SELECT status, error_code, error_message
+        FROM execution_tasks
+        WHERE task_id = ?
+        """,
+        (task_id,),
+    ).fetchone()
+    if row is None:
+        raise LookupError(f"missing execution task: {task_id}")
+    if row[0] not in ("failed", "cancelled"):
+        raise RuntimeError(f"task has no failure facts: {task_id}")
+
+    payload = _fetch_latest_failed_event_payload(connection, task_id)
+    return FailureFacts(
+        task_id=task_id,
+        error_code=row[1] or str(payload.get("error_code", "")),
+        error_message=row[2] or str(payload.get("message", "")),
+        recoverable=bool(payload.get("recoverable", False)),
+        partial_artifact_paths=_fetch_partial_artifact_paths(connection, task_id),
+    )
+
+
+def suggest_recovery_options(connection: sqlite3.Connection, task_id: str) -> list[RecoveryOption]:
+    facts = fetch_failure_facts(connection, task_id)
+    options = [
+        RecoveryOption(
+            action="inspect_failure",
+            label="Inspect failure",
+            reason="Review the persisted failure facts before choosing a recovery path.",
+        )
+    ]
+    if facts.recoverable:
+        options.insert(
+            0,
+            RecoveryOption(
+                action="retry",
+                label="Retry task",
+                reason="The worker marked this failure as recoverable.",
+            ),
+        )
+        if facts.partial_artifact_paths:
+            options.append(
+                RecoveryOption(
+                    action="use_partial_artifacts",
+                    label="Use partial artifacts",
+                    reason="Partial artifacts are available for a resume or downstream handoff.",
+                )
+            )
+        return options
+
+    if facts.partial_artifact_paths:
+        options.append(
+            RecoveryOption(
+                action="export_partial_artifacts",
+                label="Export partial artifacts",
+                reason="The failure is not retryable, but usable artifacts were preserved.",
+            )
+        )
+    return options
 
 
 def fetch_next_runnable_task(connection: sqlite3.Connection, plan_id: str) -> ExecutionTask | None:
@@ -225,6 +319,63 @@ def fetch_active_resource_lock(connection: sqlite3.Connection, task_id: str) -> 
     )
 
 
+def fetch_stale_resource_locks(
+    connection: sqlite3.Connection,
+    *,
+    now: str,
+) -> list[StaleResourceLockRecord]:
+    rows = connection.execute(
+        """
+        SELECT
+            lock_id, task_id, device_id, lock_type, vram_mb,
+            acquired_at, heartbeat_at, stale_after, released_at
+        FROM resource_locks
+        WHERE released_at IS NULL
+          AND stale_after IS NOT NULL
+          AND stale_after <= ?
+        ORDER BY stale_after, acquired_at, lock_id
+        """,
+        (now,),
+    ).fetchall()
+    return [
+        StaleResourceLockRecord(
+            lock_id=row[0],
+            task_id=row[1],
+            device_id=row[2],
+            lock_type=row[3],
+            vram_mb=row[4],
+            acquired_at=row[5],
+            heartbeat_at=row[6],
+            stale_after=row[7],
+            released_at=row[8],
+        )
+        for row in rows
+    ]
+
+
+def release_stale_resource_lock(
+    connection: sqlite3.Connection,
+    lock_id: str,
+    *,
+    released_at: str,
+) -> None:
+    cursor = connection.execute(
+        """
+        UPDATE resource_locks
+        SET released_at = ?,
+            heartbeat_at = ?
+        WHERE lock_id = ?
+          AND released_at IS NULL
+          AND stale_after IS NOT NULL
+          AND stale_after <= ?
+        """,
+        (released_at, released_at, lock_id, released_at),
+    )
+    if cursor.rowcount == 0:
+        raise RuntimeError(f"resource lock is not stale or already released: {lock_id}")
+    connection.commit()
+
+
 def _insert_execution_task(
     connection: sqlite3.Connection,
     plan_id: str,
@@ -306,24 +457,85 @@ def _record_artifact_event(connection: sqlite3.Connection, event: ArtifactEvent)
     )
 
 
+def _record_partial_artifact_refs(connection: sqlite3.Connection, event: FailedEvent) -> None:
+    for artifact in event.partial_artifacts:
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO artifacts
+                (artifact_id, task_id, artifact_type, path, metadata_json, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                artifact.artifact_id,
+                event.task_id,
+                artifact.artifact_type,
+                artifact.path,
+                _dump_json({"source": "failed_event"}),
+                "partial",
+                event.timestamp,
+            ),
+        )
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO task_artifacts
+                (link_id, task_id, artifact_id, role, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                f"{event.task_id}-{artifact.artifact_id}-partial",
+                event.task_id,
+                artifact.artifact_id,
+                "partial",
+                event.timestamp,
+            ),
+        )
+
+
 def _update_task_from_terminal_event(
     connection: sqlite3.Connection,
     event: CompletedEvent | FailedEvent,
 ) -> None:
     status = task_status_from_terminal_event(event)
-    connection.execute(
-        """
-        UPDATE execution_tasks
-        SET status = ?, completed_at = ?, updated_at = ?
-        WHERE task_id = ?
-        """,
-        (
-            status,
-            event.timestamp,
-            event.timestamp,
-            event.task_id,
-        ),
-    )
+    if isinstance(event, CompletedEvent):
+        connection.execute(
+            """
+            UPDATE execution_tasks
+            SET status = ?,
+                completed_at = ?,
+                updated_at = ?,
+                error_code = NULL,
+                error_message = NULL,
+                duration_seconds = ?
+            WHERE task_id = ?
+            """,
+            (
+                status,
+                event.timestamp,
+                event.timestamp,
+                event.duration_seconds,
+                event.task_id,
+            ),
+        )
+    else:
+        connection.execute(
+            """
+            UPDATE execution_tasks
+            SET status = ?,
+                completed_at = ?,
+                updated_at = ?,
+                error_code = ?,
+                error_message = ?
+            WHERE task_id = ?
+            """,
+            (
+                status,
+                event.timestamp,
+                event.timestamp,
+                event.error_code,
+                event.message,
+                event.task_id,
+            ),
+        )
     _release_resource_locks_for_task(connection, event.task_id, event.timestamp)
 
 
@@ -354,6 +566,38 @@ def _release_resource_locks_for_task(
         """,
         (timestamp, timestamp, task_id),
     )
+
+
+def _fetch_latest_failed_event_payload(connection: sqlite3.Connection, task_id: str) -> dict:
+    row = connection.execute(
+        """
+        SELECT payload
+        FROM task_events
+        WHERE task_id = ? AND event_type = 'failed'
+        ORDER BY seq DESC
+        LIMIT 1
+        """,
+        (task_id,),
+    ).fetchone()
+    if row is None:
+        return {}
+    return json.loads(row[0])
+
+
+def _fetch_partial_artifact_paths(connection: sqlite3.Connection, task_id: str) -> list[str]:
+    rows = connection.execute(
+        """
+        SELECT artifacts.path
+        FROM artifacts
+        JOIN task_artifacts
+          ON task_artifacts.artifact_id = artifacts.artifact_id
+        WHERE task_artifacts.task_id = ?
+          AND task_artifacts.role = 'partial'
+        ORDER BY artifacts.created_at, artifacts.artifact_id
+        """,
+        (task_id,),
+    ).fetchall()
+    return [row[0] for row in rows]
 
 
 def _dependencies_are_completed(connection: sqlite3.Connection, task_id: str) -> bool:

@@ -2,6 +2,69 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_080447 [执行 resource locks Phase D]
+
+- Extended `tests/test_resource_locks.py` before implementation and confirmed the first failure was the missing `fetch_stale_resource_locks` repository helper.
+- Added `StaleResourceLockRecord`, `fetch_stale_resource_locks()`, and `release_stale_resource_lock()` in `atelier/storage/repositories.py`.
+- Stale detection now returns unreleased locks whose `stale_after` timestamp is older than or equal to the supplied `now`.
+- Stale release marks the lock released by `lock_id` and leaves the task status unchanged, preserving crash recovery as a later explicit decision.
+- Added guard coverage confirming stale release rejects locks that are not stale yet or were already released.
+- Updated `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_resource_locks_failure_recovery.md`.
+
+Current Phase D boundary:
+
+- Implemented: stale resource lock detection, explicit stale lock release, and release guards for non-stale/already-released locks.
+- Not implemented: crash recovery scan orchestration, retry execution, worker subprocess supervision, or GUI recovery panels.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_resource_locks
+.venv/Scripts/python -m unittest tests.test_failure_recovery
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_resource_locks`: 6 tests passed.
+- `.venv/Scripts/python -m unittest tests.test_failure_recovery`: 2 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 31 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260503_075217 [执行 resource locks Phase C]
+
+- Added `tests/test_failure_recovery.py` before implementation and confirmed the first failure was the missing `fetch_failure_facts` repository helper.
+- Added `FailureFacts`, `RecoveryOption`, `fetch_failure_facts()`, and `suggest_recovery_options()` in `atelier/storage/repositories.py`.
+- Updated `record_worker_events()` so `FailedEvent.partial_artifacts` are persisted as `partial` artifacts linked through `task_artifacts`.
+- Updated terminal failure persistence so `execution_tasks.error_code` and `execution_tasks.error_message` are populated from `FailedEvent`.
+- Updated `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_resource_locks_failure_recovery.md`.
+
+Current Phase C boundary:
+
+- Implemented: failed task facts, partial artifact path query, recoverable retry/use-partial suggestions, and non-recoverable inspect/export suggestions.
+- Not implemented yet: stale lock detection, retry execution, GUI recovery panels, and real worker subprocess recovery.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_resource_locks
+.venv/Scripts/python -m unittest tests.test_failure_recovery
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_resource_locks`: 4 tests passed.
+- `.venv/Scripts/python -m unittest tests.test_failure_recovery`: 2 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 29 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_073409 [执行 resource locks Phase A]
 
 - Started execution of `docs/plan/plan_resource_locks_failure_recovery.md`.

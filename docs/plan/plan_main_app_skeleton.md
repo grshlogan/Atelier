@@ -30,7 +30,7 @@
 - 当前已有 `AppPaths`，开发期默认数据目录为 `.atelier/AtelierData/`。
 - 当前已有 app-level factory：`create_runtime_store(paths)` 和 `open_app_database(paths)`。
 - 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、package SHA-256 helper、SQLite schema 初始化和 simulated Worker。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 27 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 31 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -244,7 +244,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：27 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：31 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -276,6 +276,9 @@ python -m mypy .
 - 2026-05-03：完成 Phase 6 首版最小业务闭环：新增 minimal `workflow/`、simple `planning/`、SQLite repository helpers，并验证 `WorkflowGraph -> ExecutionPlan -> simulated Worker -> SQLite events/artifacts`。
 - 2026-05-03：完成 Phase 7 首版 queue / Scheduler claim：新增 `SimpleScheduler`，验证只 claim 依赖满足的 pending task，并持久化 `ResourceBinding` 和 `running` 状态。
 - 2026-05-03：按后续实施顺序拆出两个子计划：先 `resource_locks + failure recovery`，再只读 PySide6 工作台壳。
+- 2026-05-03：`plan_resource_locks_failure_recovery.md` 已执行到 Phase C：resource lock claim/release、failure facts、partial artifacts 和 recovery option 查询已具备首版测试覆盖。
+- 2026-05-03：`plan_resource_locks_failure_recovery.md` 已完成 Phase D：stale resource lock 可以被查询和释放，但不会自动改变 task status 或触发任务重跑。
+- 2026-05-03：补充 Phase D stale release 防护测试：未过期 lock 和已释放 lock 不会被 stale release 路径释放。
 
 ## Blockers（阻塞）
 

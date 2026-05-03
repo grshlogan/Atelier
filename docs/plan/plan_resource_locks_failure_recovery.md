@@ -44,7 +44,7 @@ runnable task
 - `record_worker_events()` 当前能写入 `task_events`、`artifacts`、`task_artifacts`，并在 terminal event 后更新 task status。
 - `FailedEvent` 已有 `error_code`、`message`、`recoverable`、`partial_artifacts` 字段。
 - `task_status_from_terminal_event()` 当前把 `CANCELLED` 映射为 `cancelled`，其他 failed terminal event 映射为 `failed`。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近记录为 23 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近记录为 31 tests passed。
 
 ## Constraints（约束）
 
@@ -114,6 +114,10 @@ runnable task
 
 - 新增测试：recoverable 与 non-recoverable failure 产生不同 recovery options。
 
+状态：
+
+- 已完成。新增 `tests/test_failure_recovery.py`，验证 recoverable failure 会暴露 retry / use partial artifacts 选项，non-recoverable failure 不暴露 retry 且提供 inspect/export partial artifacts 只读选项。
+
 ### Phase D：Stale Lock 最小检测
 
 目标：
@@ -129,6 +133,10 @@ runnable task
 验证：
 
 - 新增测试：构造过期 lock，可被检测并释放。
+
+状态：
+
+- 已完成。`tests/test_resource_locks.py` 已覆盖：构造超过 `stale_after` 且未 released 的 lock，能被 `fetch_stale_resource_locks()` 检测，并能通过 `release_stale_resource_lock()` 释放；释放 stale lock 不自动改变 task status；未过期 lock 和已释放 lock 不会被 stale release 路径释放。
 
 ## Child Plans（子计划）
 
@@ -163,6 +171,11 @@ git diff --check
 - 2026-05-03：Phase A 验证通过：`tests.test_resource_locks` passed，全量 unittest 为 24 tests passed。
 - 2026-05-03：完成 Phase B。`record_worker_events()` 在 terminal event 路径更新 task status 后释放 active resource locks，completed / cancelled / failed 均已覆盖。
 - 2026-05-03：Phase B 验证通过：`tests.test_resource_locks` 为 4 tests passed，全量 unittest 为 27 tests passed。
+- 2026-05-03：完成 Phase C。新增 `FailureFacts`、`RecoveryOption`、`fetch_failure_facts()`、`suggest_recovery_options()`，并把 `FailedEvent.partial_artifacts` 以 `partial` 角色写入 `artifacts` / `task_artifacts`。
+- 2026-05-03：Phase C 验证通过：`tests.test_failure_recovery` 为 2 tests passed，全量 unittest 为 29 tests passed。
+- 2026-05-03：完成 Phase D。新增 `StaleResourceLockRecord`、`fetch_stale_resource_locks()` 和 `release_stale_resource_lock()`，只处理 stale lock 检测/释放，不自动重跑任务或改变 task status。
+- 2026-05-03：Phase D 验证通过：`tests.test_resource_locks` 为 5 tests passed，全量 unittest 为 30 tests passed。
+- 2026-05-03：Phase D 收尾补丁：补充 stale release 防护测试，确认未过期 lock 与已释放 lock 会被拒绝释放；`tests.test_resource_locks` 为 6 tests passed，全量 unittest 为 31 tests passed。
 
 ## Blockers（阻塞）
 
