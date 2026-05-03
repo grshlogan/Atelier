@@ -2,6 +2,41 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260503_124750 [执行 Worker Protocol Phase A]
+
+- Added `docs/plan/plan_worker_protocol_runner.md` before implementation.
+- Added `tests/test_worker_protocol.py` before implementation and confirmed the first failure was missing `HeartbeatEvent` / `LogEvent` from `atelier.domain.worker_event`.
+- Added `LogEvent` and `HeartbeatEvent` to `atelier/domain/worker_event.py`.
+- Added `atelier/workers/protocol.py` with:
+  - `format_worker_event_json_line()`
+  - `parse_worker_event_json_line()`
+  - `WorkerProtocolError`
+- Worker protocol helpers now serialize typed worker events to newline-terminated JSON Lines and parse single JSON Lines back to concrete event models by `type`.
+- Malformed JSON, non-object JSON, missing/invalid event type, unknown event type, and invalid event payloads fail explicitly.
+- Updated `docs/WORKER_PROTOCOL.md` from “planning / not implemented” to “partially implemented”.
+- Updated `README.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md`.
+
+Current Phase A boundary:
+
+- Implemented: single-event Worker JSON Lines encode/decode, `log` / `heartbeat` event models, and protocol error boundary.
+- Not implemented: whole-stream lifecycle validation, subprocess runner, stdin cancel/pause control, heartbeat timeout kill logic, stderr capture, real worker adapters, or real FFmpeg/model execution.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_worker_protocol
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_worker_protocol`: 4 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 45 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260503_092651 [执行只读 PySide6 工作台 Phase F]
 
 - Extended `docs/plan/plan_readonly_pyside6_workbench.md` with Phase F before implementation.

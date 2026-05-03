@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 60
+Code file count: 62
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 40 files
-- `tests/`: 19 files
+- `atelier/`: 41 files
+- `tests/`: 20 files
 
 ## Current Code Tree
 
@@ -68,6 +68,7 @@ atelier/
     schema.sql
   workers/
     __init__.py
+    protocol.py
     simulated.py
   workflow/
     __init__.py
@@ -93,6 +94,7 @@ tests/
   test_simulated_worker.py
   test_storage_schema.py
   test_worker_events.py
+  test_worker_protocol.py
 ```
 
 ## Root Project Files
@@ -289,6 +291,8 @@ Responsibility:
 - Defines structured worker event models:
   - `StartedEvent`
   - `ProgressEvent`
+  - `LogEvent`
+  - `HeartbeatEvent`
   - `ArtifactEvent`
   - `CompletedEvent`
   - `FailedEvent`
@@ -696,6 +700,23 @@ Boundary:
 
 - No worker process startup at import time.
 
+### `atelier/workers/protocol.py`
+
+Responsibility:
+
+- Defines the current Worker JSON Lines encode/decode boundary.
+- Provides `format_worker_event_json_line()` for serializing typed worker events as single-line JSON.
+- Provides `parse_worker_event_json_line()` for validating one Worker stdout JSON line into a concrete event model.
+- Raises `WorkerProtocolError` for malformed JSON, non-object JSON, missing/invalid `type`, unknown event types, or invalid event payloads.
+
+Boundary:
+
+- Does not spawn subprocesses.
+- Does not read stderr, write logs, or manage stdin control messages.
+- Does not read or write SQLite.
+- Does not call Scheduler, RuntimeManager, GUI, FFmpeg, model backends, or adapters.
+- Does not validate whole event stream lifecycle yet.
+
 ### `atelier/workers/simulated.py`
 
 Responsibility:
@@ -779,6 +800,21 @@ Responsibility:
 Boundary:
 
 - Does not test storage persistence or worker process execution.
+
+### `tests/test_worker_protocol.py`
+
+Responsibility:
+
+- Tests Phase A of `plan_worker_protocol_runner.md`.
+- Confirms Worker events serialize to newline-terminated JSON Lines.
+- Confirms JSON Lines parse back into concrete event models, including `completed`, `log`, `heartbeat`, and `started`.
+- Confirms malformed JSON, non-object JSON, and unknown event types raise `WorkerProtocolError`.
+
+Boundary:
+
+- Does not test subprocess runner behavior.
+- Does not validate full event stream ordering or terminal lifecycle.
+- Does not execute real external tools or write worker artifacts.
 
 ### `tests/test_runtime_manager.py`
 
@@ -992,6 +1028,7 @@ These packages are specified in docs but not fully implemented yet:
 - `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, priorities, concurrency, retry execution, and crash recovery are not implemented.
 - `gui/`: optional dependency entry helpers, formal development launch entry, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
+- `workers/protocol`: only single-event JSON Lines encode/decode exists; whole-stream validation, subprocess runner, cancel control, heartbeat timeout, and stderr capture are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.
 - `release` implementation: update manifests, staging, rollback.

@@ -29,6 +29,19 @@ class ProgressEvent(WorkerEvent):
     eta_seconds: float | None = None
 
 
+class LogEvent(WorkerEvent):
+    type: Literal["log"] = "log"
+    level: Literal["debug", "info", "warning", "error"]
+    message: str
+
+
+class HeartbeatEvent(WorkerEvent):
+    type: Literal["heartbeat"] = "heartbeat"
+    uptime_seconds: float
+    memory_mb: float
+    gpu_memory_mb: float | None = None
+
+
 class ArtifactRef(BaseModel):
     artifact_id: str
     artifact_type: str

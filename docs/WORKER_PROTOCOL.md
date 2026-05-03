@@ -1,6 +1,6 @@
 # Atelier Worker Protocol
 
-> 状态：规划中，尚未实现。本文档定义 Worker 进程与 Scheduler 之间的通信协议——启动方式、消息格式、生命周期管理、artifact 交接和错误处理。
+> 状态：部分实现。已实现 `WorkerEvent` JSON Lines 编解码、`log` / `heartbeat` 事件模型和协议错误边界；subprocess runner、stdin 控制通道、heartbeat timeout、stderr 落盘和真实 adapters 尚未实现。
 
 ## 1. 概述
 
