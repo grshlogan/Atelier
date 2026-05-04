@@ -21,6 +21,7 @@ from atelier.storage.repositories import (
     persist_planned_execution,
 )
 from atelier.workflow.graph import WorkflowGraph, WorkflowNode
+from atelier.workers.runner import WorkerLifecycleConfig
 
 
 class SchedulerWorkerRunnerIntegrationTests(unittest.TestCase):
@@ -134,6 +135,107 @@ class SchedulerWorkerRunnerIntegrationTests(unittest.TestCase):
                 )
                 self.assertEqual(task_file_payload["resource_binding"]["device_id"], "cpu")
                 self.assertEqual(task_file_payload["status"], "running")
+            finally:
+                connection.close()
+
+    def test_dispatch_claimed_task_can_use_lifecycle_runner_and_stderr_log_path(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = AppPaths.for_development(root)
+            connection = open_app_database(paths)
+            try:
+                graph = WorkflowGraph(
+                    graph_id="graph-dispatch-lifecycle-completed",
+                    name="Dispatch Lifecycle Completed",
+                    nodes=[
+                        WorkflowNode(
+                            node_id="node-lifecycle-completed",
+                            node_type="simulate.lifecycle_completed",
+                            resource_request=ResourceRequest(device_type="cpu"),
+                            runtime_request=RuntimeRequest(components=["simulated"]),
+                        )
+                    ],
+                )
+                plan = build_linear_execution_plan(graph, plan_id="plan-dispatch-lifecycle-completed")
+                persist_planned_execution(
+                    connection,
+                    project_id="project-dispatch-lifecycle-completed",
+                    project_name="Dispatch Lifecycle Completed Project",
+                    project_root=str(paths.data_root),
+                    job_id="job-dispatch-lifecycle-completed",
+                    job_name="Dispatch Lifecycle Completed Job",
+                    graph=graph,
+                    plan=plan,
+                )
+                scheduler = SimpleScheduler(
+                    HardwareSnapshot(cpu_cores=4, ram_total_mb=8192, ram_free_mb=4096)
+                )
+                claimed = scheduler.claim_next_task(connection, plan.plan_id)
+                self.assertIsNotNone(claimed)
+                assert claimed is not None
+
+                script = root / "lifecycle_completed_worker.py"
+                script.write_text(
+                    textwrap.dedent(
+                        """
+                        import argparse
+                        import json
+                        import sys
+                        from pathlib import Path
+
+                        parser = argparse.ArgumentParser()
+                        parser.add_argument("--task-file", required=True)
+                        args = parser.parse_args()
+                        payload = json.loads(Path(args.task_file).read_text(encoding="utf-8"))
+                        task_id = payload["task_id"]
+                        sys.stderr.write("lifecycle dispatch stderr\\n")
+                        print(json.dumps({
+                            "type": "started",
+                            "task_id": task_id,
+                            "timestamp": "2026-05-04T00:00:00Z",
+                            "seq": 0,
+                            "worker_pid": 4321,
+                            "worker_version": "stub",
+                            "node_type": payload["node_type"],
+                        }), flush=True)
+                        print(json.dumps({
+                            "type": "completed",
+                            "task_id": task_id,
+                            "timestamp": "2026-05-04T00:00:01Z",
+                            "seq": 1,
+                            "artifacts": [],
+                            "duration_seconds": 1.0,
+                        }), flush=True)
+                        """
+                    ),
+                    encoding="utf-8",
+                )
+                stderr_log_path = root / "logs" / "dispatch.stderr.log"
+
+                result = dispatch_claimed_task(
+                    connection,
+                    claimed_task=claimed,
+                    work_root=root / "worker-work",
+                    command_args=(sys.executable, "-u", str(script)),
+                    lifecycle_config=WorkerLifecycleConfig(
+                        startup_timeout_seconds=1.0,
+                        heartbeat_timeout_seconds=1.0,
+                    ),
+                    stderr_log_path=stderr_log_path,
+                )
+
+                stderr_log = stderr_log_path.read_text(encoding="utf-8")
+
+                self.assertEqual(result.task_status, "completed")
+                self.assertEqual([event.type for event in result.events], ["started", "completed"])
+                self.assertEqual(result.stderr_log_path, stderr_log_path)
+                self.assertFalse(result.timed_out)
+                self.assertFalse(result.cancelled)
+                self.assertFalse(result.killed)
+                self.assertIn("lifecycle dispatch stderr", result.stderr)
+                self.assertIn("lifecycle dispatch stderr", stderr_log)
+                with self.assertRaisesRegex(LookupError, "missing active resource lock"):
+                    fetch_active_resource_lock(connection, claimed.task.task_id)
             finally:
                 connection.close()
 

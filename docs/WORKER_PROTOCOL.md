@@ -1,6 +1,6 @@
 # Atelier Worker Protocol
 
-> 状态：部分实现。已实现 `WorkerEvent` JSON Lines 编解码、`ExecutionTask -> task.json -> WorkerProcessSpec` 边界、最小 stdout event stream validation、最小 subprocess runner 边界、`log` / `heartbeat` 事件模型和协议错误边界；stdin 控制通道、heartbeat timeout、stderr 落盘、生产级 worker lifecycle 和真实 adapters 尚未实现。
+> 状态：部分实现。已实现 `WorkerEvent` JSON Lines 编解码、`ExecutionTask -> task.json -> WorkerProcessSpec` 边界、最小 stdout event stream validation、最小 subprocess runner 边界、lifecycle runner 接口形状、增量 stdout 读取、startup/heartbeat timeout 转 `TIMEOUT` 失败事件、最小 stdin `cancel` 控制、timeout/cancel/protocol-error terminate-kill 升级、可选 stderr 文件落盘、`log` / `heartbeat` 事件模型和协议错误边界；pause、GUI/Scheduler 取消接线、adapter 级取消、生产级 worker lifecycle 行为和真实 adapters 尚未实现。
 
 ## 1. 概述
 

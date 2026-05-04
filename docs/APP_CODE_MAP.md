@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 68
+Code file count: 69
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
 - `atelier/`: 44 files
-- `tests/`: 23 files
+- `tests/`: 24 files
 
 Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
 
@@ -113,6 +113,7 @@ tests/
   test_simulated_worker.py
   test_storage_schema.py
   test_worker_events.py
+  test_worker_lifecycle.py
   test_worker_protocol.py
   test_worker_runner.py
   test_worker_task_file.py
@@ -642,7 +643,8 @@ Responsibility:
 
 - Defines `WorkerDispatchResult`.
 - Provides `dispatch_claimed_task()` for the first narrow Scheduler-to-runner integration seam.
-- Accepts an already claimed `ClaimedTask`, writes `task.json` through `build_worker_process_spec()`, runs the supplied stub worker command through `run_worker_process()`, persists returned Worker events through `record_worker_events()`, and returns task id, parsed events, stderr, return code, and final SQLite task status.
+- Accepts an already claimed `ClaimedTask`, writes `task.json` through `build_worker_process_spec()`, runs the supplied stub worker command through `run_worker_process()` or `run_worker_lifecycle()`, persists returned Worker events through `record_worker_events()`, and returns task id, parsed events, stderr, return code, final SQLite task status, and optional lifecycle facts.
+- Supports optional `lifecycle_config`, `cancel_event`, and `stderr_log_path` parameters for callers that need lifecycle timeout/cancel/log behavior.
 - Copies the Scheduler-provided `ResourceBinding` onto the task payload before writing `task.json`.
 - Converts `WorkerProcessProtocolError` into a persisted `FailedEvent(error_code="INTERNAL")` so malformed worker stdout does not leave a task running or a resource lock active.
 
@@ -650,7 +652,7 @@ Boundary:
 
 - Does not claim tasks; callers must use Scheduler first.
 - Does not choose runtime/model paths, command args, or hardware resources.
-- Does not implement multi-worker concurrency, priority scheduling, retry execution, protocol-error retry/recovery actions, timeout, cancel, kill escalation, stderr file persistence, or real FFmpeg/model adapters.
+- Does not implement multi-worker concurrency, priority scheduling, retry execution, protocol-error retry/recovery actions, automatic timeout/cancel policy selection, or real FFmpeg/model adapters.
 - Does not let `workers.runner` write SQLite; persistence remains in storage repositories.
 
 ### `atelier/scheduler/simple.py`
@@ -783,19 +785,25 @@ Responsibility:
 - Defines the current minimum subprocess runner boundary:
   - `WorkerProcessSpec`
   - `WorkerProcessResult`
+  - `WorkerLifecycleConfig`
+  - `WorkerLifecycleResult`
   - `WorkerProcessProtocolError`
   - `run_worker_process()`
+  - `run_worker_lifecycle()`
 - Starts a typed command with `--task-file <path>` and `cwd=work_dir`.
 - Merges supplied environment variables into the child process environment.
 - Captures stdout and validates it through `parse_worker_event_stream()`.
 - Captures stderr as text and returns the process exit code.
 - Raises `WorkerProcessProtocolError`, a `WorkerProtocolError` subclass that preserves stderr and return code, when stdout violates the Worker JSON Lines protocol.
+- Provides the lifecycle runner interface shape: configurable startup/heartbeat/terminate/cancel timeouts and a result object that can express stderr log path, timed out, cancelled, and killed facts.
+- `run_worker_lifecycle()` now starts the worker with `subprocess.Popen()`, reads stdout JSON Lines incrementally, treats startup/heartbeat silence as `FailedEvent(error_code="TIMEOUT")`, sends `{"type":"cancel"}` over stdin when the caller-provided cancel event is set, terminates or kills the worker when timeout/cancel handling requires it, and can write stderr to a caller-provided log path.
+- On malformed stdout or event-order protocol errors, `run_worker_lifecycle()` terminates or kills the worker before raising `WorkerProcessProtocolError`, preserving stderr/returncode and writing the optional stderr log path.
 
 Boundary:
 
 - Does not choose runtime paths, model paths, command args, or hardware resources.
 - Does not call Scheduler, RuntimeManager, GUI, SQLite, FFmpeg, model backends, or adapters.
-- Does not implement stdin cancel/pause, heartbeat timeout, process kill escalation, stderr log file persistence, retry, or recovery.
+- Does not implement pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, retry, or recovery.
 - Does not treat nonzero exit code as a protocol error when the Worker emitted a valid terminal event stream.
 
 ### `atelier/workers/task_file.py`
@@ -931,6 +939,22 @@ Boundary:
 - Does not run real FFmpeg/model adapters.
 - Does not test Scheduler integration, RuntimeManager path resolution, stdin cancel, heartbeat timeout, kill escalation, or stderr file persistence.
 
+### `tests/test_worker_lifecycle.py`
+
+Responsibility:
+
+- Tests Phase A of `plan_worker_lifecycle_controls.md`.
+- Verifies `run_worker_lifecycle()` exposes a lifecycle result shape while preserving existing stub worker execution behavior.
+- Confirms the Phase A result can report events, stderr text, return code, stderr log path, timed out, cancelled, and killed facts.
+- Tests Phase B silent worker timeout and heartbeat keep-alive behavior.
+- Tests Phase C cancel-aware worker handling and termination of a worker that ignores cancel.
+- Tests Phase D stderr log file persistence while preserving stdout JSON Lines as the event source.
+- Tests Phase F protocol-error process termination and stderr log persistence.
+
+Boundary:
+
+- Does not test pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, Scheduler dispatch, or SQLite persistence.
+
 ### `tests/test_worker_task_file.py`
 
 Responsibility:
@@ -984,14 +1008,16 @@ Boundary:
 Responsibility:
 
 - Tests Phase A, Phase B, and Phase C of `plan_scheduler_worker_runner_integration.md`.
+- Tests Phase A of `plan_scheduler_lifecycle_dispatch_integration.md`.
 - Confirms `dispatch_claimed_task()` accepts an already claimed task, writes a `task.json` with the Scheduler-provided resource binding, runs a temporary stub worker command, records returned events, preserves stderr/return code in the dispatch result, and reports the final SQLite task status.
+- Confirms `dispatch_claimed_task()` can use lifecycle runner options and return stderr log path plus lifecycle flags on a completed stub worker path.
 - Confirms a completed stub worker path records `started -> artifact -> completed` events, writes artifact rows, links `task_artifacts`, marks the task completed, and releases the active resource lock.
 - Confirms a valid failed worker stream records failure facts, marks the task failed, preserves stderr/return code, and releases the active resource lock.
 - Confirms malformed stdout is converted to an internal failed event instead of escaping as an unpersisted protocol exception.
 
 Boundary:
 
-- Does not test retry/recovery actions, timeout, cancel, stderr file persistence, real adapters, or GUI execution.
+- Does not test retry/recovery actions, timeout/cancel dispatch persistence, real adapters, or GUI execution.
 
 ### `tests/test_resource_locks.py`
 
@@ -1171,7 +1197,7 @@ These packages are specified in docs but not fully implemented yet:
 - `gui/`: optional dependency entry helpers, formal development launch entry, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
 - `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; only the first claimed-task dispatch seam uses it from Scheduler, while production worker lifecycle is not implemented.
-- `workers/runner`: minimum subprocess boundary exists; production worker lifecycle, stdin cancel control, heartbeat timeout, kill escalation, stderr file persistence, and real adapters are not implemented.
+- `workers/runner`: minimum subprocess boundary plus lifecycle interface, incremental stdout reading, startup/heartbeat timeout handling, timeout/cancel/protocol-error terminate-kill behavior, minimal stdin cancel control, and optional stderr log file persistence exist; pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, full production worker lifecycle behavior, and real adapters are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.
 - `release` implementation: update manifests, staging, rollback.

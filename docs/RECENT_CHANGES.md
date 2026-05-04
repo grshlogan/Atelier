@@ -2,6 +2,180 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260504_057000 [进入 Scheduler Lifecycle Dispatch Integration Phase A]
+
+- Added `docs/plan/plan_scheduler_lifecycle_dispatch_integration.md` as the next plan after worker lifecycle controls.
+- Extended `tests/test_scheduler_worker_runner_integration.py` before implementation and confirmed the first failure was `dispatch_claimed_task()` not accepting `lifecycle_config`.
+- Updated `atelier/scheduler/dispatch.py` so `dispatch_claimed_task()`:
+  - preserves the existing minimum runner path when lifecycle options are not supplied;
+  - uses `run_worker_lifecycle()` when `lifecycle_config`, `cancel_event`, or `stderr_log_path` is supplied;
+  - returns `stderr_log_path`, `timed_out`, `cancelled`, and `killed` on `WorkerDispatchResult`.
+- Updated `docs/APP_CODE_MAP.md` and `docs/plan/plan_main_app_skeleton.md`.
+
+Current Phase A boundary:
+
+- Implemented: completed stub worker dispatch path can opt into lifecycle runner and stderr log path.
+- Not implemented: timeout dispatch persistence, cancel dispatch persistence, lifecycle protocol-error dispatch persistence, automatic dispatch loop, GUI cancellation, retry/recovery actions, or real adapters.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_scheduler_worker_runner_integration
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `tests.test_scheduler_worker_runner_integration`: passed after the expected initial missing-parameter failure.
+- `tests.test_scheduler_worker_runner_integration tests.test_worker_lifecycle tests.test_worker_runner`: 15 tests passed.
+- `.venv\Scripts\python -m unittest discover -s tests`: 67 tests passed.
+- `.venv\Scripts\python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_056500 [补充 Worker Lifecycle Protocol Error 收束]
+
+- Added `docs/plan/plan_worker_lifecycle_controls.md` Phase F after reviewing the completed lifecycle plan.
+- Extended `tests/test_worker_lifecycle.py` before implementation and confirmed the first failure was the protocol-error path not writing stderr log and waiting for the bad worker to exit naturally.
+- Updated `run_worker_lifecycle()` so malformed stdout or event-order protocol errors:
+  - terminate the offending worker;
+  - kill it if it ignores terminate within `terminate_grace_seconds`;
+  - preserve stderr and return code on `WorkerProcessProtocolError`;
+  - write stderr to the caller-provided `stderr_log_path`.
+- Updated `docs/WORKER_PROTOCOL.md`, `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_worker_lifecycle_controls.md`.
+
+Current boundary:
+
+- Implemented: protocol-error worker termination and stderr log preservation for lifecycle runner.
+- Not implemented: Scheduler dispatch integration with lifecycle runner, GUI cancellation, pause, adapter-specific cancellation, process tree governance, retry/recovery action execution, or real adapters.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_worker_lifecycle
+.venv\Scripts\python -m unittest tests.test_worker_lifecycle tests.test_worker_runner
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `tests.test_worker_lifecycle`: 7 tests passed after the expected initial protocol-error stderr-log failure.
+- `tests.test_worker_lifecycle tests.test_worker_runner`: 10 tests passed.
+- `.venv\Scripts\python -m unittest discover -s tests`: 66 tests passed.
+- `.venv\Scripts\python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_056000 [执行 Worker Lifecycle Controls Phase C-D-E]
+
+- Continued `docs/plan/plan_worker_lifecycle_controls.md` through Phase C, Phase D, and Phase E after Phase B passed.
+- Extended `tests/test_worker_lifecycle.py` before implementation and confirmed the first Phase C failure was `run_worker_lifecycle()` missing `cancel_event`.
+- Added minimum cancel control to `run_worker_lifecycle()`:
+  - accepts a caller-provided `threading.Event`;
+  - sends `{"type":"cancel"}` over worker stdin when cancellation is requested;
+  - treats a cancel-aware `FailedEvent(error_code="CANCELLED")` as cancelled;
+  - terminates and, if needed, kills workers that ignore cancel beyond `cancel_grace_seconds`;
+  - returns structured `CANCELLED` failure facts for forced cancellation.
+- Extended `tests/test_worker_lifecycle.py` before implementation for Phase D and confirmed `stderr_log_path` was missing.
+- Added optional stderr log persistence through `run_worker_lifecycle(stderr_log_path=...)`; stderr remains available in the result string and is written to the caller-provided log path.
+- Updated `docs/WORKER_PROTOCOL.md`, `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_worker_lifecycle_controls.md`.
+
+Current boundary:
+
+- Implemented: lifecycle runner interface, incremental stdout, startup/heartbeat timeout, structured `TIMEOUT`, minimum stdin cancel, cancel grace terminate/kill behavior, structured `CANCELLED`, and optional stderr file persistence.
+- Not implemented: GUI/Scheduler cancellation wiring, pause, adapter-specific cancellation, process-tree/job-object governance, retry/recovery action execution, log viewer UI, or real FFmpeg/model adapters.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_worker_lifecycle
+.venv\Scripts\python -m unittest tests.test_worker_lifecycle tests.test_worker_runner
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `tests.test_worker_lifecycle`: 6 tests passed after the expected Phase C/D missing-interface failures.
+- `tests.test_worker_lifecycle tests.test_worker_runner`: 9 tests passed.
+- `.venv\Scripts\python -m unittest discover -s tests`: 65 tests passed.
+- `.venv\Scripts\python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_055500 [执行 Worker Lifecycle Controls Phase B]
+
+- Continued `docs/plan/plan_worker_lifecycle_controls.md` Phase B after Phase A passed.
+- Extended `tests/test_worker_lifecycle.py` before implementation and confirmed the first failure was silent worker timeout still escaping as `WorkerProcessProtocolError` for an empty stdout event stream.
+- Reworked `run_worker_lifecycle()` in `atelier/workers/runner.py` to:
+  - start workers with `subprocess.Popen()`;
+  - read stdout JSON Lines incrementally;
+  - enforce startup/heartbeat deadlines from `WorkerLifecycleConfig`;
+  - convert silent timeout into `FailedEvent(error_code="TIMEOUT", recoverable=True)`;
+  - terminate the timed-out worker and kill it if it does not exit within `terminate_grace_seconds`;
+  - close stdin/stdout/stderr pipes cleanly.
+- Added heartbeat keep-alive coverage so normal heartbeat output refreshes the deadline and does not become a timeout.
+- Updated `docs/WORKER_PROTOCOL.md`, `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_worker_lifecycle_controls.md`.
+
+Current Phase B boundary:
+
+- Implemented: incremental stdout reading, startup/heartbeat timeout handling, structured `TIMEOUT` failure event, timeout terminate/kill behavior, and heartbeat keep-alive coverage.
+- Not implemented: stdin cancel control, user-initiated cancellation semantics, stderr file persistence, Scheduler dispatch integration, GUI cancellation, or real adapters.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_worker_lifecycle
+.venv\Scripts\python -m unittest tests.test_worker_lifecycle tests.test_worker_runner
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `tests.test_worker_lifecycle`: 3 tests passed after the expected initial timeout failure.
+- `tests.test_worker_lifecycle tests.test_worker_runner`: 6 tests passed.
+- `.venv\Scripts\python -m unittest discover -s tests`: 62 tests passed.
+- `.venv\Scripts\python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_055000 [执行 Worker Lifecycle Controls Phase A]
+
+- Continued `docs/plan/plan_worker_lifecycle_controls.md` after `plan_scheduler_worker_runner_integration.md` was completed.
+- Added `tests/test_worker_lifecycle.py` before implementation and confirmed the first failure was missing `WorkerLifecycleConfig` from `atelier.workers.runner`.
+- Added Phase A lifecycle runner interface shape in `atelier/workers/runner.py`:
+  - `WorkerLifecycleConfig`
+  - `WorkerLifecycleResult`
+  - `run_worker_lifecycle()`
+- `run_worker_lifecycle()` currently preserves existing minimum runner behavior by delegating to `run_worker_process()` and returning lifecycle facts: events, stderr, return code, optional stderr log path, timed_out, cancelled, and killed.
+- Updated `docs/WORKER_PROTOCOL.md`, `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_worker_lifecycle_controls.md`.
+
+Current Phase A boundary:
+
+- Implemented: lifecycle configuration/result API shape and compatibility entry point over the existing stub subprocess runner.
+- Not implemented: incremental stdout reading, startup timeout enforcement, heartbeat timeout, stdin cancel control, terminate/kill escalation, stderr file persistence, Scheduler dispatch integration, GUI cancellation, or real adapters.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_worker_lifecycle
+.venv\Scripts\python -m unittest tests.test_worker_lifecycle tests.test_worker_runner
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `tests.test_worker_lifecycle`: passed after the expected initial missing-interface failure.
+- `tests.test_worker_lifecycle tests.test_worker_runner`: 4 tests passed.
+- `.venv\Scripts\python -m unittest discover -s tests`: 60 tests passed.
+- `.venv\Scripts\python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260504_054000 [补充 Atelier 图标库事实]
 
 - Confirmed `atelier/assets/` is the current Atelier UI icon library.
