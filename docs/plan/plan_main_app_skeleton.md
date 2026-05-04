@@ -17,7 +17,7 @@
 - 对齐首版 specs，确保 artifacts、cache hit、cancel、resource binding、runtime ownership、release/update、plugin、workspace、i18n、hardware scheduling、failure recovery、security/privacy 等基础契约不互相冲突。
 - 建立 Python 包骨架、测试基线、SQLite schema 初始化、runtime manifest 管理、runtime health check、package hash 校验、开发 `.venv` 和 `AppPaths` 路径事实源。
 - 保持根目录清爽：根目录文档只保留 `README.md`、`AGENTS.md`、`DESIGN.md`；计划与阶段文档放在 `docs/plan/`。
-- 当前阶段已实现只读 PySide6 工作台壳，并开始实现 Worker JSON Lines 协议边界、事件流验证、`ExecutionTask -> task.json -> WorkerProcessSpec` 边界和最小 subprocess runner 边界；仍不实现真实编辑型 GUI、真实 Scheduler、生产级 worker lifecycle runner、真实 FFmpeg/model adapters、打包发布链或插件加载链。
+- 当前阶段已实现只读 PySide6 工作台壳，并开始实现 Worker JSON Lines 协议边界、事件流验证、`ExecutionTask -> task.json -> WorkerProcessSpec` 边界、最小 subprocess runner 边界和窄的 claimed-task dispatch seam；仍不实现真实编辑型 GUI、生产级 Scheduler、生产级 worker lifecycle runner、真实 FFmpeg/model adapters、打包发布链或插件加载链。
 
 ## Current Facts（当前事实）
 
@@ -33,9 +33,11 @@
 - 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、package SHA-256 helper、SQLite schema 初始化和 simulated Worker。
 - 当前已有只读 `atelier/gui/` 工作台壳：optional dependency entry、formal development launch entry、`MainWindow`、dock workspace panel specs、workspace layout store、SQLite read-only `WorkbenchSnapshot`。
 - 当前已有 `atelier/workers/protocol.py`，支持单个 WorkerEvent 的 JSON Lines 编解码、最小 stdout event stream validation，并补齐 `LogEvent` / `HeartbeatEvent` 事件模型。
-- 当前已有 `atelier/workers/runner.py`，支持可控 subprocess 命令、`--task-file`、`cwd`、env、stdout event stream validation、stderr capture 和 return code capture。
+- 当前已有 `atelier/workers/runner.py`，支持可控 subprocess 命令、`--task-file`、`cwd`、env、stdout event stream validation、stderr capture、return code capture，以及保留 stderr/returncode 的 protocol-error exception。
 - 当前已有 `atelier/workers/task_file.py`，支持 `ExecutionTask` 写入 `task.json`，并生成 `WorkerProcessSpec`。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 55 tests passed。
+- 当前已有 `atelier/scheduler/dispatch.py`，支持把已 claim 的 `ClaimedTask` 接到 `task.json`、stub worker runner 和 SQLite event/artifact/failure persistence，并返回结构化 dispatch result。
+- 当前已有 `atelier/assets/`，作为 Atelier 主界面 toolbar、navigation、workflow nodes、queue、hardware、status、inspector 和 system 的 SVG 线性图标资源库。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 59 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -50,6 +52,7 @@
 - `runtime/` 和 `storage/` 不反向依赖 `app/`；由 app orchestration layer 负责接线。
 - Worker 应通过结构化事件协议上报进度，当前首版使用 pydantic models 和 simulated Worker。
 - SQLite 是 runtime state、events、artifacts、cache、recovery state 的首选持久层。
+- `atelier/assets/` 是资源目录，不代表已经实现 Qt `.qrc`、IconManager、图标缓存或运行时主题重染色。
 - 不假设全局安装 FFmpeg、CUDA tools、llama.cpp、whisper.cpp、模型文件或开发机路径。
 - 不硬编码 `cuda:0` 作为默认策略。
 - 不提交 secrets、API keys、bearer tokens、模型 provider credentials 或本地 runtime 数据。
@@ -298,6 +301,9 @@ python -m mypy .
 - 2026-05-04：完成 `plan_worker_protocol_runner.md` Phase C。新增最小 subprocess runner 边界，可用 stub worker 验证 `--task-file`、`cwd`、env、stdout JSON Lines、stderr 和 return code。
 - 2026-05-04：扩展并完成 `plan_worker_protocol_runner.md` Phase E。新增 `ExecutionTask -> task.json -> WorkerProcessSpec` 边界，为后续 Scheduler 接 runner 做前置准备。
 - 2026-05-04：新增后续两个计划：先执行 `plan_scheduler_worker_runner_integration.md`，再执行 `plan_worker_lifecycle_controls.md`。
+- 2026-05-04：完成 `plan_scheduler_worker_runner_integration.md` Phase A。新增窄的 `dispatch_claimed_task()` 接口形状，连接已 claim task、`task.json`、runner 和 SQLite event persistence；artifact 闭环、failed 路径和 protocol-error 转失败仍留给后续 Phase B/C。
+- 2026-05-04：完成 `plan_scheduler_worker_runner_integration.md` Phase B。completed stub worker 路径已验证 `task_events`、`artifacts`、`task_artifacts`、completed status 和 active resource lock release；failed 路径和 protocol-error 转失败仍留给 Phase C。
+- 2026-05-04：完成 `plan_scheduler_worker_runner_integration.md` Phase C。valid failed stream 和 malformed stdout protocol error 都会持久化失败事实并释放 active resource lock；timeout、cancel、kill escalation 和 stderr 文件落盘仍留给后续 lifecycle controls。
 
 ## Blockers（阻塞）
 

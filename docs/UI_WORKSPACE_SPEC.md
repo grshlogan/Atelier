@@ -4,12 +4,12 @@
 
 ## 1. 目标
 
-Atelier 的主界面不是写死的单页布局，而是一个可保存、可恢复、可折叠、可浮动的创作工作站。
+Atelier 的主界面不是写死的单页布局，而是一个深色优先、可保存、可恢复、可折叠、可浮动的创作工作站。浅色主题可作为未来 theme switching 保留。
 
 核心原则：
 
 ```text
-主呈现是四个功能区
+Workflow 复页是主舞台
 布局不硬编码为唯一形态
 高频区域默认可见
 低频区域可以停靠、隐藏、浮动
@@ -59,13 +59,14 @@ Atelier 的取舍：
 
 ## 3. 主工作区模型
 
-默认四区块：
+默认工作区：
 
 ```text
-Workflow Canvas      -> central area
-Inspector            -> right dock
-Queue Monitor        -> bottom dock
-Hardware/Runtime     -> bottom/right dock tab group
+Top command bar      -> app/actions/history/run/schedule/help/theme/person
+Collapsible Sidebar  -> Workflow / Queue / Presets / Projects / Settings
+Workflow Page        -> central card-line-flow graph
+Hardware Scheduling  -> child page derived from WorkflowGraph / ExecutionPlan
+Embeddable Panels    -> Inspector / Queue Monitor / Hardware / Logs / Artifacts
 ```
 
 扩展 panels：
@@ -82,10 +83,40 @@ Debug Events
 
 规则：
 
-- 四区块是默认呈现，不是不可变布局。
+- `Workflow Canvas` 是 central widget 的默认主舞台，不应被 Queue、Hardware 或 Inspector 抢占优先级。
+- “卡片-连线-流程图”是 Workflow 页的核心表达，可以保存为 workflow preset / template。
+- Hardware Scheduling Graph 是 Workflow 的子页面或派生页，必须基于 WorkflowGraph / ExecutionPlan / Scheduler，不允许 GUI 绕过 Scheduler。
 - 任意 dock panel 可以隐藏、浮动或重新停靠。
 - Workflow Canvas 和 Execution Canvas 可切换 central view，也可作为 tabbed central documents。
 - 关键状态必须在 panel 被隐藏时仍能通过状态栏、通知或 Queue Monitor 看到。
+
+## 3.1 Collapsible Sidebar
+
+Sidebar 与页栏独立，默认承载 `Workflow`、`Queue`、`Presets`、`Projects`、`Settings` 等页面入口。
+
+规则：
+
+- Sidebar 必须支持展开/收缩。
+- 折叠态保留图标、tooltip 和当前页指示。
+- 展开态显示图标和文字。
+- 收缩/展开动画必须可中断，重复点击要立即响应。
+- 可参考 `E:\AI\AiVideoSRTGui\app\gui\sidebar_navigation.py` 的实现方向：48px 折叠宽度、宽度驱动文字淡入/滑入、tooltip 同步和 adaptive width。
+- Sidebar 不直接运行任务，不直接读写业务事实源。
+
+## 3.2 Icon Library
+
+当前软件图标库位于：
+
+```text
+atelier/assets/
+```
+
+规则：
+
+- Sidebar、Top command bar、Workflow 节点、Queue Monitor、Hardware Resources、Inspector 和系统入口应优先使用该目录中的 24 × 24 线性 SVG。
+- 图标颜色通过 `currentColor` 继承，跟随深色主题 palette 和控件状态变化。
+- `atelier/assets/icon_manifest.json` 是当前图标清单，可用于后续 IconManager 或 Qt resource 构建输入。
+- 本文档只确认资源目录和使用边界，不声明已实现图标加载器、Qt `.qrc` 注册或运行时主题重染色。
 
 ## 4. Workspace Preset
 
@@ -205,8 +236,11 @@ User action
 第一阶段：
 
 - `MainWindow(QMainWindow)`
+- `TopCommandBar`
+- `CollapsibleSidebar`
+- 统一图标读取入口，资源来源为 `atelier/assets/`
 - `WorkflowCanvas` central placeholder
-- `InspectorDock`
+- `InspectorDock` / `CardDetailedSettingsDock`
 - `QueueMonitorDock`
 - `HardwareRuntimeDock`
 - `LogDock`

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from atelier.workers.protocol import WorkerEventPayload, parse_worker_event_stream
+from atelier.workers.protocol import WorkerEventPayload, WorkerProtocolError, parse_worker_event_stream
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,13 @@ class WorkerProcessResult:
     events: list[WorkerEventPayload]
     stderr: str
     returncode: int
+
+
+class WorkerProcessProtocolError(WorkerProtocolError):
+    def __init__(self, message: str, *, stderr: str, returncode: int) -> None:
+        super().__init__(message)
+        self.stderr = stderr
+        self.returncode = returncode
 
 
 def run_worker_process(spec: WorkerProcessSpec) -> WorkerProcessResult:
@@ -40,7 +47,14 @@ def run_worker_process(spec: WorkerProcessSpec) -> WorkerProcessResult:
         errors="replace",
         check=False,
     )
-    events = parse_worker_event_stream(completed.stdout.splitlines(keepends=True))
+    try:
+        events = parse_worker_event_stream(completed.stdout.splitlines(keepends=True))
+    except WorkerProtocolError as exc:
+        raise WorkerProcessProtocolError(
+            f"Worker protocol error: {exc}",
+            stderr=completed.stderr,
+            returncode=completed.returncode,
+        ) from exc
 
     return WorkerProcessResult(
         events=events,

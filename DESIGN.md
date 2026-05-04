@@ -2,7 +2,7 @@
 
 本文档是 Atelier 的产品视觉与交互设计事实源。它回答“Atelier 应该如何呈现、如何感受、如何组织界面”。工程边界、架构纪律和开发流程以 `AGENTS.md` 为准。
 
-Atelier 是一个本地优先的 AI 视频工作流工作站。它应该像一个安静、专业、可信的创作者工坊：用户在这里组织视频处理流程，软件把流程转译成硬件执行计划，队列稳定运行，失败可以恢复，产物可以追踪。
+Atelier 是一个本地优先的 AI 视频工作流工作站。它应该像一个安静、专业、可信的深色创作者工坊：用户在这里组织视频处理流程，软件把流程转译成硬件执行计划，队列稳定运行，失败可以恢复，产物可以追踪。
 
 ## 1. Product Identity
 
@@ -26,7 +26,7 @@ Atelier 的设计关键词：
 
 ## 2. Reference System
 
-根目录 `DESIGN.md` 是 Atelier 的设计事实源。`docs/design-md-references/` 是参考库，只用于启发。
+根目录 `DESIGN.md` 是 Atelier 的设计事实源。`docs/Atelier_Main_UI_Spec.md` 是主界面绘制规格 / concept implementation spec，用于把本文件的原则落到一张可绘制、可实现的主界面概念图上。`docs/design-md-references/` 是建设性意见源，只用于吸收方法、控件克制、空间纪律、状态密度、硬件表达或媒体工作台气质。
 
 当前参考文件：
 
@@ -39,6 +39,7 @@ Atelier 的设计关键词：
 禁止：
 
 - 不要把任一参考文件当作 Atelier 的事实源。
+- 不要让 `docs/Atelier_Main_UI_Spec.md` 覆盖本文件的事实源地位；当两者冲突，以本文件为准，再反向修正绘制规格。
 - 不要直接复制外部品牌色、字体、布局、官网 hero 或营销结构。
 - 不要因为参考 `nvidia` 就把全局做成黑绿控制台。
 - 不要因为参考 `runwayml` 就把工作台做成暗黑影院。
@@ -46,48 +47,53 @@ Atelier 的设计关键词：
 
 ## 3. Visual Theme And Atmosphere
 
-Atelier 的默认视觉基线是浅色工作台，辅以低饱和深色工具面板和少量清晰状态色。
+Atelier 的默认视觉基线是深色工作台。浅色主题可以作为未来 theme switching 保留，但主界面设计、默认截图、首版工作台和绘制规格都应优先使用深色。
 
 整体感觉：
 
-- 页面背景偏冷、干净、耐看。
-- 工作区表面清晰，卡片轻描边，少厚阴影。
+- 页面背景深、冷、干净、耐看。
+- 工作区表面清晰，卡片轻描边，少厚阴影；可以有克制的选中 glow，但不能变成发光游戏 UI。
 - 中央 canvas 有“正在编排流程”的空间感。
 - 硬件和执行信息足够密集，但保持可读。
 - 视频预览、缩略图、波形、字幕片段和产物状态是主要视觉内容，不用装饰图抢注意力。
 
-界面丰富感来自信息组织、状态反馈、媒体内容和细节一致性，不来自大面积渐变、装饰光斑、巨型标题或营销式卡片堆叠。
+界面丰富感来自信息组织、状态反馈、媒体内容、流程拓扑和细节一致性，不来自大面积渐变、装饰光斑、巨型标题或营销式卡片堆叠。
 
 ## 4. Color Palette And Roles
 
-长期颜色应语义化，不以外部品牌为来源。
+长期颜色应语义化，不以外部品牌为来源。下列深色 palette 是默认主界面基线；浅色 palette 将来作为可选主题另行定义。
 
 | Role | Value | 用途 |
 |---|---:|---|
-| App background | `#F4F7FA` | 主应用背景 |
-| Canvas background | `#EEF3F7` | Workflow / Execution canvas 底色 |
-| Surface | `#FFFFFF` | 面板、卡片、输入表面 |
-| Surface muted | `#F8FAFC` | 次级表面、表格行 |
-| Surface dark | `#20252D` | 日志、硬件细节、深色检查器 |
-| Surface dark raised | `#2A303A` | 深色面板抬升层 |
-| Border | `#DCE3EA` | 默认描边 |
-| Border strong | `#C8D2DC` | hover、选中或分割 |
-| Text primary | `#111827` | 主文本 |
-| Text secondary | `#5F6B7A` | 次级文本 |
-| Text muted | `#8A96A6` | 元信息、占位 |
-| Text on dark | `#F5F7FA` | 深色面板文本 |
-| Accent cyan | `#25A7B8` | 主交互强调、当前节点、运行中 |
-| Accent blue | `#4E7FD7` | 链接、计划生成、信息状态 |
-| Agent violet | `#7868D8` | AI agent / 翻译 / 审校相关能力 |
-| Success | `#2F8A63` | 完成、可用产物 |
-| Warning | `#C9852B` | 等待、冲突、需确认 |
-| Danger | `#D14B4B` | 失败、取消、破坏性动作 |
+| App background | `#08111D` | 主应用背景 |
+| Top bar | `#09131F` | 顶部命令栏 |
+| Sidebar | `#0A1420` | 左侧导航栏 |
+| Canvas background | `#0A1422` | Workflow / Execution canvas 绘图区 |
+| Panel background | `#0D1826` | 停靠面板、主工作区面板 |
+| Panel background raised | `#111D2C` | 抬升面板、工具按钮、表单表面 |
+| Card background | `#172332` | Workflow node、queue row、hardware card |
+| Card hover | `#1C2B3D` | hover / active surface |
+| Border | `#223247` | 默认描边 |
+| Border subtle | `#182638` | 弱分割线、顶部切割线 |
+| Border strong | `#2A3A50` | hover、选中或节点描边 |
+| Text primary | `#F3F7FB` | 主文本 |
+| Text secondary | `#B7C2D2` | 次级文本 |
+| Text muted | `#7F8EA3` | 元信息、占位 |
+| Text disabled | `#526174` | 禁用文本 |
+| Primary blue | `#3B82F6` | 主交互强调、当前节点、运行中 |
+| Primary blue light | `#60A5FA` | 高亮连线、focus、运行状态 |
+| Agent violet | `#A78BFA` | AI agent / 翻译 / 审校相关能力 |
+| Cyan accent | `#38BDF8` | 波形、音频、信息辅助强调 |
+| Success | `#39C86A` | 完成、可用产物 |
+| Warning | `#F6C85F` | 等待、冲突、需确认 |
+| Danger | `#F87171` | 失败、取消、破坏性动作 |
+| Pending | `#7A8797` | pending、disabled operational state |
 
 规则：
 
 - 状态色必须有语义，不作装饰。
-- 主色不要铺满大面积背景，优先用于边框、状态条、图标和当前项。
-- 深色面板只用于日志、硬件详情、执行检查器等高技术密度区域。
+- 主色不要铺满大面积背景，优先用于边框、状态条、图标、当前项和主运行按钮。
+- 深色是默认主题，但仍要区分 app background、panel、card、canvas 和 hover surface，避免一团黑。
 - 视频和产物缩略图可以带来真实色彩，应用 chrome 保持克制。
 
 ## 5. Typography
@@ -127,57 +133,70 @@ Atelier 的默认视觉基线是浅色工作台，辅以低饱和深色工具面
 
 ## 6. Layout Principles
 
-Atelier 的主界面应是固定工作台结构，不是任意拖拽布局系统。
+Atelier 的主界面应是专业工作站，不是网页式单页，也不是完全自由拖拽仪表盘。默认结构应稳定，但面板应支持嵌入、停靠、隐藏、浮动和 workspace preset。
 
-布局北极星是“专业工作站四区结构”，而不是某张图的颜色、图标或品牌风格。需要参考的是空间关系：
+布局北极星是“Workflow 复页 + 可嵌入/可浮动 panels”。主界面只有两条必须稳定的结构切割线：顶部命令栏切割线，以及 Workflow 工作区与左侧导航栏的切割线。其他区域优先作为可停靠/可浮动 panel，而不是不可改变的硬编码分割。
 
 ```text
 Top command bar
-  -> project actions, run workflow, schedule, global status
+  -> app icon, Atelier, New Project, Open, Save, Save As, Import, Export,
+     Undo, Redo, Run Workflow, Schedule, Remind, Help, Light/Dark, Person
 
-Left navigation rail
-  -> workflow, hardware plan, queue, presets, projects, settings
+Collapsible left navigation rail
+  -> Workflow, Queue, Presets, Projects, Settings, and future Expert pages
 
-Center work canvas
-  -> Workflow Canvas / Execution Canvas as the primary stage
+Workflow page
+  -> primary "card-line-flow graph" canvas
+  -> hardware scheduling graph as a child page derived from the workflow graph
 
-Right inspector
-  -> selected node, task, artifact, or resource details
+Embeddable / floating panels
+  -> Queue Monitor, Hardware Resources, Card Detailed Settings,
+     Inspector, Logs, Artifact Browser, Runtime panels
 
-Bottom operational band
-  -> Queue Monitor and Hardware Resources always visible enough to trust execution
+Workspace Manager
+  -> persists panel docking, floating windows, visibility, tabs, and presets
 ```
 
 推荐首版骨架：
 
 ```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ Project actions / Run workflow / Schedule / Global status            │
-├──────────────┬────────────────────────────────────┬─────────────────┤
-│ Navigation   │ Workflow Canvas / Execution Canvas │ Inspector       │
-│ Workflow     │ node graph, phase lanes, validity  │ Node params     │
-│ Hardware     │ media flow, artifacts, conflicts   │ Resource need   │
-│ Queue        │                                    │ Failure policy  │
-│ Presets      │                                    │ Artifacts       │
-│ Projects     ├──────────────────────┬─────────────┴─────────────────┤
-│ Settings     │ Queue Monitor         │ Hardware Resources             │
-│              │ progress, stages, ETA │ GPU / CPU / RAM / resource use │
-└──────────────┴──────────────────────┴───────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│ Top command bar: app/actions/history/run/schedule/help/theme/person     │
+├──────────────┬─────────────────────────────────────────────────────────┤
+│ Collapsible  │ Workflow page                                           │
+│ navigation   │   Card-line-flow canvas                                 │
+│ rail         │   Hardware scheduling child page                         │
+│              │   Embedded/floating panels as needed:                    │
+│ Workflow     │     Queue Monitor                                        │
+│ Queue        │     Hardware Resources                                   │
+│ Presets      │     Card Detailed Settings / Inspector                   │
+│ Projects     │     Logs / Artifacts / Runtime                           │
+│ Settings     │                                                         │
+└──────────────┴─────────────────────────────────────────────────────────┘
 ```
 
 布局规则：
 
-- 中央区域优先服务 Workflow Canvas 和 Execution Canvas。
-- 右侧 inspector 展示当前节点、参数、资源需求、失败策略和产物。
-- 底部区域采用操作带结构，Queue Monitor 和 Hardware Resources 同时可见。
+- Workflow Canvas 是主界面的最高优先级区域；它承载用户定义的“卡片-连线-流程图”，并可保存为 workflow preset / template。
+- Execution / Hardware Scheduling Graph 是 Workflow Canvas 的子页面或派生页，不能绕过 WorkflowGraph 与 Scheduler。
+- Queue Monitor、Hardware Resources、Card Detailed Settings / Inspector 都是可嵌入页或 panel；默认应足够可见，但允许用户浮动、停靠、隐藏或重排。
 - 硬件状态要常驻可扫读，但不要抢走 workflow 的主导权。
-- Queue Monitor 不应被藏到二级页；它是执行可信度的一部分。
+- Queue Monitor 不应被藏到不可发现的二级入口；它可以作为独立页，也可以作为嵌入 panel。
 - Hardware Resources 不应只是设置页信息；它应在执行时解释资源占用和冲突。
+- 左侧导航栏与页栏概念独立，必须可收缩；折叠态优先保留图标和 tooltip，展开态显示文字。可参考 `E:\AI\AiVideoSRTGui\app\gui\sidebar_navigation.py` 的 48px 折叠宽度、可中断动画、宽度驱动文字淡入/滑入和 tooltip 同步策略。
 - 高频动作常驻，低频维护动作下沉到设置或管理面板。
-- 不要把主界面改成自由拖拽仪表盘。
 - 不要照搬参考图的颜色、图标、品牌名或视觉皮肤；只继承这种四区工作台布局。
 
 ## 7. Component Rules
+
+### Icons
+
+- 当前主界面图标库是 `atelier/assets/`。
+- 图标以 24 × 24 的线性 SVG 为基线，使用 `stroke="currentColor"` 和 `fill="none"`，颜色由主题 palette、控件状态或样式系统控制。
+- 顶部栏、左侧导航、Workflow 节点、Queue Monitor、Hardware Resources、Inspector、状态提示和系统模块图标应优先从 `atelier/assets/toolbar/`、`navigation/`、`nodes/`、`queue/`、`hardware/`、`inspector/`、`status/`、`system/` 取用。
+- `atelier/assets/icon_manifest.json` 是当前图标清单；`atelier/assets/atelier_icons_sprite.svg` 和 `preview.html` 可用于预览或后续构建流程参考。
+- 不直接复制外部品牌 logo、第三方产品图标或参考文档里的视觉皮肤；需要新增图标时，应保持 Atelier 当前线性、克制、深色工作站兼容的语言。
+- 图标库是资源事实，不等于已经实现 Qt resource 注册、IconManager、运行时重染色或图标缓存。
 
 ### Workflow Cards
 
@@ -209,7 +228,7 @@ Bottom operational band
 
 ### Logs And Console
 
-- 日志区域使用深色表面和等宽字体。
+- 日志区域使用更深的表面和等宽字体，与默认深色 chrome 仍要有层级差。
 - 默认显示高信号摘要，详细日志可展开。
 - Worker progress 以结构化事件为事实源，不从随机文本日志解析主进度。
 
@@ -261,18 +280,22 @@ Atelier 首先是桌面应用。
 - 保持工作台真实可用，不做展示页。
 - 把 workflow、execution、queue、artifacts、hardware 和 recovery 作为界面核心。
 - 让硬件计划可解释，让失败可恢复。
+- 默认使用深色工作台主题，保留浅色主题作为未来可切换主题。
+- 以 Workflow 复页和“卡片-连线-流程图”为主舞台，让 Queue / Hardware / Inspector 作为可嵌入或可浮动 panel 协同工作。
 - 使用媒体内容本身增强视觉，而不是添加装饰。
-- 需要外部参考时只读相关文件，并转译为 Atelier 自己的语言。
+- 需要外部参考时只读相关文件，并转译为 Atelier 自己的语言；`docs/design-md-references/` 只提供建设性意见。
 
 ## 12. Don't
 
 - 不要做营销 hero。
 - 不要做完全自由节点编辑器。
+- 不要把 Workflow 主舞台降级成普通二级页。
+- 不要把 Queue Monitor、Hardware Resources 或 Card Detailed Settings 写死为不可移动的唯一布局。
 - 不要把所有参数摊成一个巨大全局表单。
 - 不要把队列做成单个模糊进度条。
 - 不要卡片嵌套卡片。
 - 不要用大面积品牌色或装饰渐变。
-- 不要把深色日志面板扩散成全局暗黑主题。
+- 不要把深色主题做成黑绿控制台、暗黑影院或花哨游戏 UI。
 - 不要让 GUI 控件直接表达底层命令拼接。
 
 ## 13. Agent Usage Guide
@@ -281,6 +304,7 @@ Atelier 首先是桌面应用。
 
 1. 先读 `AGENTS.md`，确认工程边界。
 2. 再读本文件，确认设计事实源。
-3. 如需参考外部风格，只读取 `docs/design-md-references/` 中与任务相关的文件。
-4. 把参考中的有用方法转译回 Atelier 的颜色、组件、布局和产品目标。
-5. 修改后说明验证范围。若没有可运行 UI，就说明只完成文档级验证。
+3. 需要绘制或实现主界面时，再读 `docs/Atelier_Main_UI_Spec.md`，把它作为主界面 concept implementation spec。
+4. 如需参考外部风格，只读取 `docs/design-md-references/` 中与任务相关的文件。
+5. 把参考中的有用方法转译回 Atelier 的颜色、组件、布局和产品目标。
+6. 修改后说明验证范围。若没有可运行 UI，就说明只完成文档级验证。

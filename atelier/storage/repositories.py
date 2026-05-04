@@ -156,6 +156,19 @@ def fetch_artifact_paths(connection: sqlite3.Connection, task_id: str) -> list[s
     return [row[0] for row in rows]
 
 
+def fetch_task_artifact_links(connection: sqlite3.Connection, task_id: str) -> list[tuple[str, str]]:
+    rows = connection.execute(
+        """
+        SELECT artifact_id, role
+        FROM task_artifacts
+        WHERE task_id = ?
+        ORDER BY created_at, artifact_id, role
+        """,
+        (task_id,),
+    ).fetchall()
+    return [(row[0], row[1]) for row in rows]
+
+
 def fetch_task_status(connection: sqlite3.Connection, task_id: str) -> str:
     row = connection.execute(
         "SELECT status FROM execution_tasks WHERE task_id = ?",

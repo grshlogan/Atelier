@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<symbol id="hardware-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/><path d="M10 10h4v4h-4z"/></symbol>
+<symbol id="hardware-disk" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+<symbol id="hardware-gpu" viewBox="0 0 24 24"><rect x="4" y="7" width="14" height="10" rx="2"/><path d="M8 3v4M14 3v4M8 17v4M14 17v4M18 10h3v4h-3"/><path d="M8 10h6v4H8z"/></symbol>
+<symbol id="hardware-ram" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M6 16v3M10 16v3M14 16v3M18 16v3"/><path d="M7 11h2M11 11h2M15 11h2"/></symbol>
+<symbol id="hardware-resource_lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v2"/></symbol>
+<symbol id="hardware-vram" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M7 10h10M7 14h6"/><path d="M8 2v4M16 2v4M8 18v4M16 18v4"/></symbol>
+<symbol id="hardware-waiting_resource" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M7 3.5 5 6M17 3.5l2 2.5"/></symbol>
+<symbol id="inspector-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+<symbol id="inspector-delete" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M7 7l1 14h8l1-14"/><path d="M10 11v6M14 11v6"/></symbol>
+<symbol id="inspector-dropdown" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="inspector-duplicate" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><rect x="5" y="5" width="11" height="11" rx="2"/></symbol>
+<symbol id="inspector-folder" viewBox="0 0 24 24"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v6.5A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z"/></symbol>
+<symbol id="inspector-slider" viewBox="0 0 24 24"><path d="M4 12h16"/><circle cx="15" cy="12" r="3"/></symbol>
+<symbol id="inspector-toggle_on" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="5"/><circle cx="16" cy="12" r="3"/></symbol>
+<symbol id="navigation-hardware_plan" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/><path d="M10 10h4v4h-4z"/></symbol>
+<symbol id="navigation-presets" viewBox="0 0 24 24"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.9-5.4 2.9 1-6-4.4-4.3 6.1-.9L12 3z"/></symbol>
+<symbol id="navigation-projects" viewBox="0 0 24 24"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v6.5A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z"/></symbol>
+<symbol id="navigation-queue" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1.4"/><circle cx="4" cy="12" r="1.4"/><circle cx="4" cy="18" r="1.4"/></symbol>
+<symbol id="navigation-settings" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 2l.04.04a2.1 2.1 0 0 1-3 3l-.04-.04a1.8 1.8 0 0 0-2-.36 1.8 1.8 0 0 0-1.1 1.66V21a2.1 2.1 0 0 1-4.2 0v-.06A1.8 1.8 0 0 0 8.4 19.3a1.8 1.8 0 0 0-2 .36l-.04.04a2.1 2.1 0 0 1-3-3l.04-.04a1.8 1.8 0 0 0 .36-2 1.8 1.8 0 0 0-1.66-1.1H2a2.1 2.1 0 0 1 0-4.2h.06A1.8 1.8 0 0 0 3.7 8.3a1.8 1.8 0 0 0-.36-2l-.04-.04a2.1 2.1 0 0 1 3-3l.04.04a1.8 1.8 0 0 0 2 .36A1.8 1.8 0 0 0 9.4 2.06V2a2.1 2.1 0 0 1 4.2 0v.06a1.8 1.8 0 0 0 1.1 1.66 1.8 1.8 0 0 0 2-.36l.04-.04a2.1 2.1 0 0 1 3 3l-.04.04a1.8 1.8 0 0 0-.36 2 1.8 1.8 0 0 0 1.66 1.1H22a2.1 2.1 0 0 1 0 4.2h-.06A1.8 1.8 0 0 0 19.4 15z"/></symbol>
+<symbol id="navigation-workflow" viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="5" rx="1.2"/><rect x="16" y="4" width="5" height="5" rx="1.2"/><rect x="9.5" y="15" width="5" height="5" rx="1.2"/><path d="M8 6.5h4.2c2.2 0 3.8 1.6 3.8 3.8V15"/><path d="M5.5 9v2.3c0 2.1 1.6 3.7 3.7 3.7h.3"/></symbol>
+<symbol id="nodes-agent" viewBox="0 0 24 24"><path d="M12 3a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3h-1v1a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-1H7a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3h1V7a4 4 0 0 1 4-4z"/><path d="M9 13h.01M15 13h.01M10 17h4"/></symbol>
+<symbol id="nodes-asr_subtitle" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 10.5a2 2 0 1 0 0 3M15 10.5a2 2 0 1 0 0 3"/><path d="M7 17h10"/></symbol>
+<symbol id="nodes-audio_enhance" viewBox="0 0 24 24"><path d="M5 9v6h3l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></symbol>
+<symbol id="nodes-audio_extract" viewBox="0 0 24 24"><path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h-2"/></symbol>
+<symbol id="nodes-frame_interpolation" viewBox="0 0 24 24"><rect x="4" y="6" width="6" height="10" rx="1.2"/><rect x="14" y="8" width="6" height="10" rx="1.2"/><path d="M10 11h4M12 9v4"/><path d="M7 19h10"/></symbol>
+<symbol id="nodes-multi_export" viewBox="0 0 24 24"><path d="M8 7h8v10H8z"/><path d="M5 10H3v10h8v-2M19 10h2v10h-8v-2"/><path d="M12 3v8M9 8l3 3 3-3"/></symbol>
+<symbol id="nodes-ocr" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/><path d="M4 9H2M4 15H2M22 9h-2M22 15h-2"/></symbol>
+<symbol id="nodes-output" viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m8 10 4 4 4-4"/><rect x="4" y="17" width="16" height="4" rx="1.5"/></symbol>
+<symbol id="nodes-soft_subtitle_mux" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h4M13 10h4M7 14h10"/><path d="M5 3v4M19 3v4"/></symbol>
+<symbol id="nodes-translate_agent" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/><path d="M7 7h10M7 17h10"/></symbol>
+<symbol id="nodes-video_enhance" viewBox="0 0 24 24"><path d="m12 3 1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="m5 15 .8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8zM19 3l.6 1.6L21 5l-1.4.4L19 7l-.6-1.6L17 5l1.4-.4z"/></symbol>
+<symbol id="nodes-video_input" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9h4M3 15h4M17 9h4M17 15h4"/><path d="m10 9 5 3-5 3z"/></symbol>
+<symbol id="queue-artifact" viewBox="0 0 24 24"><path d="M12 3 4 7v10l8 4 8-4V7z"/><path d="M4 7l8 4 8-4M12 11v10"/></symbol>
+<symbol id="queue-cache" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></symbol>
+<symbol id="queue-logs" viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4"/><path d="M8 11h8M8 15h8M8 19h5"/></symbol>
+<symbol id="queue-menu_dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></symbol>
+<symbol id="queue-pause" viewBox="0 0 24 24"><path d="M8 5h3v14H8zM14 5h3v14h-3z"/></symbol>
+<symbol id="queue-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+<symbol id="queue-priority" viewBox="0 0 24 24"><path d="M6 19V5M6 5h11l-2 4 2 4H6"/></symbol>
+<symbol id="queue-recover" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 8.5 6"/><path d="M20.5 3v6h-6"/><path d="M9 12l2 2 4-5"/></symbol>
+<symbol id="queue-retry" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 13.5-5.8L20 8.7"/><path d="M20 4v4.7h-4.7"/><path d="M20 12a8 8 0 0 1-13.5 5.8L4 15.3"/><path d="M4 20v-4.7h4.7"/></symbol>
+<symbol id="queue-skip" viewBox="0 0 24 24"><path d="m5 6 7 6-7 6zM13 6l7 6-7 6z"/></symbol>
+<symbol id="queue-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+<symbol id="status-cached" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="m9 14 2 2 4-5"/></symbol>
+<symbol id="status-error" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 8.5 15.5 15.5M15.5 8.5 8.5 15.5"/></symbol>
+<symbol id="status-failed_retryable" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5"/><path d="M12 16h.01"/><path d="M16 18a5 5 0 0 1-8 0"/></symbol>
+<symbol id="status-pending" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+<symbol id="status-running" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M21 3v6h-6"/></symbol>
+<symbol id="status-success" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.5 2.5L16 9"/></symbol>
+<symbol id="status-warning" viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4z"/><path d="M12 9v5M12 17h.01"/></symbol>
+<symbol id="system-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+<symbol id="system-event" viewBox="0 0 24 24"><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h3"/><circle cx="6" cy="8" r="1.5"/><circle cx="6" cy="16" r="1.5"/></symbol>
+<symbol id="system-i18n" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/><path d="M7 8h5M9.5 8v7M7 15c2.3-1.4 4-3.8 5-7"/></symbol>
+<symbol id="system-node_registry" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="9" y="14" width="6" height="6" rx="1"/><path d="M10 7h4M12 10v4"/></symbol>
+<symbol id="system-plugin" viewBox="0 0 24 24"><path d="M8 3v5M16 3v5"/><path d="M7 8h10v4a5 5 0 0 1-10 0z"/><path d="M12 17v4"/></symbol>
+<symbol id="system-release" viewBox="0 0 24 24"><path d="M12 3 4 7v10l8 4 8-4V7z"/><path d="M12 3v18M4 7l8 4 8-4"/><path d="m15 14 2 2 4-5"/></symbol>
+<symbol id="system-runtime" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/><path d="M16 16l3 3M19 16l-3 3"/></symbol>
+<symbol id="system-security" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4 2.8 7.5 7 9 4.2-1.5 7-5 7-9V6z"/><path d="m9 12 2 2 4-5"/></symbol>
+<symbol id="system-terminal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m7 9 3 3-3 3M12 15h5"/></symbol>
+<symbol id="system-workspace" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M3 10h18M14 10v10"/></symbol>
+<symbol id="toolbar-add_node" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="toolbar-export" viewBox="0 0 24 24"><path d="M12 21V10"/><path d="m7.5 14.5 4.5-4.5 4.5 4.5"/><path d="M5 4h14"/></symbol>
+<symbol id="toolbar-fit_view" viewBox="0 0 24 24"><path d="M8 3H4v4M16 3h4v4M8 21H4v-4M16 21h4v-4"/><path d="M9 9h6v6H9z"/></symbol>
+<symbol id="toolbar-grid_view" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></symbol>
+<symbol id="toolbar-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.6 2.6 0 1 1 4.2 2c-1 .7-2 1.2-2 2.7"/><path d="M12 17.5h.01"/></symbol>
+<symbol id="toolbar-import" viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 9.5 4.5 4.5 4.5-4.5"/><path d="M5 20h14"/></symbol>
+<symbol id="toolbar-list_view" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="toolbar-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="toolbar-minimap" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="7" y="9" width="4" height="3" rx=".8"/><rect x="14" y="9" width="3" height="3" rx=".8"/><path d="M11 10.5h3M9 12v3h6"/></symbol>
+<symbol id="toolbar-new_project" viewBox="0 0 24 24"><path d="M6 3.5h8l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 20V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M14 3.5V8h4"/><path d="M12 11v6M9 14h6"/></symbol>
+<symbol id="toolbar-notification" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-2.5 7-2.5 7h17S18 16 18 9z"/><path d="M9.5 20a2.5 2.5 0 0 0 5 0"/></symbol>
+<symbol id="toolbar-open" viewBox="0 0 24 24"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v6.5A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5z"/><path d="M8 13h8"/></symbol>
+<symbol id="toolbar-redo" viewBox="0 0 24 24"><path d="M15 7h5v5"/><path d="M20 12c-3-5-10-7-16-1"/></symbol>
+<symbol id="toolbar-run_workflow" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+<symbol id="toolbar-save" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5z"/><path d="M8 4v6h8V4"/><path d="M8 20v-6h8v6"/></symbol>
+<symbol id="toolbar-save_as" viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5z"/><path d="M8 4v6h8V4"/><path d="M8 20v-5h5"/><path d="m15.5 15.5 3 3M18.5 15.5l-3 3"/></symbol>
+<symbol id="toolbar-schedule" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M7 3.5v4M17 3.5v4M3.5 10h17"/><path d="M8 14h3M14 14h2M8 17h2"/></symbol>
+<symbol id="toolbar-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></symbol>
+<symbol id="toolbar-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="toolbar-undo" viewBox="0 0 24 24"><path d="M9 7H4v5"/><path d="M4 12c3-5 10-7 16-1"/></symbol>
+</svg>

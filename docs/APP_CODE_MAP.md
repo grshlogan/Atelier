@@ -2,13 +2,15 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 66
+Code file count: 68
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 43 files
-- `tests/`: 22 files
+- `atelier/`: 44 files
+- `tests/`: 23 files
+
+Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
 
 ## Current Code Tree
 
@@ -16,6 +18,19 @@ Scope counted:
 pyproject.toml
 
 atelier/
+  assets/
+    README.md
+    icon_manifest.json
+    preview.html
+    atelier_icons_sprite.svg
+    hardware/
+    inspector/
+    navigation/
+    nodes/
+    queue/
+    status/
+    system/
+    toolbar/
   __init__.py
   app/
     __init__.py
@@ -60,6 +75,7 @@ atelier/
     package_integrity.py
   scheduler/
     __init__.py
+    dispatch.py
     simple.py
   storage/
     __init__.py
@@ -92,6 +108,7 @@ tests/
   test_runtime_manager.py
   test_runtime_store.py
   test_resource_locks.py
+  test_scheduler_worker_runner_integration.py
   test_scheduler_simple.py
   test_simulated_worker.py
   test_storage_schema.py
@@ -151,6 +168,22 @@ Rules:
 - Release packaging owns GUI runtime layout; RuntimeManager owns tool/model/backend runtime state.
 
 ## `atelier/`
+
+### `atelier/assets/`
+
+Responsibility:
+
+- Stores the current Atelier UI icon library.
+- Provides original 24 × 24 SVG line icons for toolbar, navigation, workflow nodes, queue, hardware, status, inspector, and system module surfaces.
+- Provides `icon_manifest.json` as the current icon inventory.
+- Provides `atelier_icons_sprite.svg` and `preview.html` as preview / future build-pipeline reference assets.
+
+Boundary:
+
+- This is a resource directory, not Python runtime logic.
+- Does not implement Qt `.qrc` registration, IconManager, runtime recoloring, icon cache, or theme switching.
+- Do not load icons through ad hoc hard-coded paths in many widgets once GUI implementation starts; add a single asset path / icon loading boundary first.
+- Does not contain third-party brand logos or external reference design assets.
 
 ### `atelier/__init__.py`
 
@@ -603,6 +636,23 @@ Boundary:
 
 - No scheduling work at import time.
 
+### `atelier/scheduler/dispatch.py`
+
+Responsibility:
+
+- Defines `WorkerDispatchResult`.
+- Provides `dispatch_claimed_task()` for the first narrow Scheduler-to-runner integration seam.
+- Accepts an already claimed `ClaimedTask`, writes `task.json` through `build_worker_process_spec()`, runs the supplied stub worker command through `run_worker_process()`, persists returned Worker events through `record_worker_events()`, and returns task id, parsed events, stderr, return code, and final SQLite task status.
+- Copies the Scheduler-provided `ResourceBinding` onto the task payload before writing `task.json`.
+- Converts `WorkerProcessProtocolError` into a persisted `FailedEvent(error_code="INTERNAL")` so malformed worker stdout does not leave a task running or a resource lock active.
+
+Boundary:
+
+- Does not claim tasks; callers must use Scheduler first.
+- Does not choose runtime/model paths, command args, or hardware resources.
+- Does not implement multi-worker concurrency, priority scheduling, retry execution, protocol-error retry/recovery actions, timeout, cancel, kill escalation, stderr file persistence, or real FFmpeg/model adapters.
+- Does not let `workers.runner` write SQLite; persistence remains in storage repositories.
+
 ### `atelier/scheduler/simple.py`
 
 Responsibility:
@@ -656,7 +706,7 @@ Responsibility:
 - Provides minimum failure recovery helpers for the resource-lock plan: `FailureFacts`, `RecoveryOption`, `fetch_failure_facts()`, and `suggest_recovery_options()`.
 - Records `FailedEvent.partial_artifacts` as partial artifacts and links them through `task_artifacts`.
 - Persists terminal failure `error_code` and `error_message` onto `execution_tasks`.
-- Provides small query helpers for tests: `fetch_task_event_types()`, `fetch_artifact_paths()`, and `fetch_task_status()`.
+- Provides small query helpers for tests: `fetch_task_event_types()`, `fetch_artifact_paths()`, `fetch_task_artifact_links()`, and `fetch_task_status()`.
 
 Boundary:
 
@@ -733,11 +783,13 @@ Responsibility:
 - Defines the current minimum subprocess runner boundary:
   - `WorkerProcessSpec`
   - `WorkerProcessResult`
+  - `WorkerProcessProtocolError`
   - `run_worker_process()`
 - Starts a typed command with `--task-file <path>` and `cwd=work_dir`.
 - Merges supplied environment variables into the child process environment.
 - Captures stdout and validates it through `parse_worker_event_stream()`.
 - Captures stderr as text and returns the process exit code.
+- Raises `WorkerProcessProtocolError`, a `WorkerProtocolError` subclass that preserves stderr and return code, when stdout violates the Worker JSON Lines protocol.
 
 Boundary:
 
@@ -927,6 +979,20 @@ Boundary:
 
 - Does not test real concurrency, resource locks, worker subprocesses, or GPU policy.
 
+### `tests/test_scheduler_worker_runner_integration.py`
+
+Responsibility:
+
+- Tests Phase A, Phase B, and Phase C of `plan_scheduler_worker_runner_integration.md`.
+- Confirms `dispatch_claimed_task()` accepts an already claimed task, writes a `task.json` with the Scheduler-provided resource binding, runs a temporary stub worker command, records returned events, preserves stderr/return code in the dispatch result, and reports the final SQLite task status.
+- Confirms a completed stub worker path records `started -> artifact -> completed` events, writes artifact rows, links `task_artifacts`, marks the task completed, and releases the active resource lock.
+- Confirms a valid failed worker stream records failure facts, marks the task failed, preserves stderr/return code, and releases the active resource lock.
+- Confirms malformed stdout is converted to an internal failed event instead of escaping as an unpersisted protocol exception.
+
+Boundary:
+
+- Does not test retry/recovery actions, timeout, cancel, stderr file persistence, real adapters, or GUI execution.
+
 ### `tests/test_resource_locks.py`
 
 Responsibility:
@@ -1101,10 +1167,10 @@ These packages are specified in docs but not fully implemented yet:
 
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
-- `scheduler/`: only `SimpleScheduler` exists; durable queue claiming, priorities, concurrency, retry execution, and crash recovery are not implemented.
+- `scheduler/`: `SimpleScheduler` and a narrow claimed-task dispatch helper exist; durable queue claiming, full dispatch loops, priorities, concurrency, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
 - `gui/`: optional dependency entry helpers, formal development launch entry, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
-- `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; Scheduler runner integration and production worker lifecycle are not implemented.
+- `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; only the first claimed-task dispatch seam uses it from Scheduler, while production worker lifecycle is not implemented.
 - `workers/runner`: minimum subprocess boundary exists; production worker lifecycle, stdin cancel control, heartbeat timeout, kill escalation, stderr file persistence, and real adapters are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.

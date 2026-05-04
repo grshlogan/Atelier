@@ -41,7 +41,7 @@ SimpleScheduler.claim_next_task()
 - `write_worker_task_file()` / `build_worker_process_spec()` 已能写入 `task.json` 并生成 `WorkerProcessSpec`。
 - `run_worker_process()` 已能启动可控 subprocess，捕获 stdout/stderr/return code，并验证 stdout JSON Lines。
 - `record_worker_events()` 已能持久化 worker events、artifacts、terminal status，并释放 active resource locks。
-- 当前测试基线是 stdlib `unittest`，最近完整验证为 55 tests passed。
+- 当前测试基线是 stdlib `unittest`，最近完整验证为 59 tests passed。
 
 ## Constraints（约束）
 
@@ -75,7 +75,7 @@ SimpleScheduler.claim_next_task()
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase B：completed stub worker 路径
 
@@ -98,7 +98,7 @@ SimpleScheduler.claim_next_task()
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase C：failed 和 protocol error 路径
 
@@ -120,7 +120,7 @@ SimpleScheduler.claim_next_task()
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase D：文档状态对齐
 
@@ -141,7 +141,7 @@ git diff --check
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ## Child Plans（子计划）
 
@@ -161,6 +161,16 @@ git diff --check
 ## Progress / Decisions（进展 / 决策）
 
 - 2026-05-04：创建本计划。决策：先用 stub worker 打通 Scheduler 到 runner 到 SQLite 的首个闭环，再进入生产级 lifecycle controls。
+- 2026-05-04：开始执行 Phase A。决策：dispatch helper 先只接收已 claim 的 `ClaimedTask`，不自行 claim、不选择 runtime/model/hardware。
+- 2026-05-04：完成 Phase A。新增 `atelier.scheduler.dispatch.dispatch_claimed_task()` 和 `WorkerDispatchResult`，用于把已 claim task 接到 `task.json`、runner、SQLite event persistence，并返回 task id、events、stderr、returncode 和最终 task status。
+- 2026-05-04：Phase A 验证通过：`tests.test_scheduler_worker_runner_integration` 1 test passed，完整 `unittest discover` 56 tests passed，`compileall` passed，`git diff --check` 仅有 Windows CRLF conversion warnings。
+- 2026-05-04：开始执行 Phase B。决策：补 completed stub worker 覆盖时，同时验证 `artifacts` 与 `task_artifacts` link；为此只新增最小查询 helper，不改变写入协议。
+- 2026-05-04：完成 Phase B。新增 completed stub worker 覆盖，验证 `started -> artifact -> completed` 经 dispatch 写入 `task_events`、`artifacts`、`task_artifacts`，task status 变为 `completed`，active resource lock 被释放。
+- 2026-05-04：Phase B 验证通过：`tests.test_scheduler_worker_runner_integration` 2 tests passed，完整 `unittest discover` 57 tests passed，`compileall` passed，`git diff --check` 仅有 Windows CRLF conversion warnings。
+- 2026-05-04：开始执行 Phase C。决策：valid `failed` event stream 继续走 runner 正常结果；protocol error 在 dispatch 层转换为 `FailedEvent(error_code="INTERNAL")` 持久化，同时保留 stderr 和 returncode。
+- 2026-05-04：完成 Phase C。valid `failed` event stream 会持久化 failure facts 并释放 active lock；malformed stdout protocol error 会记录为 `FailedEvent(error_code="INTERNAL", recoverable=False)`，同时 dispatch result 保留 stderr 和 returncode。
+- 2026-05-04：Phase C 验证通过：`tests.test_scheduler_worker_runner_integration` 与 `tests.test_worker_runner` 共 7 tests passed，完整 `unittest discover` 59 tests passed，`compileall` passed，`git diff --check` 仅有 Windows CRLF conversion warnings。
+- 2026-05-04：完成 Phase D。`APP_CODE_MAP.md`、`RECENT_CHANGES.md`、主计划和本计划已对齐当前状态；生产级 worker lifecycle controls、真实 adapters、GUI execution 仍明确未实现。
 
 ## Blockers（阻塞）
 

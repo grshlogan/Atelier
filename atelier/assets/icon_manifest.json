@@ -1,0 +1,482 @@
+[
+  {
+    "path": "hardware/cpu.svg",
+    "name": "cpu",
+    "category": "hardware",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "hardware/disk.svg",
+    "name": "disk",
+    "category": "hardware",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "hardware/gpu.svg",
+    "name": "gpu",
+    "category": "hardware",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "hardware/ram.svg",
+    "name": "ram",
+    "category": "hardware",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "hardware/resource_lock.svg",
+    "name": "resource_lock",
+    "category": "hardware",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "hardware/vram.svg",
+    "name": "vram",
+    "category": "hardware",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "hardware/waiting_resource.svg",
+    "name": "waiting_resource",
+    "category": "hardware",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "inspector/close.svg",
+    "name": "close",
+    "category": "inspector",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "inspector/delete.svg",
+    "name": "delete",
+    "category": "inspector",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "inspector/dropdown.svg",
+    "name": "dropdown",
+    "category": "inspector",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "inspector/duplicate.svg",
+    "name": "duplicate",
+    "category": "inspector",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "inspector/folder.svg",
+    "name": "folder",
+    "category": "inspector",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "inspector/slider.svg",
+    "name": "slider",
+    "category": "inspector",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "inspector/toggle_on.svg",
+    "name": "toggle_on",
+    "category": "inspector",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "navigation/hardware_plan.svg",
+    "name": "hardware_plan",
+    "category": "navigation",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "navigation/presets.svg",
+    "name": "presets",
+    "category": "navigation",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "navigation/projects.svg",
+    "name": "projects",
+    "category": "navigation",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "navigation/queue.svg",
+    "name": "queue",
+    "category": "navigation",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "navigation/settings.svg",
+    "name": "settings",
+    "category": "navigation",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "navigation/workflow.svg",
+    "name": "workflow",
+    "category": "navigation",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/agent.svg",
+    "name": "agent",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/asr_subtitle.svg",
+    "name": "asr_subtitle",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/audio_enhance.svg",
+    "name": "audio_enhance",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/audio_extract.svg",
+    "name": "audio_extract",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/frame_interpolation.svg",
+    "name": "frame_interpolation",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/multi_export.svg",
+    "name": "multi_export",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/ocr.svg",
+    "name": "ocr",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/output.svg",
+    "name": "output",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/soft_subtitle_mux.svg",
+    "name": "soft_subtitle_mux",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/translate_agent.svg",
+    "name": "translate_agent",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/video_enhance.svg",
+    "name": "video_enhance",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "nodes/video_input.svg",
+    "name": "video_input",
+    "category": "nodes",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/artifact.svg",
+    "name": "artifact",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/cache.svg",
+    "name": "cache",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/logs.svg",
+    "name": "logs",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/menu_dots.svg",
+    "name": "menu_dots",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/pause.svg",
+    "name": "pause",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/play.svg",
+    "name": "play",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/priority.svg",
+    "name": "priority",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/recover.svg",
+    "name": "recover",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/retry.svg",
+    "name": "retry",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/skip.svg",
+    "name": "skip",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "queue/stop.svg",
+    "name": "stop",
+    "category": "queue",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "status/cached.svg",
+    "name": "cached",
+    "category": "status",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "status/error.svg",
+    "name": "error",
+    "category": "status",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "status/failed_retryable.svg",
+    "name": "failed_retryable",
+    "category": "status",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "status/pending.svg",
+    "name": "pending",
+    "category": "status",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "status/running.svg",
+    "name": "running",
+    "category": "status",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "status/success.svg",
+    "name": "success",
+    "category": "status",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "status/warning.svg",
+    "name": "warning",
+    "category": "status",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/database.svg",
+    "name": "database",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/event.svg",
+    "name": "event",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/i18n.svg",
+    "name": "i18n",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/node_registry.svg",
+    "name": "node_registry",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/plugin.svg",
+    "name": "plugin",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/release.svg",
+    "name": "release",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/runtime.svg",
+    "name": "runtime",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/security.svg",
+    "name": "security",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/terminal.svg",
+    "name": "terminal",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "system/workspace.svg",
+    "name": "workspace",
+    "category": "system",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/add_node.svg",
+    "name": "add_node",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/export.svg",
+    "name": "export",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/fit_view.svg",
+    "name": "fit_view",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/grid_view.svg",
+    "name": "grid_view",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/help.svg",
+    "name": "help",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/import.svg",
+    "name": "import",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/list_view.svg",
+    "name": "list_view",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/lock.svg",
+    "name": "lock",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/minimap.svg",
+    "name": "minimap",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/new_project.svg",
+    "name": "new_project",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/notification.svg",
+    "name": "notification",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/open.svg",
+    "name": "open",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/redo.svg",
+    "name": "redo",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/run_workflow.svg",
+    "name": "run_workflow",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/save.svg",
+    "name": "save",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/save_as.svg",
+    "name": "save_as",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/schedule.svg",
+    "name": "schedule",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/search.svg",
+    "name": "search",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/theme.svg",
+    "name": "theme",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  },
+  {
+    "path": "toolbar/undo.svg",
+    "name": "undo",
+    "category": "toolbar",
+    "style": "24px outline, currentColor, no fill"
+  }
+]

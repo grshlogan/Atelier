@@ -2,6 +2,168 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260504_054000 [补充 Atelier 图标库事实]
+
+- Confirmed `atelier/assets/` is the current Atelier UI icon library.
+- Updated `atelier/assets/README.md` to:
+  - remove the old non-Atelier product name;
+  - document `icon_manifest.json`, `atelier_icons_sprite.svg`, and `preview.html`;
+  - clarify that icons are 24 × 24 `currentColor` SVG line icons for dark-first workstation UI;
+  - state that the directory is a resource library, not an implemented Qt `.qrc`, IconManager, icon cache, or runtime recoloring system.
+- Updated `DESIGN.md`, `docs/Atelier_Main_UI_Spec.md`, and `docs/UI_WORKSPACE_SPEC.md` to make `atelier/assets/` the icon source for toolbar, navigation, workflow nodes, queue, hardware, status, inspector, and system surfaces.
+- Updated `README.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md` so handoff docs now record the icon library without adding non-code assets to the Python code file count.
+- Updated `docs/plan/plan_ui_design_source_alignment.md` with the asset-library decision and boundary.
+
+Current boundary:
+
+- Implemented: documentation and resource ownership alignment for the existing SVG icon library.
+- Not implemented: Qt `.qrc` registration, IconManager, icon caching, runtime theme recoloring, or icon usage in real GUI widgets.
+
+Validation run:
+
+```powershell
+# Checked repository text for the old non-Atelier product name.
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- Old non-Atelier product-name search: no matches outside ignored local/git directories.
+- `.venv\Scripts\python -m unittest discover -s tests`: 59 tests passed.
+- `.venv\Scripts\python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_053000 [对齐主 UI 设计事实源]
+
+- Added `docs/plan/plan_ui_design_source_alignment.md` before editing design docs.
+- Reviewed the new `docs/Atelier_Main_UI_Spec.md`, root `DESIGN.md`, `docs/UI_WORKSPACE_SPEC.md`, and the sidebar reference at `E:\AI\AiVideoSRTGui\app\gui\sidebar_navigation.py`.
+- Updated `DESIGN.md` so:
+  - default Atelier UI theme is dark-first;
+  - light theme is preserved as future theme switching;
+  - `DESIGN.md` remains the design source of truth;
+  - `docs/Atelier_Main_UI_Spec.md` is the main UI drawing / concept implementation spec;
+  - `docs/design-md-references/` is a constructive suggestion source only;
+  - Workflow Page / card-line-flow graph is the primary UI stage;
+  - Queue Monitor, Hardware Resources, and Card Detailed Settings are embeddable/floating panels.
+- Updated `docs/Atelier_Main_UI_Spec.md` so:
+  - product name is only `Atelier`;
+  - fixed coordinates are concept drawing coordinates, not immutable product geometry;
+  - top bar order, collapsible sidebar, Workflow child pages, and embeddable/floating panels align with `DESIGN.md`.
+- Updated `README.md` and `docs/UI_WORKSPACE_SPEC.md` to include the new UI spec relationship and sidebar/workspace rules.
+
+Current boundary:
+
+- Implemented: documentation alignment only.
+- Not implemented: actual dark theme, real Workflow Canvas drawing, collapsible sidebar code, panel docking UI, theme switching, or visual verification.
+
+Validation run:
+
+```powershell
+git diff --check
+```
+
+Result:
+
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_052000 [执行 Scheduler Worker Runner Phase C]
+
+- Continued `docs/plan/plan_scheduler_worker_runner_integration.md` Phase C before implementation.
+- Extended `tests/test_scheduler_worker_runner_integration.py` before implementation and confirmed the first failure was `dispatch_claimed_task()` still letting malformed stdout escape as `WorkerProtocolError`.
+- Added `WorkerProcessProtocolError` in `atelier/workers/runner.py`; it subclasses `WorkerProtocolError` and preserves stderr plus return code when stdout event validation fails.
+- Updated `dispatch_claimed_task()` in `atelier/scheduler/dispatch.py` so `WorkerProcessProtocolError` is converted into a persisted `FailedEvent(error_code="INTERNAL", recoverable=False)`.
+- Valid failed stub worker dispatch coverage now verifies failure facts, stderr, return code, failed status, and resource lock release.
+- Protocol-error dispatch coverage now verifies malformed stdout records an internal failed event, preserves stderr/return code, marks the task failed, and releases the active resource lock.
+- Updated `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_scheduler_worker_runner_integration.md`.
+
+Current Phase C boundary:
+
+- Implemented: valid failed worker stream persistence and protocol-error-to-failed-event persistence for the narrow claimed-task dispatch seam.
+- Not implemented: automatic claim loop, RuntimeManager command selection, real adapters, timeout, cancel, kill escalation, stderr file persistence, retry/recovery orchestration, or GUI execution.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_scheduler_worker_runner_integration tests.test_worker_runner
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_scheduler_worker_runner_integration tests.test_worker_runner`: 7 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 59 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_051000 [执行 Scheduler Worker Runner Phase B]
+
+- Continued `docs/plan/plan_scheduler_worker_runner_integration.md` Phase B before implementation.
+- Extended `tests/test_scheduler_worker_runner_integration.py` before implementation and confirmed the first failure was missing `fetch_task_artifact_links`.
+- Added `fetch_task_artifact_links()` in `atelier/storage/repositories.py` to verify `task_artifacts` links without changing artifact write behavior.
+- Completed stub worker dispatch coverage now verifies:
+  - `started -> artifact -> completed` events are persisted to `task_events`;
+  - artifact paths are persisted to `artifacts`;
+  - output artifact links are persisted to `task_artifacts`;
+  - task status becomes `completed`;
+  - active resource lock is released.
+- Updated `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_scheduler_worker_runner_integration.md`.
+
+Current Phase B boundary:
+
+- Implemented: completed stub worker dispatch path with event, artifact, task-artifact link, terminal status, and lock release verification.
+- Not implemented: valid failed worker path, protocol-error conversion to `FailedEvent`, automatic claim loop, RuntimeManager command selection, real adapters, timeout, cancel, kill escalation, stderr file persistence, retry/recovery orchestration, or GUI execution.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_scheduler_worker_runner_integration
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_scheduler_worker_runner_integration`: 2 tests passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 57 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_050000 [执行 Scheduler Worker Runner Phase A]
+
+- Continued `docs/plan/plan_scheduler_worker_runner_integration.md` Phase A before implementation.
+- Added `tests/test_scheduler_worker_runner_integration.py` before implementation and confirmed the first failure was missing `atelier.scheduler.dispatch`.
+- Added `atelier/scheduler/dispatch.py` with:
+  - `WorkerDispatchResult`
+  - `dispatch_claimed_task()`
+- `dispatch_claimed_task()` accepts an already claimed `ClaimedTask`, copies the Scheduler-provided `ResourceBinding` onto the task payload, writes `task.json`, runs the supplied stub worker command through `run_worker_process()`, persists returned events through `record_worker_events()`, and returns task id, parsed events, stderr, return code, and final SQLite task status.
+- Updated `docs/APP_CODE_MAP.md`, `docs/plan/plan_main_app_skeleton.md`, and `docs/plan/plan_scheduler_worker_runner_integration.md`.
+
+Current Phase A boundary:
+
+- Implemented: first claimed-task dispatch seam from Scheduler claim to `task.json`, runner, SQLite event persistence, and structured dispatch result.
+- Not implemented: completed artifact-path coverage, failed worker path, protocol-error conversion to `FailedEvent`, automatic claim loop, RuntimeManager command selection, real adapters, timeout, cancel, kill escalation, stderr file persistence, retry/recovery orchestration, or GUI execution.
+
+Validation run:
+
+```powershell
+.venv/Scripts/python -m unittest tests.test_scheduler_worker_runner_integration
+.venv/Scripts/python -m unittest discover -s tests
+.venv/Scripts/python -m compileall -q atelier tests
+git diff --check
+```
+
+Result:
+
+- `.venv/Scripts/python -m unittest tests.test_scheduler_worker_runner_integration`: 1 test passed.
+- `.venv/Scripts/python -m unittest discover -s tests`: 56 tests passed.
+- `.venv/Scripts/python -m compileall -q atelier tests`: passed.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260504_044000 [新增后续两个 Worker 计划]
 
 - Added `docs/plan/plan_scheduler_worker_runner_integration.md`.
