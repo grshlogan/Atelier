@@ -44,10 +44,45 @@ class NodeCategory(str, Enum):
 | 分类 | 用途 | 示例 node_type |
 |---|---|---|
 | `input` | 媒体输入源 | `input.video`, `input.audio`, `input.subtitle` |
-| `process` | AI / 媒体处理 | `asr.whisper`, `translate.llm`, `subtitle.review`, `enhance.realesrgan`, `enhance.rife`, `audio.enhance` |
+| `process` | AI / 媒体处理 | `asr.whisper`, `ocr.recognition`, `subtitle.normalize`, `translate.llm`, `subtitle.review`, `enhance.realesrgan`, `enhance.rife`, `audio.enhance` |
 | `compose` | 合成 / 封装 | `compose.mux_subtitle`, `compose.burn_subtitle`, `compose.mux_audio` |
 | `output` | 导出 / 输出 | `output.export`, `output.multi_format` |
 | `control` | 流程控制（预留） | `control.branch`, `control.merge` |
+
+## 3.1 首版主要内置卡片 / node_type
+
+当前主要卡片目录以本节为 NodeRegistry 初始事实源。后续 UI、ExecutionPlan、Scheduler、Worker Adapter 和预设文档都应对齐这些 `node_type`，不要在不同文档里发明近义命名。
+
+```text
+输入类:
+  input.video
+  input.audio
+  input.subtitle
+
+预处理类:
+  media.audio_extract
+
+字幕类:
+  asr.whisper
+  ocr.recognition
+  translate.llm
+  subtitle.review
+  subtitle.normalize
+
+视频处理类:
+  enhance.realesrgan
+  enhance.rife
+
+合成类:
+  compose.mux_subtitle
+  compose.burn_subtitle
+  compose.mux_audio
+
+输出类:
+  output.export
+```
+
+辅助卡片可在首版或后续加入，例如 `metadata.probe`、`audio.enhance` 和 cache / review / diagnostic 类节点；但它们不应替换以上主要卡片的命名。
 
 ## 4. 节点 Schema (WorkflowNode)
 
@@ -88,6 +123,7 @@ class PortDataType(str, Enum):
     VIDEO     = "video"
     AUDIO     = "audio"
     SUBTITLE  = "subtitle"
+    OCR_TEXT_TRACK = "ocr_text_track"
     IMAGE_SEQ = "image_seq"
     METADATA  = "metadata"
     ANY       = "any"
@@ -108,6 +144,7 @@ class PortDefinition(BaseModel):
 | `video` | `video`, `any` |
 | `audio` | `audio`, `any` |
 | `subtitle` | `subtitle`, `any` |
+| `ocr_text_track` | `ocr_text_track`, `metadata`, `any` |
 | `image_seq` | `image_seq`, `any` |
 | `metadata` | `metadata`, `any` |
 | `any` | `any`，或在运行前已经绑定成具体类型的目标端口 |
@@ -119,6 +156,14 @@ class PortDefinition(BaseModel):
 - `target.data_type == any` 表示该输入端口可以接收任意已知具体类型。
 - `source.data_type == any` 不应绕过类型检查；它必须在 ExecutionPlanner 生成计划前被推导或绑定为具体类型。
 - 如果无法推导出具体类型，WorkflowGraph 验证应返回 `DataTypeUnresolved`，不应进入 ExecutionPlan。
+- `ocr_text_track` 表示 OCR 识别出的画面文字轨道，可作为 `translate.llm` 的视觉上下文输入，但不是完整字幕时间轴的默认替代品。
+- `translate.llm` 的主字幕输入仍是 `subtitle`；当缺少 ASR subtitle 而只接入 `ocr_text_track` 时，必须按 `TRANSLATE_AGENT_SPEC.md` 标记为 OCR-only draft。
+
+### Translate Agent 与 OCR Recognition 边界
+
+- `ocr.recognition` 是独立节点，可由第三方插件 adapter 或 Atelier 自研 adapter 提供，输出 `ocr_text_track`。
+- `translate.llm` / `Translate Agent` 消费 `subtitle`、可选 `ocr_text_track`、glossary 和 style profile，输出翻译字幕与 fusion metadata。
+- Translate Agent 不拥有 OCR 识别职责，不应把 OCR 逻辑塞进 ASR adapter，也不应直接调用第三方 OCR 软件绕过 Worker / RuntimeManager / Scheduler。
 
 ## 6. 边 Schema (WorkflowEdge)
 
@@ -372,7 +417,8 @@ WorkflowGraph 使用 JSON 序列化。以下是一个最小示例（ASR + 翻译
       "display_name": "LLM 翻译",
       "version": "1.0.0",
       "inputs": [
-        {"port_id": "subtitle_in", "direction": "input", "data_type": "subtitle", "required": true, "multi": false, "label": "原始字幕"}
+        {"port_id": "subtitle_in", "direction": "input", "data_type": "subtitle", "required": true, "multi": false, "label": "原始字幕"},
+        {"port_id": "ocr_context_in", "direction": "input", "data_type": "ocr_text_track", "required": false, "multi": false, "label": "OCR 上下文"}
       ],
       "outputs": [
         {"port_id": "subtitle_out", "direction": "output", "data_type": "subtitle", "required": false, "multi": false, "label": "翻译字幕"}
@@ -457,4 +503,5 @@ WORKFLOW_NODE_SPEC (本文档)
                          NodeParam / param_values 传递给 Worker 作为执行参数。
   → DATABASE_SCHEMA：   WorkflowGraph 整体序列化存入 workflow_graphs 表。
                          Preset 复用 graph_json 格式。
+  → TRANSLATE_AGENT_SPEC：translate.llm / ocr.recognition / ocr_text_track 的翻译专项契约由该文档细化。
 ```

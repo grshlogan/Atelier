@@ -1,6 +1,6 @@
 # Atelier Worker Protocol
 
-> 状态：部分实现。已实现 `WorkerEvent` JSON Lines 编解码、`ExecutionTask -> task.json -> WorkerProcessSpec` 边界、最小 stdout event stream validation、最小 subprocess runner 边界、lifecycle runner 接口形状、增量 stdout 读取、startup/heartbeat timeout 转 `TIMEOUT` 失败事件、最小 stdin `cancel` 控制、timeout/cancel/protocol-error terminate-kill 升级、可选 stderr 文件落盘、`log` / `heartbeat` 事件模型和协议错误边界；pause、GUI/Scheduler 取消接线、adapter 级取消、生产级 worker lifecycle 行为和真实 adapters 尚未实现。
+> 状态：部分实现。已实现 `WorkerEvent` JSON Lines 编解码、`ExecutionTask -> task.json -> WorkerProcessSpec` 边界、最小 stdout event stream validation、最小 subprocess runner 边界、lifecycle runner 接口形状、增量 stdout 读取、startup/heartbeat timeout 转 `TIMEOUT` 失败事件、最小 stdin `cancel` 控制、timeout/cancel/protocol-error terminate-kill 升级、可选 stderr 文件落盘、`log` / `heartbeat` 事件模型和协议错误边界；窄的 claimed-task dispatch seam 已能把 lifecycle timeout/cancel/protocol-error 结果持久化到 SQLite 并释放 resource lock。pause、GUI 取消接线、adapter 级取消、生产级 worker lifecycle 行为和真实 adapters 尚未实现。
 
 ## 1. 概述
 
@@ -166,7 +166,7 @@ class LogEvent(WorkerEvent):
 class ArtifactEvent(WorkerEvent):
     type:           Literal["artifact"] = "artifact"
     artifact_id:    str                  # ULID，Worker 生成
-    artifact_type:  str                  # "subtitle" | "video" | "audio" | "image_seq" | "metadata" | "cache"
+    artifact_type:  str                  # "subtitle" | "video" | "audio" | "ocr_text_track" | "image_seq" | "metadata" | "cache"
     path:           str                  # 最终文件路径（相对于 work_dir）
     hash:           str | None = None    # SHA-256 hex digest
     size_bytes:     int | None = None    # 文件大小
@@ -182,9 +182,13 @@ class ArtifactEvent(WorkerEvent):
 | artifact_type | 建议 metadata 字段 |
 |---|---|
 | `subtitle` | `format`, `segments`, `language` |
+| `ocr_text_track` | `backend`, `model_id`, `frames_sampled`, `confidence_stats`, `item_count` |
 | `video` | `format`, `duration_sec`, `resolution`, `codec`, `fps` |
 | `audio` | `format`, `duration_sec`, `sample_rate`, `channels` |
 | `image_seq` | `format`, `frame_count`, `resolution` |
+| `metadata` | `kind`, `schema_version`, `related_artifact_ids` |
+
+Translate Agent 的 `translation_fusion.json` 和 `translation_warnings.json` 可以作为 `metadata` artifact 记录；OCR Recognition 的结构化文字轨道应使用 `ocr_text_track`，不要伪装成 `subtitle`。
 | `metadata` | 自由格式 |
 
 ---
@@ -326,6 +330,12 @@ class WorkerConfig(BaseModel):
 
 Scheduler 收到 `failed` 且 `error_code == CANCELLED` 时，必须将任务状态归一化为 `cancelled`，并将 Plan/Job 取消逻辑按 EXECUTION_PLAN_SPEC §12 处理。这类事件不进入普通失败重试路径。
 
+当前实现状态：
+
+- `run_worker_lifecycle()` 已支持最小 stdin `cancel` 控制。
+- `dispatch_claimed_task()` 已能接收 caller-provided `cancel_event`，并把 Worker 主动上报或 cancel grace 到期生成的 `CANCELLED` failure event 持久化为 `cancelled` task status。
+- GUI 取消按钮、Plan/Job 级级联取消、adapter-specific cancellation 和生产级 process tree governance 尚未实现。
+
 ### 7.2 取消时的 partial artifacts
 
 - 如果取消前已有完整产物，Worker 应在 failed 事件的 `partial_artifacts` 中列出。
@@ -405,9 +415,14 @@ class WorkerAdapter(ABC):
 
 | node_type | Adapter | 外部工具 |
 |---|---|---|
-| `input.video` | InputVideoAdapter | FFprobe |
+| `input.video` | InputMediaAdapter | FFprobe / file validation |
+| `input.audio` | InputMediaAdapter | FFprobe / file validation |
+| `input.subtitle` | InputSubtitleAdapter | subtitle parser / file validation |
+| `media.audio_extract` | FFmpegAudioExtractAdapter | FFmpeg |
 | `asr.whisper` | WhisperAdapter | faster-whisper / whisper.cpp |
-| `translate.llm` | LLMTranslateAdapter | LLM API（本地或远程） |
+| `ocr.recognition` | OCRRecognitionAdapter | PaddleOCR / Tesseract / 插件 adapter（未来） |
+| `translate.llm` | TranslateAgentAdapter | LLM API / DeepL / 本地 LLM |
+| `subtitle.normalize` | SubtitleNormalizeAdapter | internal subtitle parser |
 | `subtitle.review` | SubtitleReviewAdapter | LLM API |
 | `enhance.realesrgan` | RealESRGANAdapter | realesrgan-ncnn-vulkan |
 | `enhance.rife` | RIFEAdapter | rife-ncnn-vulkan |
@@ -457,4 +472,7 @@ WORKER_PROTOCOL (本文档)
       task_events 表追加存储所有 WorkerEvent。
       artifacts 表存储 artifact 记录。
       stderr 日志存储到文件系统（不入数据库）。
+  → TRANSLATE_AGENT_SPEC：
+      translate.llm 使用 TranslateAgentAdapter。
+      ocr.recognition 输出 ocr_text_track，Translate Agent 可将其作为视觉上下文消费。
 ```

@@ -192,7 +192,10 @@ Workspace Manager
 ### Icons
 
 - 当前主界面图标库是 `atelier/assets/`。
+- 当前软件品牌图标位于 `atelier/assets/brand/`，用于 app icon、窗口图标、安装器、About 页面、顶部品牌标记和托盘图标。
 - 图标以 24 × 24 的线性 SVG 为基线，使用 `stroke="currentColor"` 和 `fill="none"`，颜色由主题 palette、控件状态或样式系统控制。
+- `brand/atelier_icon_full.svg` 可使用渐变和 app tile 质感；小尺寸 UI 应使用 `atelier_logo_compact.svg`、`atelier_logo_mono.svg` 或 tray variants，避免把 full icon 机械缩小到 16-32px。
+- `brand/01.png` 到 `brand/04.png` 是品牌 SVG 的视觉参考渲染；SVG 应尽量保持与这些 PNG 的轮廓、流程线数量、节点块和发光质感一致，但不能通过嵌入 raster image 伪装成 SVG。
 - 顶部栏、左侧导航、Workflow 节点、Queue Monitor、Hardware Resources、Inspector、状态提示和系统模块图标应优先从 `atelier/assets/toolbar/`、`navigation/`、`nodes/`、`queue/`、`hardware/`、`inspector/`、`status/`、`system/` 取用。
 - `atelier/assets/icon_manifest.json` 是当前图标清单；`atelier/assets/atelier_icons_sprite.svg` 和 `preview.html` 可用于预览或后续构建流程参考。
 - 不直接复制外部品牌 logo、第三方产品图标或参考文档里的视觉皮肤；需要新增图标时，应保持 Atelier 当前线性、克制、深色工作站兼容的语言。

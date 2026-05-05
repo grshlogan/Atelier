@@ -14,6 +14,12 @@ Atelier 的插件系统必须扩展 workflow、runtime、UI 和 presets，同时
 插件必须可禁用、可回滚、可诊断
 ```
 
+### 1.1 与第三方工具接入的关系
+
+插件系统不是第三方工具的执行接口。它负责安装、声明、权限、注册、启停、更新和缺失状态；工具执行接口由 `ExternalToolAdapter` / `WorkerAdapter`、RuntimeManager、Scheduler 和 Worker 共同承担。
+
+因此 LADA-like 修复工具、翻译 provider、OCR backend、ASR backend、视频增强 backend 可以由插件贡献，但不能由 PluginManager 直接运行。详细边界见 `EXTERNAL_TOOL_INTEGRATION_SPEC.md`。
+
 ## 2. 参考软件与取舍
 
 ### VS Code Extensions
@@ -155,6 +161,19 @@ name = "worker:spawn"
 - runtime requirements
 - worker adapter entry
 - command builder constraints
+
+### external_tools
+
+新增第三方工具声明。它描述工具形态和允许绑定的 node/backend，而不是直接声明可执行 shell 命令。
+
+必须声明：
+
+- tool id
+- tool kind: `local_cli`、`local_sdk`、`remote_api`、`managed_runtime` 或 `plugin_backend`
+- supported node types
+- runtime requirements 或 provider profile requirements
+- adapter entry
+- required permissions
 
 ### presets
 

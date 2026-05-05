@@ -1,5 +1,65 @@
 [
   {
+    "path": "brand/atelier_icon_full.svg",
+    "name": "atelier_icon_full",
+    "category": "brand",
+    "style": "1024px full app icon, gradient SVG"
+  },
+  {
+    "path": "brand/atelier_logo_standard.svg",
+    "name": "atelier_logo_standard",
+    "category": "brand",
+    "style": "standard app logo, gradient SVG"
+  },
+  {
+    "path": "brand/atelier_logo_compact.svg",
+    "name": "atelier_logo_compact",
+    "category": "brand",
+    "style": "compact app logo, gradient SVG"
+  },
+  {
+    "path": "brand/atelier_logo_mono.svg",
+    "name": "atelier_logo_mono",
+    "category": "brand",
+    "style": "monochrome currentColor brand mark"
+  },
+  {
+    "path": "brand/atelier_tray_dark.svg",
+    "name": "atelier_tray_dark",
+    "category": "brand",
+    "style": "white monochrome tray mark for dark UI"
+  },
+  {
+    "path": "brand/atelier_tray_light.svg",
+    "name": "atelier_tray_light",
+    "category": "brand",
+    "style": "dark monochrome tray mark for light UI"
+  },
+  {
+    "path": "brand/01.png",
+    "name": "atelier_icon_full_reference",
+    "category": "brand_reference",
+    "style": "PNG visual reference render for atelier_icon_full.svg"
+  },
+  {
+    "path": "brand/02.png",
+    "name": "atelier_logo_standard_reference",
+    "category": "brand_reference",
+    "style": "PNG visual reference render for atelier_logo_standard.svg"
+  },
+  {
+    "path": "brand/03.png",
+    "name": "atelier_logo_compact_reference",
+    "category": "brand_reference",
+    "style": "PNG visual reference render for atelier_logo_compact.svg"
+  },
+  {
+    "path": "brand/04.png",
+    "name": "atelier_logo_mono_reference",
+    "category": "brand_reference",
+    "style": "PNG visual reference render for atelier_logo_mono.svg and tray variants"
+  },
+  {
     "path": "hardware/cpu.svg",
     "name": "cpu",
     "category": "hardware",

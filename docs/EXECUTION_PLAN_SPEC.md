@@ -294,6 +294,19 @@ class Conflict(BaseModel):
 - `ExecutionLane.lane_resource_hint` 不是执行事实源；运行时只信任 `ExecutionTask.resource_binding`。
 - `runtime_binding` 不由用户手写，必须由 RuntimeManager 根据 RuntimeRequest 和 RuntimeManifest 解析。
 
+### 11.1 OCR / Translate Agent 降级依赖
+
+`translate.llm` 是首个需要 optional / degraded dependency 表达的内置卡片。默认推荐：
+
+```text
+ASR completed + OCR completed -> ASR + OCR fusion
+ASR completed + OCR failed    -> ASR-only with warning
+ASR failed + OCR completed    -> OCR-only draft if policy allows
+ASR failed + OCR failed       -> blocked
+```
+
+ExecutionPlanner / Scheduler 不应把 `translate.llm` 固定成必须同时依赖 `asr.whisper` 和 `ocr.recognition` 成功。具体策略由 `TRANSLATE_AGENT_SPEC.md`、`BATCH_PIPELINE_SCHEDULING_SPEC.md` 和后续 NodeRegistry dependency policy 细化。
+
 ## 12. TaskStatus 状态机
 
 ```text

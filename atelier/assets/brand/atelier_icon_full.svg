@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Atelier full app icon">
+  <!--
+Atelier icon asset
+Pure SVG vector: no embedded raster images, no external fonts, no scripts.
+Brand concept: A + Flow + Scheduling.
+Visual reference: atelier/assets/brand/01.png.
+-->
+  <defs>
+    <linearGradient id="tile" x1="120" y1="78" x2="904" y2="944" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#10213A"/>
+      <stop offset="0.38" stop-color="#061224"/>
+      <stop offset="1" stop-color="#030812"/>
+    </linearGradient>
+    <radialGradient id="tileSheen" cx="50%" cy="22%" r="72%">
+      <stop offset="0" stop-color="#13305C" stop-opacity="0.58"/>
+      <stop offset="0.46" stop-color="#0A1830" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#02050B" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="108" y1="42" x2="920" y2="982" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E7F1FF" stop-opacity="0.72"/>
+      <stop offset="0.18" stop-color="#6E8DB8" stop-opacity="0.84"/>
+      <stop offset="0.58" stop-color="#1A2A42" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#92A9C8" stop-opacity="0.64"/>
+    </linearGradient>
+    <linearGradient id="aBlue" x1="315" y1="190" x2="835" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#32D8FF"/>
+      <stop offset="0.42" stop-color="#1476FF"/>
+      <stop offset="0.72" stop-color="#0862F4"/>
+      <stop offset="1" stop-color="#34E8F4"/>
+    </linearGradient>
+    <linearGradient id="flowBlue" x1="185" y1="566" x2="810" y2="816" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0E5DFF"/>
+      <stop offset="0.52" stop-color="#126DFF"/>
+      <stop offset="1" stop-color="#2EDFF2"/>
+    </linearGradient>
+    <linearGradient id="nodeBlue" x1="176" y1="575" x2="385" y2="826" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#36D9FF"/>
+      <stop offset="0.54" stop-color="#126DFF"/>
+      <stop offset="1" stop-color="#0A56E9"/>
+    </linearGradient>
+    <filter id="tileShadow" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="22" stdDeviation="18" flood-color="#000000" flood-opacity="0.58"/>
+    </filter>
+    <filter id="blueGlow" x="-34%" y="-34%" width="168%" height="168%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.02  0 0 0 0 0.42  0 0 0 0 1  0 0 0 0.72 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="trailBlur" x="-30%" y="-80%" width="160%" height="260%">
+      <feGaussianBlur stdDeviation="9 2"/>
+    </filter>
+    <mask id="aCut">
+      <rect width="1024" height="1024" fill="#FFFFFF"/>
+      <path d="M302 586 H412 C495 586 510 542 586 518 C622 507 660 508 714 514"
+            fill="none" stroke="#000000" stroke-width="88" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M265 690 H426 C504 690 520 636 588 618 C620 610 656 610 696 612 C747 615 766 647 792 696 L840 790"
+            fill="none" stroke="#000000" stroke-width="98" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M268 790 H390 C475 790 500 744 536 681 L578 608"
+            fill="none" stroke="#000000" stroke-width="80" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+
+  <rect x="34" y="34" width="956" height="956" rx="216" fill="url(#tile)" filter="url(#tileShadow)"/>
+  <rect x="46" y="46" width="932" height="932" rx="204" fill="url(#tileSheen)"/>
+  <rect x="50" y="50" width="924" height="924" rx="202" fill="none" stroke="url(#rim)" stroke-width="12"/>
+  <rect x="66" y="66" width="892" height="892" rx="184" fill="none" stroke="#FFFFFF" stroke-opacity="0.09" stroke-width="4"/>
+  <rect x="78" y="78" width="868" height="868" rx="172" fill="none" stroke="#000000" stroke-opacity="0.42" stroke-width="10"/>
+
+  <g opacity="0.26" filter="url(#trailBlur)" stroke="#0D60FF" stroke-linecap="round">
+    <path d="M156 586 H322" stroke-width="18"/>
+    <path d="M136 688 H286" stroke-width="18"/>
+    <path d="M128 792 H314" stroke-width="18"/>
+  </g>
+
+  <g filter="url(#blueGlow)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M300 544 L462 249 C486 206 538 206 563 249 L854 790"
+          fill="none" stroke="#020814" stroke-opacity="0.56" stroke-width="176" mask="url(#aCut)"/>
+    <path d="M300 544 L462 249 C486 206 538 206 563 249 L854 790"
+          fill="none" stroke="url(#aBlue)" stroke-width="156" mask="url(#aCut)"/>
+    <path d="M316 535 L470 256 C491 218 534 218 554 256 L832 772"
+          fill="none" stroke="#92F2FF" stroke-opacity="0.44" stroke-width="10" mask="url(#aCut)"/>
+
+    <path d="M302 586 H412 C495 586 510 542 586 518 C622 507 660 508 714 514"
+          fill="none" stroke="#02101F" stroke-opacity="0.72" stroke-width="66"/>
+    <path d="M302 586 H412 C495 586 510 542 586 518 C622 507 660 508 714 514"
+          fill="none" stroke="url(#flowBlue)" stroke-width="44"/>
+
+    <path d="M265 690 H426 C504 690 520 636 588 618 C620 610 656 610 696 612 C747 615 766 647 792 696 L840 790"
+          fill="none" stroke="#02101F" stroke-opacity="0.8" stroke-width="78"/>
+    <path d="M265 690 H426 C504 690 520 636 588 618 C620 610 656 610 696 612 C747 615 766 647 792 696 L840 790"
+          fill="none" stroke="url(#flowBlue)" stroke-width="56"/>
+
+    <path d="M268 790 H390 C475 790 500 744 536 681 L578 608"
+          fill="none" stroke="#02101F" stroke-opacity="0.76" stroke-width="62"/>
+    <path d="M268 790 H390 C475 790 500 744 536 681 L578 608"
+          fill="none" stroke="url(#flowBlue)" stroke-width="42"/>
+
+    <rect x="260" y="561" width="78" height="48" rx="13" fill="#061326" opacity="0.82"/>
+    <rect x="249" y="554" width="76" height="48" rx="13" fill="url(#nodeBlue)"/>
+    <rect x="201" y="656" width="118" height="56" rx="15" fill="#061326" opacity="0.82"/>
+    <rect x="190" y="648" width="122" height="56" rx="15" fill="url(#nodeBlue)"/>
+    <rect x="236" y="755" width="88" height="54" rx="15" fill="#061326" opacity="0.82"/>
+    <rect x="225" y="747" width="88" height="54" rx="15" fill="url(#nodeBlue)"/>
+  </g>
+</svg>

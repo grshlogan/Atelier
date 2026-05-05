@@ -159,6 +159,7 @@ Rules:
 - User input is validated by type and constraints before becoming an argument.
 - External tool paths come from `RuntimeBinding.component_paths`.
 - Worker environment is scoped and minimal.
+- Third-party local tools, user-configured external tool profiles, remote providers and plugin-contributed backends must follow `EXTERNAL_TOOL_INTEGRATION_SPEC.md`.
 
 Command execution record should include:
 

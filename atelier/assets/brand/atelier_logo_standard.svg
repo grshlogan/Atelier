@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Atelier standard logo">
+  <!--
+Atelier icon asset
+Pure SVG vector: no embedded raster images, no external fonts, no scripts.
+Brand concept: A + Flow + Scheduling.
+Visual reference: atelier/assets/brand/02.png.
+-->
+  <defs>
+    <linearGradient id="aBlue" x1="300" y1="182" x2="850" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#24D5FF"/>
+      <stop offset="0.42" stop-color="#1477FF"/>
+      <stop offset="0.78" stop-color="#0E67F4"/>
+      <stop offset="1" stop-color="#28D8EC"/>
+    </linearGradient>
+    <linearGradient id="flowBlue" x1="180" y1="592" x2="820" y2="800" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F5CFF"/>
+      <stop offset="0.56" stop-color="#116DFF"/>
+      <stop offset="1" stop-color="#28D8EC"/>
+    </linearGradient>
+    <linearGradient id="nodeBlue" x1="188" y1="595" x2="340" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#24D5FF"/>
+      <stop offset="0.56" stop-color="#126DFF"/>
+      <stop offset="1" stop-color="#0A55E8"/>
+    </linearGradient>
+    <mask id="aCut">
+      <rect width="1024" height="1024" fill="#FFFFFF"/>
+      <path d="M306 622 H421 C498 622 516 576 590 548 C622 536 660 536 720 542"
+            fill="none" stroke="#000000" stroke-width="84" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M275 724 H432 C512 724 530 666 594 646 C626 636 660 636 700 638 C748 640 768 672 792 718 L842 812"
+            fill="none" stroke="#000000" stroke-width="98" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M302 550 L462 257 C486 212 538 212 562 257 L854 802"
+          stroke="url(#aBlue)" stroke-width="156" mask="url(#aCut)"/>
+    <path d="M316 540 L470 264 C491 226 533 226 554 264 L833 784"
+          stroke="#8BEFFF" stroke-opacity="0.28" stroke-width="9" mask="url(#aCut)"/>
+
+    <path d="M306 622 H421 C498 622 516 576 590 548 C622 536 660 536 720 542"
+          stroke="url(#flowBlue)" stroke-width="48"/>
+    <path d="M275 724 H432 C512 724 530 666 594 646 C626 636 660 636 700 638 C748 640 768 672 792 718 L842 812"
+          stroke="url(#flowBlue)" stroke-width="60"/>
+  </g>
+  <g fill="url(#nodeBlue)">
+    <rect x="234" y="594" width="74" height="52" rx="13"/>
+    <rect x="180" y="688" width="118" height="58" rx="15"/>
+  </g>
+</svg>

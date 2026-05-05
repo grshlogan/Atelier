@@ -211,7 +211,8 @@ CREATE TABLE artifacts (
     artifact_type   TEXT NOT NULL
                     CHECK (artifact_type IN (
                         'video', 'audio', 'subtitle',
-                        'image_seq', 'metadata', 'cache'
+                        'ocr_text_track', 'image_seq',
+                        'metadata', 'cache'
                     )),
     path            TEXT NOT NULL,                 -- 文件路径
     hash            TEXT,                          -- SHA-256 hex digest
@@ -228,6 +229,14 @@ CREATE INDEX idx_artifacts_task_id ON artifacts(task_id);
 CREATE INDEX idx_artifacts_type ON artifacts(artifact_type);
 CREATE INDEX idx_artifacts_hash ON artifacts(hash);
 ```
+
+常见 artifact type：
+
+| artifact_type | 用途 |
+|---|---|
+| `subtitle` | ASR、翻译或审校后的 SRT/VTT/ASS 字幕文件 |
+| `ocr_text_track` | OCR Recognition 产生的结构化画面文字轨道，用作 Translate Agent 的视觉上下文 |
+| `metadata` | sidecar / fusion / warnings / probe 结果等结构化 JSON，例如 `translation_fusion.json` |
 
 ### Artifact Status 说明
 
@@ -627,6 +636,10 @@ EXECUTION_PLAN_SPEC
 WORKER_PROTOCOL
   → task_events 表：所有 WorkerEvent 追加存储。
   → artifacts 表：Worker 产出的 artifact 记录。
+
+TRANSLATE_AGENT_SPEC
+  → artifacts 表：`ocr_text_track` 存储 OCR 文字轨道，`subtitle` 存储翻译字幕，`metadata` 存储 fusion / warnings sidecar。
+  → credential_refs 表：远程翻译 provider / OpenAI-compatible provider / DeepL 等只保存 credential reference，不保存 secret。
 
 RuntimeManager
   → runtime_components 表：软件 runtime 组件安装、校验和状态。

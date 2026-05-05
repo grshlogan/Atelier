@@ -23,6 +23,7 @@ atelier/
     icon_manifest.json
     preview.html
     atelier_icons_sprite.svg
+    brand/
     hardware/
     inspector/
     navigation/
@@ -174,7 +175,9 @@ Rules:
 
 Responsibility:
 
-- Stores the current Atelier UI icon library.
+- Stores the current Atelier icon resources.
+- Provides brand/app icon assets under `brand/` for app icon, installer/about page, header logo, monochrome mark, and tray variants.
+- Keeps `brand/01.png` through `brand/04.png` as visual reference renders for the brand SVGs.
 - Provides original 24 × 24 SVG line icons for toolbar, navigation, workflow nodes, queue, hardware, status, inspector, and system module surfaces.
 - Provides `icon_manifest.json` as the current icon inventory.
 - Provides `atelier_icons_sprite.svg` and `preview.html` as preview / future build-pipeline reference assets.
@@ -183,6 +186,7 @@ Boundary:
 
 - This is a resource directory, not Python runtime logic.
 - Does not implement Qt `.qrc` registration, IconManager, runtime recoloring, icon cache, or theme switching.
+- Does not generate Windows `.ico`, macOS `.icns`, or a complete PNG export set from brand SVGs.
 - Do not load icons through ad hoc hard-coded paths in many widgets once GUI implementation starts; add a single asset path / icon loading boundary first.
 - Does not contain third-party brand logos or external reference design assets.
 
@@ -647,6 +651,7 @@ Responsibility:
 - Supports optional `lifecycle_config`, `cancel_event`, and `stderr_log_path` parameters for callers that need lifecycle timeout/cancel/log behavior.
 - Copies the Scheduler-provided `ResourceBinding` onto the task payload before writing `task.json`.
 - Converts `WorkerProcessProtocolError` into a persisted `FailedEvent(error_code="INTERNAL")` so malformed worker stdout does not leave a task running or a resource lock active.
+- Persists lifecycle timeout as `TIMEOUT`, lifecycle cancel as `CANCELLED` / `cancelled`, and lifecycle protocol errors as `INTERNAL`, while preserving stderr log path facts and releasing active resource locks.
 
 Boundary:
 
@@ -1011,13 +1016,16 @@ Responsibility:
 - Tests Phase A of `plan_scheduler_lifecycle_dispatch_integration.md`.
 - Confirms `dispatch_claimed_task()` accepts an already claimed task, writes a `task.json` with the Scheduler-provided resource binding, runs a temporary stub worker command, records returned events, preserves stderr/return code in the dispatch result, and reports the final SQLite task status.
 - Confirms `dispatch_claimed_task()` can use lifecycle runner options and return stderr log path plus lifecycle flags on a completed stub worker path.
+- Confirms lifecycle dispatch timeout records `TIMEOUT`, marks the task failed, preserves stderr log path, and releases the active resource lock.
+- Confirms lifecycle dispatch cancellation records `CANCELLED`, normalizes the task status to `cancelled`, and releases the active resource lock for both cancel-aware and stuck workers.
+- Confirms lifecycle dispatch protocol errors preserve stderr log details, record an internal failed event, and release the active resource lock.
 - Confirms a completed stub worker path records `started -> artifact -> completed` events, writes artifact rows, links `task_artifacts`, marks the task completed, and releases the active resource lock.
 - Confirms a valid failed worker stream records failure facts, marks the task failed, preserves stderr/return code, and releases the active resource lock.
 - Confirms malformed stdout is converted to an internal failed event instead of escaping as an unpersisted protocol exception.
 
 Boundary:
 
-- Does not test retry/recovery actions, timeout/cancel dispatch persistence, real adapters, or GUI execution.
+- Does not test retry/recovery action execution, GUI cancellation wiring, automatic claim loops, real adapters, or GUI execution.
 
 ### `tests/test_resource_locks.py`
 
@@ -1193,10 +1201,12 @@ These packages are specified in docs but not fully implemented yet:
 
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
-- `scheduler/`: `SimpleScheduler` and a narrow claimed-task dispatch helper exist; durable queue claiming, full dispatch loops, priorities, concurrency, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
+- `scheduler/`: `SimpleScheduler` and a narrow claimed-task dispatch helper exist; lifecycle timeout/cancel/protocol-error results can be persisted for already claimed stub tasks, but durable queue claiming, full dispatch loops, priorities, concurrency, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
 - `gui/`: optional dependency entry helpers, formal development launch entry, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
-- `workers/adapters/`: typed FFmpeg, ffprobe, ASR, translation, enhancement adapters.
-- `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; only the first claimed-task dispatch seam uses it from Scheduler, while production worker lifecycle is not implemented.
+- `atelier/domain/translation.py`: translation / OCR fusion / structured subtitle output models described by `docs/TRANSLATE_AGENT_SPEC.md`.
+- `atelier/translation/`: input resolver, timeline builder, OCR context aligner, chunk planner, prompt builder, provider clients, result validator, repair runner, and subtitle rebuilder described by `docs/TRANSLATE_AGENT_SPEC.md`.
+- `workers/adapters/`: typed FFmpeg, ffprobe, ASR, OCR recognition, Translate Agent, subtitle review, composition, export, and enhancement adapters.
+- `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; the first claimed-task dispatch seam uses it from Scheduler, including lifecycle timeout/cancel/protocol-error result persistence for stub workers, while production worker lifecycle orchestration is not implemented.
 - `workers/runner`: minimum subprocess boundary plus lifecycle interface, incremental stdout reading, startup/heartbeat timeout handling, timeout/cancel/protocol-error terminate-kill behavior, minimal stdin cancel control, and optional stderr log file persistence exist; pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, full production worker lifecycle behavior, and real adapters are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.

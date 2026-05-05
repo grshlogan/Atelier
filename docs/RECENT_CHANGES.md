@@ -2,6 +2,268 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260505_003000 [完成 lifecycle dispatch timeout/cancel/protocol-error 覆盖]
+
+- Aligned `docs/plan/plan_scheduler_lifecycle_dispatch_integration.md` with the new external tool integration boundary:
+  - this plan remains limited to the claimed-task Scheduler dispatch seam.
+  - real external tools, plugin backends, RuntimeManager automatic backend selection, and real adapters remain out of scope.
+- Extended `tests/test_scheduler_worker_runner_integration.py` with integration coverage for lifecycle dispatch:
+  - silent worker timeout persists `FailedEvent(error_code="TIMEOUT")`, marks the task `failed`, preserves stderr log path, and releases the active resource lock.
+  - cancel-aware worker persists `CANCELLED`, normalizes task status to `cancelled`, and releases the active resource lock.
+  - stuck cancel worker is terminated after cancel grace, persists `CANCELLED`, normalizes task status to `cancelled`, and releases the active resource lock.
+  - lifecycle protocol error persists `FailedEvent(error_code="INTERNAL")`, preserves stderr log details, marks the task `failed`, and releases the active resource lock.
+- Updated `docs/WORKER_PROTOCOL.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md`.
+
+Current boundary:
+
+- Implemented: claimed-task dispatch persistence for lifecycle completed, timeout, cancel, failed, and protocol-error stub worker paths.
+- Not implemented: GUI cancellation wiring, automatic claim loop, retry/recovery action execution, real adapters, external tool profiles, plugin backend execution, or production process tree governance.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_scheduler_worker_runner_integration tests.test_worker_lifecycle tests.test_worker_runner
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Related runner / dispatch tests: 19 tests passed.
+- Full unittest discovery: 71 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260505_002000 [规划第三方外部工具接入边界]
+
+- Added `docs/EXTERNAL_TOOL_INTEGRATION_SPEC.md` to define how third-party tools, local CLI tools, local SDKs, remote providers, managed runtimes, and plugin-provided backends enter Atelier.
+- Added `docs/plan/plan_external_tool_integration_spec.md`.
+- Recorded the core decision:
+  - external tool execution is an independent adapter/runtime/worker contract.
+  - the plugin system is the contribution, packaging, permission, registration, enable/disable, and update layer.
+- Updated `README.md`, `docs/ADAPTER_SPEC.md`, `docs/PLUGIN_SYSTEM_SPEC.md`, `docs/RUNTIME_ENVIRONMENT_SPEC.md`, and `docs/SECURITY_PRIVACY_SPEC.md` so LADA-like video repair tools, translation providers, OCR backends, ASR backends, and video enhancement tools share the same architecture path.
+
+Current boundary:
+
+- Implemented: documentation/spec alignment only.
+- Not implemented: `ExternalToolKind`, `ExternalToolBinding`, `AdapterRegistry`, external tool profile UI, real plugin manifest parser, real LADA-like adapter, or third-party backend execution.
+
+Validation run:
+
+```powershell
+Select-String -Path .\docs\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260505_001500 [导入 Split Docs v2 并对齐主要卡片目录]
+
+- Read `C:\Users\Administrator\Downloads\atelier_split_docs_v2\README.md` and `DOC_ALIGNMENT_NOTES.md`.
+- Moved 11 split docs v2 planning documents into `docs/`:
+  - `PRODUCT_FLOW_SPEC.md`
+  - `MVP_ACCEPTANCE_SPEC.md`
+  - `ADAPTER_SPEC.md`
+  - `FFMPEG_ADAPTER_SPEC.md`
+  - `ASR_ADAPTER_SPEC.md`
+  - `OCR_ADAPTER_SPEC.md`
+  - `VIDEO_ENHANCE_ADAPTER_SPEC.md`
+  - `ARTIFACT_LIFECYCLE_SPEC.md`
+  - `UI_STATE_SPEC.md`
+  - `ONBOARDING_RUNTIME_SETUP_SPEC.md`
+  - `DOC_ALIGNMENT_NOTES.md`
+- Kept the external pack `README.md` in the download folder as import context instead of adding `docs/README.md`.
+- Added `.gitignore` entries for temporary user-provided SVG drafts:
+  - `atelier/assets/brand/001.svg`
+  - `atelier/assets/brand/01.svg`
+- Updated the canonical main built-in node list in `docs/WORKFLOW_NODE_SPEC.md`:
+  - input: `input.video`, `input.audio`, `input.subtitle`
+  - preprocessing: `media.audio_extract`
+  - subtitle: `asr.whisper`, `ocr.recognition`, `translate.llm`, `subtitle.review`, `subtitle.normalize`
+  - video: `enhance.realesrgan`, `enhance.rife`
+  - compose: `compose.mux_subtitle`, `compose.burn_subtitle`, `compose.mux_audio`
+  - output: `output.export`
+- Updated `README.md`, `PRODUCT_FLOW_SPEC.md`, `BATCH_PIPELINE_SCHEDULING_SPEC.md`, `HARDWARE_SCHEDULING_PAGE_SPEC.md`, `ADAPTER_SPEC.md`, `FFMPEG_ADAPTER_SPEC.md`, `WORKER_PROTOCOL.md`, `RUNTIME_ENVIRONMENT_SPEC.md`, `EXECUTION_PLAN_SPEC.md`, `SCHEDULING_PRESETS_SPEC.md`, `ARTIFACT_LIFECYCLE_SPEC.md`, `DOC_ALIGNMENT_NOTES.md`, and `TRANSLATE_AGENT_SPEC.md` to align OCR and the main card catalog.
+- Added `docs/plan/plan_split_docs_v2_import_alignment.md`.
+
+Current boundary:
+
+- Implemented: documentation import, exact SVG ignore rules, and planning/spec alignment.
+- Not implemented: real adapters, OCR runtime, FFmpeg command builders, product flow UI, UI state machine, onboarding setup, MVP test harness, or Scheduler policy code.
+
+Validation run:
+
+```powershell
+Get-FileHash C:\Users\Administrator\Downloads\atelier_split_docs_v2\*.md
+Get-FileHash .\docs\<imported split docs>
+git check-ignore -v atelier/assets/brand/001.svg atelier/assets/brand/01.svg
+git check-ignore -v atelier/assets/brand/atelier_icon_full.svg
+Select-String -Path .\docs\*.md, .\README.md, .\.gitignore -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Initial move hashes matched for the imported split docs before follow-up alignment edits.
+- `001.svg` and `01.svg` are ignored by `.gitignore`.
+- `atelier_icon_full.svg` is not ignored, so tracked brand SVG assets remain eligible for commit.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260505_000500 [纳入 Translate Agent 专项规格]
+
+- Added `docs/TRANSLATE_AGENT_SPEC.md` as the planning source for the `Translate Agent` card focused on SRT / OCR-context subtitle translation.
+- Updated `README.md` so the document index includes `TRANSLATE_AGENT_SPEC.md` and the product scope records future OCR subtitle / screen-text recognition.
+- Updated `docs/WORKFLOW_NODE_SPEC.md` with:
+  - `ocr.recognition`
+  - `subtitle.normalize`
+  - `ocr_text_track` port data type
+  - optional `ocr_context_in` input for `translate.llm`
+  - explicit boundary that OCR Recognition remains its own node / adapter / plugin path.
+- Updated `docs/WORKER_PROTOCOL.md` and `docs/DATABASE_SCHEMA.md` so `ocr_text_track` and Translate Agent fusion / warnings metadata have a documented artifact path.
+- Updated `docs/Atelier_Main_UI_Spec.md` so the selected `Translate Agent` card and Inspector express ASR/OCR fusion rather than a single plain translation service.
+- Updated `docs/APP_CODE_MAP.md` and added `docs/plan/plan_translate_agent_spec_alignment.md`.
+
+Current boundary:
+
+- Implemented: documentation/spec alignment only.
+- Not implemented: OCR Recognition adapter, Translate Agent models, provider clients, Scheduler optional/degraded dependencies, real GUI controls, or Worker adapter execution.
+
+Validation run:
+
+```powershell
+Select-String -Path .\docs\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Trailing whitespace scan for docs and `README.md`: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_058500 [对齐品牌 SVG 与 PNG 参考渲染]
+
+- Used the user-provided PNG renders in `atelier/assets/brand/` as visual references:
+  - `01.png` for `atelier_icon_full.svg`
+  - `02.png` for `atelier_logo_standard.svg`
+  - `03.png` for `atelier_logo_compact.svg`
+  - `04.png` for `atelier_logo_mono.svg` and tray variants
+- Redrew the six brand SVG files as pure vector assets with larger rounded `A` geometry, multi-lane workflow lines, node blocks, transparent SVG mask cutouts, and stronger full-icon glow:
+  - `atelier_icon_full.svg`
+  - `atelier_logo_standard.svg`
+  - `atelier_logo_compact.svg`
+  - `atelier_logo_mono.svg`
+  - `atelier_tray_dark.svg`
+  - `atelier_tray_light.svg`
+- Updated `atelier/assets/icon_manifest.json` with four `brand_reference` entries for the PNG references.
+- Updated `atelier/assets/brand/preview.html` so the SVG variants and PNG references can be compared in one local preview page.
+- Updated `atelier/assets/brand/README.md`, `atelier/assets/README.md`, `DESIGN.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_brand_icon_pack_import.md` to record that the PNG files are visual reference renders and runtime UI should still prefer SVG.
+
+Current boundary:
+
+- Implemented: SVG visual realignment and documentation updates.
+- Not implemented: raster export pipeline, installer icon generation, Qt `.qrc`, IconManager, or runtime icon loading.
+- Note: after this change, the brand SVG files intentionally no longer match the original imported SVG hashes from `C:\Users\Administrator\Downloads\atelier_icon_pack`.
+
+Validation run:
+
+```powershell
+Get-ChildItem .\atelier\assets\brand -Filter *.svg | ForEach-Object { [xml](Get-Content -Raw -Encoding UTF8 $_.FullName) | Out-Null }
+Select-String -Path .\atelier\assets\brand\*.svg -Pattern '<image|<script|font-face|base64'
+git diff --check
+```
+
+Result:
+
+- All six brand SVG files parse as XML.
+- Forbidden raster/script/font/base64 pattern scan returned no matches.
+- `atelier/assets/icon_manifest.json`: valid JSON with 90 entries, including 6 `brand` entries and 4 `brand_reference` entries.
+- Trailing whitespace scan for touched brand assets and docs: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_058000 [导入 Atelier 软件品牌图标]
+
+- Read external icon pack README at `C:\Users\Administrator\Downloads\atelier_icon_pack\README.md`.
+- Imported the Atelier software brand icon pack into `atelier/assets/brand/`:
+  - `atelier_icon_full.svg`
+  - `atelier_logo_standard.svg`
+  - `atelier_logo_compact.svg`
+  - `atelier_logo_mono.svg`
+  - `atelier_tray_dark.svg`
+  - `atelier_tray_light.svg`
+  - `preview.html`
+  - `README.md`
+- Updated `atelier/assets/icon_manifest.json` with `brand` category entries.
+- Updated `atelier/assets/README.md`, `DESIGN.md`, `docs/Atelier_Main_UI_Spec.md`, `README.md`, and `docs/APP_CODE_MAP.md` to distinguish software brand icons from UI functional icons.
+- Added `docs/plan/plan_brand_icon_pack_import.md`.
+
+Current boundary:
+
+- Implemented: brand icon asset import and documentation alignment.
+- Not implemented: Qt `.qrc`, IconManager, runtime icon loading, Windows `.ico`, macOS `.icns`, PNG export sizes, installer integration, or tray integration.
+
+Validation run:
+
+```powershell
+Get-FileHash C:\Users\Administrator\Downloads\atelier_icon_pack\*.svg
+Get-FileHash .\atelier\assets\brand\*.svg
+git diff --check
+```
+
+Result:
+
+- Imported SVG hashes match the external source files:
+  - `atelier_icon_full.svg`: `9570CB40B277308DFE6DE3A56EAEEFB121DE0321DE6EE9B1C3BF777CB044B129`
+  - `atelier_logo_standard.svg`: `66895AB1AB985FA5D776E809A184B3D29F85AA152997BF49580D2261C3D2551B`
+  - `atelier_logo_compact.svg`: `6F457284BB8871BF34687F4D3840976798872F93D913845BCD378DCF20D9D9D7`
+  - `atelier_logo_mono.svg`: `57870087FE3FA666BF1DBB1451ED91378D8C829FB5BF71DD362B7CBB1B44445F`
+  - `atelier_tray_dark.svg`: `A50CBF0BF63BD014B98DE54B5638706EB7D0BDB034D3C31E27BA2F7F53D4D831`
+  - `atelier_tray_light.svg`: `D942336A7B1F275CD83BEB40CAA154C56655BD5944AE5F51E88FFA4353BE4E9F`
+- Imported `README.md` and `preview.html` hashes also match external source files.
+- `atelier/assets/icon_manifest.json`: valid JSON with 86 entries, including 6 `brand` entries.
+- Trailing whitespace scan for brand assets and import plan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260504_057500 [导入 Scheduling Docs Pack]
+
+- Read external docs pack README at `C:\Users\Administrator\Downloads\atelier_scheduling_docs\README.md`.
+- Imported the three scheduling planning docs into `docs/`:
+  - `docs/BATCH_PIPELINE_SCHEDULING_SPEC.md`
+  - `docs/HARDWARE_SCHEDULING_PAGE_SPEC.md`
+  - `docs/SCHEDULING_PRESETS_SPEC.md`
+- Added `docs/plan/plan_scheduling_docs_import.md` to record the import objective, scope, constraints, and verification.
+- Updated `README.md` document index so the new scheduling specs are discoverable.
+
+Current boundary:
+
+- Implemented: documentation import and index update only.
+- Not implemented: batch pipeline scheduler, SchedulingPageSnapshot builder, Hardware Scheduling UI page, scheduling presets runtime model, Scheduler waiting reason generation, or preset application behavior.
+
+Validation run:
+
+```powershell
+Get-FileHash C:\Users\Administrator\Downloads\atelier_scheduling_docs\*.md
+Get-FileHash .\docs\BATCH_PIPELINE_SCHEDULING_SPEC.md
+Get-FileHash .\docs\HARDWARE_SCHEDULING_PAGE_SPEC.md
+Get-FileHash .\docs\SCHEDULING_PRESETS_SPEC.md
+git diff --check
+```
+
+Result:
+
+- Imported doc hashes match the external source files:
+  - `BATCH_PIPELINE_SCHEDULING_SPEC.md`: `AE5626513C60227B6E3950FE1F968EEBCA8C83BD210836F4458706ABD73B74F0`
+  - `HARDWARE_SCHEDULING_PAGE_SPEC.md`: `8278E87CF98940B9E8C8E3BFC2F9F73BD04E50772CC277015D1229870C180F15`
+  - `SCHEDULING_PRESETS_SPEC.md`: `120C40583D82F63E77EFAC70E9B7D67E2F7E70F911F234A82B1A4D77F903606B`
+- Trailing whitespace scan for imported docs and import plan: no matches.
+- `git diff --check`: passed for tracked modifications with only Windows CRLF conversion warnings.
+
 ## 20260504_057000 [进入 Scheduler Lifecycle Dispatch Integration Phase A]
 
 - Added `docs/plan/plan_scheduler_lifecycle_dispatch_integration.md` as the next plan after worker lifecycle controls.

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Atelier SVG Icon Pack Preview</title>
+<style>
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: #08111D; color: #F3F7FB; }
+  main { padding: 32px; }
+  h1 { margin: 0 0 8px; font-size: 28px; }
+  p { color: #B7C2D2; margin: 0 0 28px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+  .card { background: #0D1826; border: 1px solid #223247; border-radius: 18px; padding: 20px; }
+  .iconbox { display: grid; place-items: center; height: 180px; background: #111D2C; border: 1px solid #182638; border-radius: 14px; margin-bottom: 12px; }
+  .iconbox.light { background: #F6F8FB; }
+  .iconbox.reference {
+    background-color: #F6F8FB;
+    background-image:
+      linear-gradient(45deg, #E9EDF3 25%, transparent 25%),
+      linear-gradient(-45deg, #E9EDF3 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #E9EDF3 75%),
+      linear-gradient(-45deg, transparent 75%, #E9EDF3 75%);
+    background-position: 0 0, 0 16px, 16px -16px, -16px 0;
+    background-size: 32px 32px;
+  }
+  img { width: 128px; height: 128px; object-fit: contain; }
+  img.reference { width: 160px; height: 160px; }
+  img.mono-preview { filter: invert(1); }
+  code { color: #60A5FA; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Atelier SVG Icon Pack</h1>
+  <p>Pure vector icon assets: full, standard, compact, monochrome, and tray variants. PNG files are visual references.</p>
+  <section class="grid">
+    <div class="card"><div class="iconbox"><img src="atelier_icon_full.svg"></div><code>atelier_icon_full.svg</code></div>
+    <div class="card"><div class="iconbox"><img src="atelier_logo_standard.svg"></div><code>atelier_logo_standard.svg</code></div>
+    <div class="card"><div class="iconbox"><img src="atelier_logo_compact.svg"></div><code>atelier_logo_compact.svg</code></div>
+    <div class="card"><div class="iconbox"><img class="mono-preview" src="atelier_logo_mono.svg"></div><code>atelier_logo_mono.svg</code></div>
+    <div class="card"><div class="iconbox"><img src="atelier_tray_dark.svg"></div><code>atelier_tray_dark.svg</code></div>
+    <div class="card"><div class="iconbox light"><img src="atelier_tray_light.svg"></div><code>atelier_tray_light.svg</code></div>
+    <div class="card"><div class="iconbox reference"><img class="reference" src="01.png"></div><code>01.png reference</code></div>
+    <div class="card"><div class="iconbox reference"><img class="reference" src="02.png"></div><code>02.png reference</code></div>
+    <div class="card"><div class="iconbox reference"><img class="reference" src="03.png"></div><code>03.png reference</code></div>
+    <div class="card"><div class="iconbox"><img class="reference" src="04.png"></div><code>04.png reference</code></div>
+  </section>
+</main>
+</body>
+</html>

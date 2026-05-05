@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Atelier compact logo">
+  <!--
+Atelier icon asset
+Pure SVG vector: no embedded raster images, no external fonts, no scripts.
+Brand concept: A + Flow + Scheduling.
+Visual reference: atelier/assets/brand/03.png.
+-->
+  <defs>
+    <linearGradient id="compactBlue" x1="290" y1="210" x2="790" y2="785" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3FF"/>
+      <stop offset="0.46" stop-color="#1477FF"/>
+      <stop offset="1" stop-color="#1CBFF0"/>
+    </linearGradient>
+    <mask id="aCut">
+      <rect width="1024" height="1024" fill="#FFFFFF"/>
+      <path d="M245 720 H390 C486 720 522 662 588 632 C626 615 666 610 728 616"
+            fill="none" stroke="#000000" stroke-width="94" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <g fill="none" stroke="url(#compactBlue)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M296 618 L462 305 C486 260 538 260 562 305 L790 735"
+          stroke-width="156" mask="url(#aCut)"/>
+    <path d="M245 720 H390 C486 720 522 662 588 632 C626 615 666 610 728 616"
+          stroke-width="58"/>
+  </g>
+</svg>

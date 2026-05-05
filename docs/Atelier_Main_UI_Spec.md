@@ -1,10 +1,10 @@
 # Atelier 主界面 UI 绘制规格 v0.1
 
-> 用途：作为 Atelier 主界面的绘制规格 / concept implementation spec，指导 Codex / Claude Code / 设计工具绘制和实现主工作台概念。  
-> 事实源关系：根目录 `DESIGN.md` 仍是设计事实源；本文档服从 `DESIGN.md`，用于把主界面视觉、布局和组件落到可绘制规格。  
-> 参考源关系：`docs/design-md-references/` 只作为建设性意见源，不作为 Atelier 事实源。  
-> 品牌名：产品唯一名称是 `Atelier`。不要在 UI、文档或代码中使用其他名称作为产品名。  
-> 目标：明确主界面布局、控件位置、尺寸、视觉层级、状态样式和交互意图。  
+> 用途：作为 Atelier 主界面的绘制规格 / concept implementation spec，指导 Codex / Claude Code / 设计工具绘制和实现主工作台概念。
+> 事实源关系：根目录 `DESIGN.md` 仍是设计事实源；本文档服从 `DESIGN.md`，用于把主界面视觉、布局和组件落到可绘制规格。
+> 参考源关系：`docs/design-md-references/` 只作为建设性意见源，不作为 Atelier 事实源。
+> 品牌名：产品唯一名称是 `Atelier`。不要在 UI、文档或代码中使用其他名称作为产品名。
+> 目标：明确主界面布局、控件位置、尺寸、视觉层级、状态样式和交互意图。
 > 推荐画布：`1600 × 1000`，比例 `16:10`。所有坐标以左上角为原点。
 
 ---
@@ -178,6 +178,7 @@ atelier/assets/
 - Hardware Resources 使用 `atelier/assets/hardware/`。
 - Card Detailed Settings / Inspector 使用 `atelier/assets/inspector/`。
 - Runtime、Security、Plugin、Workspace 等系统入口使用 `atelier/assets/system/`。
+- 软件图标和顶部品牌标记使用 `atelier/assets/brand/`，其中窗口 / installer / about 可使用 `atelier_icon_full.svg`，顶部栏和小尺寸 UI 优先使用 `atelier_logo_compact.svg` 或 `atelier_logo_mono.svg`。
 - 图标颜色通过 `currentColor` 继承，不在图标文件中写死主色。
 - 本文档绘制主界面时应优先复用这些图标，不直接临摹外部参考品牌图标。
 
@@ -639,7 +640,7 @@ icon: blue CC
 ```text
 x=770 y=190 w=160 h=92
 title: Translate Agent
-subtitle: DeepL Pro
+subtitle: ASR + OCR Fusion
 status: RUNNING
 icon: globe
 selected: true
@@ -698,6 +699,7 @@ icon: output/export
 ```text
 Video Input
   ├─ Audio Extract -> ASR Subtitle -> Translate Agent
+  ├─ OCR Recognition ----------------------^
   └─ Video Enhance -> Frame Interpolation
 Translate Agent + Frame Interpolation -> Soft Subtitle Mux -> Output
 ```
@@ -757,7 +759,7 @@ radius: 8
 x=1260 y=88
 icon: globe 28px
 title: Translate Agent
-subtitle: DeepL Pro
+subtitle: OpenAI-compatible · ASR primary
 ```
 
 Title：
@@ -840,13 +842,16 @@ y=195
 ```text
 Source Language        Auto Detect
 Target Language        English (US)
-Service                DeepL Pro
-Formality              Prefer More Natural
+Recognition Inputs     ASR completed · OCR completed
+Fusion Policy          Prefer fusion, degrade allowed
+Provider               OpenAI-compatible
+Model                  project default
+Style                  Natural
 Glossary / Terms       travel_terms.txt + folder icon
 Preserve Line Breaks   toggle on
 Max Characters per Line 42 + slider
 Context Window         5 + slider
-Use Translation Memory toggle on
+Private Prompt Mode    toggle on
 ```
 
 控件样式：

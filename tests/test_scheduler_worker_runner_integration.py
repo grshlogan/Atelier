@@ -1,5 +1,6 @@
 import json
 import sys
+import threading
 import textwrap
 import unittest
 from pathlib import Path
@@ -239,6 +240,298 @@ class SchedulerWorkerRunnerIntegrationTests(unittest.TestCase):
             finally:
                 connection.close()
 
+    def test_lifecycle_dispatch_timeout_records_failure_and_releases_resource_lock(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = AppPaths.for_development(root)
+            connection = open_app_database(paths)
+            try:
+                graph = WorkflowGraph(
+                    graph_id="graph-dispatch-lifecycle-timeout",
+                    name="Dispatch Lifecycle Timeout",
+                    nodes=[
+                        WorkflowNode(
+                            node_id="node-lifecycle-timeout",
+                            node_type="simulate.lifecycle_timeout",
+                            resource_request=ResourceRequest(device_type="cpu"),
+                            runtime_request=RuntimeRequest(components=["simulated"]),
+                        )
+                    ],
+                )
+                plan = build_linear_execution_plan(graph, plan_id="plan-dispatch-lifecycle-timeout")
+                persist_planned_execution(
+                    connection,
+                    project_id="project-dispatch-lifecycle-timeout",
+                    project_name="Dispatch Lifecycle Timeout Project",
+                    project_root=str(paths.data_root),
+                    job_id="job-dispatch-lifecycle-timeout",
+                    job_name="Dispatch Lifecycle Timeout Job",
+                    graph=graph,
+                    plan=plan,
+                )
+                scheduler = SimpleScheduler(
+                    HardwareSnapshot(cpu_cores=4, ram_total_mb=8192, ram_free_mb=4096)
+                )
+                claimed = scheduler.claim_next_task(connection, plan.plan_id)
+                self.assertIsNotNone(claimed)
+                assert claimed is not None
+                self.assertEqual(fetch_task_status(connection, claimed.task.task_id), "running")
+
+                script = root / "silent_timeout_worker.py"
+                script.write_text(
+                    textwrap.dedent(
+                        """
+                        import argparse
+                        import time
+
+                        parser = argparse.ArgumentParser()
+                        parser.add_argument("--task-file", required=True)
+                        parser.parse_args()
+                        time.sleep(0.3)
+                        """
+                    ),
+                    encoding="utf-8",
+                )
+                stderr_log_path = root / "logs" / "timeout.stderr.log"
+
+                result = dispatch_claimed_task(
+                    connection,
+                    claimed_task=claimed,
+                    work_root=root / "worker-work",
+                    command_args=(sys.executable, "-u", str(script)),
+                    lifecycle_config=WorkerLifecycleConfig(
+                        startup_timeout_seconds=0.05,
+                        heartbeat_timeout_seconds=0.05,
+                        terminate_grace_seconds=0.05,
+                    ),
+                    stderr_log_path=stderr_log_path,
+                )
+                facts = fetch_failure_facts(connection, claimed.task.task_id)
+
+                self.assertTrue(result.timed_out)
+                self.assertFalse(result.cancelled)
+                self.assertEqual(result.task_status, "failed")
+                self.assertEqual([event.type for event in result.events], ["failed"])
+                self.assertEqual(result.events[0].error_code, "TIMEOUT")
+                self.assertEqual(fetch_task_status(connection, claimed.task.task_id), "failed")
+                self.assertEqual(fetch_task_event_types(connection, claimed.task.task_id), ["failed"])
+                self.assertEqual(facts.error_code, "TIMEOUT")
+                self.assertIn("timed out", facts.error_message)
+                self.assertTrue(facts.recoverable)
+                self.assertEqual(result.stderr_log_path, stderr_log_path)
+                self.assertTrue(stderr_log_path.exists())
+                with self.assertRaisesRegex(LookupError, "missing active resource lock"):
+                    fetch_active_resource_lock(connection, claimed.task.task_id)
+            finally:
+                connection.close()
+
+    def test_lifecycle_dispatch_cancel_aware_worker_records_cancelled_status(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = AppPaths.for_development(root)
+            connection = open_app_database(paths)
+            try:
+                graph = WorkflowGraph(
+                    graph_id="graph-dispatch-lifecycle-cancel-aware",
+                    name="Dispatch Lifecycle Cancel Aware",
+                    nodes=[
+                        WorkflowNode(
+                            node_id="node-lifecycle-cancel-aware",
+                            node_type="simulate.lifecycle_cancel_aware",
+                            resource_request=ResourceRequest(device_type="cpu"),
+                            runtime_request=RuntimeRequest(components=["simulated"]),
+                        )
+                    ],
+                )
+                plan = build_linear_execution_plan(graph, plan_id="plan-dispatch-lifecycle-cancel-aware")
+                persist_planned_execution(
+                    connection,
+                    project_id="project-dispatch-lifecycle-cancel-aware",
+                    project_name="Dispatch Lifecycle Cancel Aware Project",
+                    project_root=str(paths.data_root),
+                    job_id="job-dispatch-lifecycle-cancel-aware",
+                    job_name="Dispatch Lifecycle Cancel Aware Job",
+                    graph=graph,
+                    plan=plan,
+                )
+                scheduler = SimpleScheduler(
+                    HardwareSnapshot(cpu_cores=4, ram_total_mb=8192, ram_free_mb=4096)
+                )
+                claimed = scheduler.claim_next_task(connection, plan.plan_id)
+                self.assertIsNotNone(claimed)
+                assert claimed is not None
+
+                script = root / "cancel_aware_dispatch_worker.py"
+                script.write_text(
+                    textwrap.dedent(
+                        """
+                        import argparse
+                        import json
+                        import sys
+                        from pathlib import Path
+
+                        parser = argparse.ArgumentParser()
+                        parser.add_argument("--task-file", required=True)
+                        args = parser.parse_args()
+                        payload = json.loads(Path(args.task_file).read_text(encoding="utf-8"))
+                        task_id = payload["task_id"]
+                        print(json.dumps({
+                            "type": "started",
+                            "task_id": task_id,
+                            "timestamp": "2026-05-04T00:00:00Z",
+                            "seq": 0,
+                            "worker_pid": 4321,
+                            "worker_version": "stub",
+                            "node_type": payload["node_type"],
+                        }), flush=True)
+                        for line in sys.stdin:
+                            command = json.loads(line)
+                            if command.get("type") == "cancel":
+                                print(json.dumps({
+                                    "type": "failed",
+                                    "task_id": task_id,
+                                    "timestamp": "2026-05-04T00:00:01Z",
+                                    "seq": 1,
+                                    "error_code": "CANCELLED",
+                                    "message": "cancelled by dispatch test",
+                                    "recoverable": False,
+                                    "partial_artifacts": [],
+                                }), flush=True)
+                                raise SystemExit(0)
+                        """
+                    ),
+                    encoding="utf-8",
+                )
+                cancel_event = threading.Event()
+                cancel_event.set()
+
+                result = dispatch_claimed_task(
+                    connection,
+                    claimed_task=claimed,
+                    work_root=root / "worker-work",
+                    command_args=(sys.executable, "-u", str(script)),
+                    lifecycle_config=WorkerLifecycleConfig(
+                        startup_timeout_seconds=0.5,
+                        heartbeat_timeout_seconds=1.0,
+                        terminate_grace_seconds=0.05,
+                        cancel_grace_seconds=0.5,
+                    ),
+                    cancel_event=cancel_event,
+                )
+                facts = fetch_failure_facts(connection, claimed.task.task_id)
+
+                self.assertTrue(result.cancelled)
+                self.assertFalse(result.timed_out)
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(result.task_status, "cancelled")
+                self.assertEqual([event.type for event in result.events], ["started", "failed"])
+                self.assertEqual(result.events[-1].error_code, "CANCELLED")
+                self.assertEqual(fetch_task_status(connection, claimed.task.task_id), "cancelled")
+                self.assertEqual(facts.error_code, "CANCELLED")
+                self.assertEqual(facts.error_message, "cancelled by dispatch test")
+                self.assertFalse(facts.recoverable)
+                with self.assertRaisesRegex(LookupError, "missing active resource lock"):
+                    fetch_active_resource_lock(connection, claimed.task.task_id)
+            finally:
+                connection.close()
+
+    def test_lifecycle_dispatch_stuck_cancel_worker_records_cancelled_failure(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = AppPaths.for_development(root)
+            connection = open_app_database(paths)
+            try:
+                graph = WorkflowGraph(
+                    graph_id="graph-dispatch-lifecycle-stuck-cancel",
+                    name="Dispatch Lifecycle Stuck Cancel",
+                    nodes=[
+                        WorkflowNode(
+                            node_id="node-lifecycle-stuck-cancel",
+                            node_type="simulate.lifecycle_stuck_cancel",
+                            resource_request=ResourceRequest(device_type="cpu"),
+                            runtime_request=RuntimeRequest(components=["simulated"]),
+                        )
+                    ],
+                )
+                plan = build_linear_execution_plan(graph, plan_id="plan-dispatch-lifecycle-stuck-cancel")
+                persist_planned_execution(
+                    connection,
+                    project_id="project-dispatch-lifecycle-stuck-cancel",
+                    project_name="Dispatch Lifecycle Stuck Cancel Project",
+                    project_root=str(paths.data_root),
+                    job_id="job-dispatch-lifecycle-stuck-cancel",
+                    job_name="Dispatch Lifecycle Stuck Cancel Job",
+                    graph=graph,
+                    plan=plan,
+                )
+                scheduler = SimpleScheduler(
+                    HardwareSnapshot(cpu_cores=4, ram_total_mb=8192, ram_free_mb=4096)
+                )
+                claimed = scheduler.claim_next_task(connection, plan.plan_id)
+                self.assertIsNotNone(claimed)
+                assert claimed is not None
+
+                script = root / "stuck_cancel_dispatch_worker.py"
+                script.write_text(
+                    textwrap.dedent(
+                        """
+                        import argparse
+                        import json
+                        import time
+                        from pathlib import Path
+
+                        parser = argparse.ArgumentParser()
+                        parser.add_argument("--task-file", required=True)
+                        args = parser.parse_args()
+                        payload = json.loads(Path(args.task_file).read_text(encoding="utf-8"))
+                        task_id = payload["task_id"]
+                        print(json.dumps({
+                            "type": "started",
+                            "task_id": task_id,
+                            "timestamp": "2026-05-04T00:00:00Z",
+                            "seq": 0,
+                            "worker_pid": 4321,
+                            "worker_version": "stub",
+                            "node_type": payload["node_type"],
+                        }), flush=True)
+                        time.sleep(1.0)
+                        """
+                    ),
+                    encoding="utf-8",
+                )
+                cancel_event = threading.Event()
+                cancel_event.set()
+
+                result = dispatch_claimed_task(
+                    connection,
+                    claimed_task=claimed,
+                    work_root=root / "worker-work",
+                    command_args=(sys.executable, "-u", str(script)),
+                    lifecycle_config=WorkerLifecycleConfig(
+                        startup_timeout_seconds=0.5,
+                        heartbeat_timeout_seconds=5.0,
+                        terminate_grace_seconds=0.05,
+                        cancel_grace_seconds=0.2,
+                    ),
+                    cancel_event=cancel_event,
+                )
+                facts = fetch_failure_facts(connection, claimed.task.task_id)
+
+                self.assertTrue(result.cancelled)
+                self.assertFalse(result.timed_out)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.task_status, "cancelled")
+                self.assertEqual([event.type for event in result.events], ["started", "failed"])
+                self.assertEqual(result.events[-1].error_code, "CANCELLED")
+                self.assertEqual(fetch_task_status(connection, claimed.task.task_id), "cancelled")
+                self.assertEqual(facts.error_code, "CANCELLED")
+                self.assertIn("cancel grace period", facts.error_message)
+                self.assertFalse(facts.recoverable)
+                with self.assertRaisesRegex(LookupError, "missing active resource lock"):
+                    fetch_active_resource_lock(connection, claimed.task.task_id)
+            finally:
+                connection.close()
+
     def test_failed_stub_worker_records_failure_and_releases_resource_lock(self) -> None:
         with TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -400,6 +693,90 @@ class SchedulerWorkerRunnerIntegrationTests(unittest.TestCase):
                 self.assertEqual(result.events[0].error_code, "INTERNAL")
                 self.assertIn("Worker protocol error", result.events[0].message)
                 self.assertIn("protocol stderr detail", result.stderr)
+                self.assertEqual(fetch_task_status(connection, claimed.task.task_id), "failed")
+                self.assertEqual(facts.error_code, "INTERNAL")
+                self.assertIn("Worker protocol error", facts.error_message)
+                self.assertFalse(facts.recoverable)
+                with self.assertRaisesRegex(LookupError, "missing active resource lock"):
+                    fetch_active_resource_lock(connection, claimed.task.task_id)
+            finally:
+                connection.close()
+
+    def test_lifecycle_dispatch_protocol_error_records_internal_failure_and_stderr_log(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            paths = AppPaths.for_development(root)
+            connection = open_app_database(paths)
+            try:
+                graph = WorkflowGraph(
+                    graph_id="graph-dispatch-lifecycle-protocol-error",
+                    name="Dispatch Lifecycle Protocol Error",
+                    nodes=[
+                        WorkflowNode(
+                            node_id="node-lifecycle-protocol-error",
+                            node_type="simulate.lifecycle_protocol_error",
+                            resource_request=ResourceRequest(device_type="cpu"),
+                            runtime_request=RuntimeRequest(components=["simulated"]),
+                        )
+                    ],
+                )
+                plan = build_linear_execution_plan(graph, plan_id="plan-dispatch-lifecycle-protocol-error")
+                persist_planned_execution(
+                    connection,
+                    project_id="project-dispatch-lifecycle-protocol-error",
+                    project_name="Dispatch Lifecycle Protocol Error Project",
+                    project_root=str(paths.data_root),
+                    job_id="job-dispatch-lifecycle-protocol-error",
+                    job_name="Dispatch Lifecycle Protocol Error Job",
+                    graph=graph,
+                    plan=plan,
+                )
+                scheduler = SimpleScheduler(
+                    HardwareSnapshot(cpu_cores=4, ram_total_mb=8192, ram_free_mb=4096)
+                )
+                claimed = scheduler.claim_next_task(connection, plan.plan_id)
+                self.assertIsNotNone(claimed)
+                assert claimed is not None
+
+                script = root / "bad_lifecycle_stdout_worker.py"
+                script.write_text(
+                    textwrap.dedent(
+                        """
+                        import sys
+                        import time
+
+                        sys.stderr.write("lifecycle protocol stderr detail\\n")
+                        print("not json", flush=True)
+                        time.sleep(1.0)
+                        """
+                    ),
+                    encoding="utf-8",
+                )
+                stderr_log_path = root / "logs" / "protocol.stderr.log"
+
+                result = dispatch_claimed_task(
+                    connection,
+                    claimed_task=claimed,
+                    work_root=root / "worker-work",
+                    command_args=(sys.executable, "-u", str(script)),
+                    lifecycle_config=WorkerLifecycleConfig(
+                        startup_timeout_seconds=0.5,
+                        heartbeat_timeout_seconds=0.5,
+                        terminate_grace_seconds=0.05,
+                    ),
+                    stderr_log_path=stderr_log_path,
+                )
+                facts = fetch_failure_facts(connection, claimed.task.task_id)
+                stderr_log = stderr_log_path.read_text(encoding="utf-8")
+
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.task_status, "failed")
+                self.assertEqual([event.type for event in result.events], ["failed"])
+                self.assertEqual(result.events[0].error_code, "INTERNAL")
+                self.assertIn("Worker protocol error", result.events[0].message)
+                self.assertEqual(result.stderr_log_path, stderr_log_path)
+                self.assertIn("lifecycle protocol stderr detail", result.stderr)
+                self.assertIn("lifecycle protocol stderr detail", stderr_log)
                 self.assertEqual(fetch_task_status(connection, claimed.task.task_id), "failed")
                 self.assertEqual(facts.error_code, "INTERNAL")
                 self.assertIn("Worker protocol error", facts.error_message)

@@ -8,7 +8,7 @@ Atelier 不应把环境配置责任推给用户。软件应管理自己能管理
 
 ```text
 App Runtime       -> Python / PySide6 / Qt plugins / app dependencies
-Tool Runtime      -> FFmpeg / ffprobe / llama.cpp / whisper.cpp / ncnn-vulkan
+Tool Runtime      -> FFmpeg / ffprobe / llama.cpp / whisper.cpp / PaddleOCR / Tesseract / ncnn-vulkan
 Backend Runtime   -> CUDA / Vulkan / CPU / MLX / ROCm 等 backend 变体
 Model Store       -> ASR / LLM / enhance / interpolation model assets
 Runtime Manifest  -> 版本、路径、hash、capabilities、状态
@@ -126,6 +126,7 @@ RuntimeManager 负责：
 - 管理 runtime component 的安装状态。
 - 管理 model asset 的导入、校验、删除和状态。
 - 根据 Task 的 RuntimeRequest 解析 RuntimeBinding。
+- 根据内置配置、用户 external tool profile 或插件声明解析第三方工具 RuntimeBinding。
 - 检查 hardware/backend 兼容性。
 - 为 Worker 提供工具路径、模型路径和环境变量。
 - 报告 runtime health。
@@ -148,6 +149,8 @@ AtelierData/
       ffmpeg/7.1.0/
       llama.cpp/b4600-cuda/
       whisper.cpp/v1.7.0-cpu/
+      paddleocr/3.x/
+      tesseract/5.x/
       realesrgan-ncnn-vulkan/20220424/
     python-envs/
       worker-default/
@@ -157,6 +160,7 @@ AtelierData/
 
   models/
     asr/
+    ocr/
     llm/
     enhance/
     interpolate/
@@ -266,6 +270,26 @@ RuntimeBinding(
     },
 )
 ```
+
+## 7.1 External Tool RuntimeBinding
+
+第三方工具接入仍由 RuntimeManager 解析运行环境。来源可以是：
+
+```text
+内置 runtime component
+用户配置的 external tool profile
+插件 manifest 声明的 runtime requirement
+远程 provider profile
+```
+
+规则：
+
+- 本地 CLI 工具路径必须来自 RuntimeManager 解析结果，不能来自 adapter 自行搜索全局 PATH。
+- 本地 SDK / Python 工具必须运行在受控 Worker env 中。
+- 远程 provider 只暴露 `credential_ref` 和 provider profile id，不把 secrets 写入 RuntimeBinding 日志。
+- 插件贡献 backend 时，PluginManager 只注册声明，RuntimeManager 仍负责解析 runtime 和健康状态。
+
+详细规划见 `EXTERNAL_TOOL_INTEGRATION_SPEC.md`。
 
 规则：
 

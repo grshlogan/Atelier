@@ -39,8 +39,9 @@ SimpleScheduler.claim_next_task()
 
 - `dispatch_claimed_task()` 当前已经能接收已 claim task、写 `task.json`、运行 stub worker、持久化 worker events，并释放 terminal event 对应的 active resource lock。
 - `run_worker_lifecycle()` 当前支持增量 stdout、startup/heartbeat timeout、最小 cancel control、terminate/kill escalation、protocol-error worker 收束和 stderr log path。
-- `dispatch_claimed_task()` 当前仍调用 `run_worker_process()`，因此不能使用 lifecycle timeout、cancel 或 stderr log path。
-- 当前完整验证基线为 66 tests passed。
+- `dispatch_claimed_task()` 当前在传入 `lifecycle_config`、`cancel_event` 或 `stderr_log_path` 时会调用 `run_worker_lifecycle()`；不传 lifecycle 参数时仍保持旧的 `run_worker_process()` 路径。
+- 新增第三方外部工具规划文档不改变本计划范围；真实 adapters、外部工具 profile、插件 backend 和 RuntimeManager 自动选择仍不进入本计划。
+- 当前完整验证基线为 67 tests passed。
 
 ## Constraints（约束）
 
@@ -96,7 +97,7 @@ SimpleScheduler.claim_next_task()
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase C：cancel lifecycle dispatch 路径
 
@@ -118,7 +119,7 @@ SimpleScheduler.claim_next_task()
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase D：protocol-error lifecycle dispatch 路径
 
@@ -141,7 +142,7 @@ SimpleScheduler.claim_next_task()
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase E：文档状态对齐
 
@@ -161,7 +162,7 @@ git diff --check
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ## Child Plans（子计划）
 
@@ -180,12 +181,29 @@ git diff --check
 git diff --check
 ```
 
+当前验证结果：
+
+- `.venv/Scripts/python -m unittest tests.test_scheduler_worker_runner_integration tests.test_worker_lifecycle tests.test_worker_runner`：19 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：71 tests passed。
+- `.venv/Scripts/python -m compileall -q atelier tests`：passed。
+- `Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'`：no matches。
+- `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
+
 ## Progress / Decisions（进展 / 决策）
 
 - 2026-05-04：创建本计划。决策：先把 lifecycle runner 接回现有 claimed-task dispatch seam，再考虑自动 dispatch loop、GUI cancel 或真实 adapters。
 - 2026-05-04：开始执行 Phase A。先扩展 `tests/test_scheduler_worker_runner_integration.py`，确认 `dispatch_claimed_task()` 尚不接受 `lifecycle_config`。
 - 2026-05-04：完成 Phase A。`dispatch_claimed_task()` 保持旧调用兼容；当传入 `lifecycle_config`、`cancel_event` 或 `stderr_log_path` 时改用 `run_worker_lifecycle()`，并在 `WorkerDispatchResult` 暴露 `stderr_log_path`、`timed_out`、`cancelled` 和 `killed`。
 - 2026-05-04：Phase A 完整验证通过：`tests.test_scheduler_worker_runner_integration tests.test_worker_lifecycle tests.test_worker_runner` 15 tests passed，`unittest discover` 67 tests passed，`compileall` passed，`git diff --check` 仅有 Windows CRLF conversion warnings。
+- 2026-05-05：对齐新增外部工具规划文档。决策：本计划继续只处理 Scheduler dispatch seam 的 lifecycle result 持久化；LADA-like、OCR、翻译 provider、插件 backend 或真实 adapter 接入另走 `EXTERNAL_TOOL_INTEGRATION_SPEC.md` 后续计划。
+- 2026-05-05：完成 Phase B。新增 dispatch 集成测试，验证 silent worker 触发 lifecycle timeout 后，`FailedEvent(error_code="TIMEOUT")` 被持久化，task status 变为 `failed`，`result.timed_out=True`，stderr log path 保留，active resource lock 被释放。该测试直接通过，说明 Phase A 的 lifecycle result 接线已覆盖 timeout 路径。
+- 2026-05-05：Phase B 验证通过：`tests.test_scheduler_worker_runner_integration` 6 tests passed。
+- 2026-05-05：完成 Phase C。新增 cancel-aware worker 和 stuck cancel worker 的 dispatch 集成测试，验证 `CANCELLED` failure event 持久化后 task status 归一为 `cancelled`，`result.cancelled=True`，active resource lock 被释放。测试直接通过，说明 Phase A 的 lifecycle result 接线已覆盖 cancel 路径。
+- 2026-05-05：Phase C 验证通过：`tests.test_scheduler_worker_runner_integration` 8 tests passed。
+- 2026-05-05：完成 Phase D。新增 lifecycle protocol-error dispatch 集成测试，验证 malformed stdout worker 会被转成 `FailedEvent(error_code="INTERNAL")`，stderr log path 保留，task status 变为 `failed`，active resource lock 被释放。
+- 2026-05-05：Phase D 验证通过：`tests.test_scheduler_worker_runner_integration` 9 tests passed。
+- 2026-05-05：完成 Phase E。`WORKER_PROTOCOL.md`、`APP_CODE_MAP.md`、`RECENT_CHANGES.md` 和主计划已对齐当前状态；明确真实 adapters、外部工具 profile、插件 backend、GUI cancellation、自动 claim loop 和 retry/recovery action execution 仍未实现。
+- 2026-05-05：Phase E 完整验证通过：相关 runner/dispatch 测试 19 tests passed，完整 `unittest discover` 71 tests passed，`compileall` passed，文档尾随空格扫描无匹配，`git diff --check` 仅有 Windows CRLF conversion warnings。
 
 ## Blockers（阻塞）
 
