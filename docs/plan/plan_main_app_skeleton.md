@@ -29,15 +29,15 @@
 - `.venv/`、`venv/`、`.atelier/` 已加入 `.gitignore`。
 - 当前已有 `atelier/` 包、`tests/` 测试目录、`pyproject.toml`、`docs/APP_CODE_MAP.md` 和 `docs/RECENT_CHANGES.md`。
 - 当前已有 `AppPaths`，开发期默认数据目录为 `.atelier/AtelierData/`。
-- 当前已有 app-level factory：`create_runtime_store(paths)` 和 `open_app_database(paths)`。
-- 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、package SHA-256 helper、SQLite schema 初始化和 simulated Worker。
-- 当前已有只读 `atelier/gui/` 工作台壳：optional dependency entry、formal development launch entry、`MainWindow`、dock workspace panel specs、workspace layout store、SQLite read-only `WorkbenchSnapshot`。
+- 当前已有 app-level factories：`create_runtime_store(paths)`、`create_runtime_setup_service(paths)` 和 `open_app_database(paths)`。
+- 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、`RuntimeRegistrationService`、`RuntimeSetupSnapshot` service、package SHA-256 helper、SQLite schema 初始化和 simulated Worker；`RuntimeManifest` / `ModelAssetManifest` 已完成 Phase A 字段加固，可表达 runtime kind、profile kind、display name、platform、executable paths、library dirs、scoped env、backend tags、integrity metadata、model family、task types、compatible backends、size bytes 和 metadata。
+- 当前已有 `atelier/gui/` 工作台壳：optional dependency entry、formal development launch entry、`MainWindow`、dock workspace panel specs、workspace layout store、SQLite read-only `WorkbenchSnapshot`，以及最小可操作 `Runtime Setup` dock。
 - 当前已有 `atelier/workers/protocol.py`，支持单个 WorkerEvent 的 JSON Lines 编解码、最小 stdout event stream validation，并补齐 `LogEvent` / `HeartbeatEvent` 事件模型。
 - 当前已有 `atelier/workers/runner.py`，支持可控 subprocess 命令、`--task-file`、`cwd`、env、stdout event stream validation、stderr capture、return code capture、保留 stderr/returncode 的 protocol-error exception、lifecycle runner 接口形状、增量 stdout 读取、startup/heartbeat timeout、最小 cancel control、protocol-error worker 终止和 stderr 文件落盘。
 - 当前已有 `atelier/workers/task_file.py`，支持 `ExecutionTask` 写入 `task.json`，并生成 `WorkerProcessSpec`。
 - 当前已有 `atelier/scheduler/dispatch.py`，支持把已 claim 的 `ClaimedTask` 接到 `task.json`、stub worker runner / lifecycle runner 和 SQLite event/artifact/failure persistence，并返回结构化 dispatch result；已验证 completed、timeout、cancel、failed 和 protocol-error stub paths。
 - 当前已有 `atelier/assets/`，作为 Atelier 主界面 toolbar、navigation、workflow nodes、queue、hardware、status、inspector 和 system 的 SVG 线性图标资源库。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 71 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 87 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -236,6 +236,9 @@
 - [plan_scheduler_worker_runner_integration.md](./plan_scheduler_worker_runner_integration.md)：第 4 个后续子计划。把 Scheduler claim、task file、runner 和 SQLite event persistence 接成 stub worker 闭环。
 - [plan_worker_lifecycle_controls.md](./plan_worker_lifecycle_controls.md)：第 5 个后续子计划。补 timeout、cancel、terminate/kill escalation 和 stderr 文件落盘。
 - [plan_scheduler_lifecycle_dispatch_integration.md](./plan_scheduler_lifecycle_dispatch_integration.md)：第 6 个后续子计划。把 lifecycle runner 的 timeout、cancel、stderr log 和 protocol-error 收束能力接回 Scheduler dispatch seam。
+- [plan_runtime_management_foundation.md](./plan_runtime_management_foundation.md)：第 7 个后续子计划。在真实 workflow 前补 runtime manifest、local runtime/model registration、health check、RuntimeBinding resolution 和 GUI snapshot。
+- [plan_initial_actionable_gui_runtime_setup.md](./plan_initial_actionable_gui_runtime_setup.md)：第 8 个后续子计划。在 Runtime 管理骨架完成后，让 GUI 具备最小 runtime setup 操作面。
+- [plan_minimal_adapter_probe_workflow.md](./plan_minimal_adapter_probe_workflow.md)：第 9 个后续子计划。在 Runtime 管理骨架完成后，接入最简 metadata.probe / ffprobe adapter workflow。
 
 执行顺序：
 
@@ -244,6 +247,10 @@
 3. 再执行 `plan_worker_protocol_runner.md`，让未来真实 Worker subprocess 接入前先有可验证协议边界。
 4. 再执行 `plan_scheduler_worker_runner_integration.md`，先用 stub worker 形成 Scheduler 到 runner 到 SQLite 的闭环。
 5. 再执行 `plan_worker_lifecycle_controls.md`，处理 timeout、cancel、kill escalation 和 stderr 文件落盘。
+6. 再执行 `plan_scheduler_lifecycle_dispatch_integration.md`，把 lifecycle runner 结果接回 claimed-task dispatch seam。
+7. 再执行 `plan_runtime_management_foundation.md`，先把 runtime/model/tool profile、health check 和 RuntimeBinding 管理立稳。
+8. 再执行 `plan_initial_actionable_gui_runtime_setup.md`，让 GUI 具备最小 runtime setup 操作面。
+9. 再执行 `plan_minimal_adapter_probe_workflow.md`，用 metadata probe 跑通首个最简真实 adapter workflow。
 
 如后续某一阶段继续变复杂，例如 Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
 
@@ -259,7 +266,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：71 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：87 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -313,6 +320,14 @@ python -m mypy .
 - 2026-05-04：完成 `plan_scheduler_lifecycle_dispatch_integration.md` Phase A。`dispatch_claimed_task()` 可选接入 lifecycle runner，并返回 stderr log path 与 lifecycle flags；timeout/cancel/protocol-error dispatch 持久化仍留给后续 phases。
 - 2026-05-05：完成 `plan_scheduler_lifecycle_dispatch_integration.md` Phase B-D。timeout、cancel-aware worker、stuck cancel worker 和 lifecycle protocol-error 都已在 claimed-task dispatch seam 中验证能持久化 terminal failure facts、归一化 task status，并释放 active resource lock；GUI 取消、自动 claim loop、真实 adapters 和 retry/recovery action execution 仍未实现。
 - 2026-05-05：完成 `plan_scheduler_lifecycle_dispatch_integration.md` Phase E。接手文档已对齐；完整验证为 71 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
+- 2026-05-05：新增后续三个计划：先执行 `plan_runtime_management_foundation.md`，再执行 `plan_initial_actionable_gui_runtime_setup.md`，再执行 `plan_minimal_adapter_probe_workflow.md`。决策：真实 workflow 前必须先补 Runtime 管理骨架，避免 adapter 从全局 PATH 或 GUI callback 直接找工具。
+- 2026-05-05：完成 `plan_runtime_management_foundation.md` Phase A。runtime/model manifest 字段已加固并保持旧 manifest 兼容；完整验证为 72 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
+- 2026-05-05：完成 `plan_runtime_management_foundation.md` Phase B。新增 manifest-only local runtime/model profile registration，可登记 ffprobe/ffmpeg、python.worker-dev 和 demo model directory；完整验证为 75 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
+- 2026-05-05：完成 `plan_runtime_management_foundation.md` Phase C。runtime health report 已有 repair hints，health checker 支持 caller-provided safe dry-run probe args；完整验证为 76 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
+- 2026-05-05：完成 `plan_runtime_management_foundation.md` Phase D。RuntimeManager resolution 已有 `RuntimeResolutionError(subject_id, reason)` 诊断和 manifest-scoped env binding；完整验证为 79 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
+- 2026-05-05：完成 `plan_runtime_management_foundation.md` Phase E。新增 RuntimeSetupSnapshot service，为后续 GUI runtime setup 面板提供只读 runtime/model health snapshot。
+- 2026-05-05：完成 `plan_runtime_management_foundation.md` Phase F。Runtime 管理骨架接手文档已对齐；完整验证为 80 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
+- 2026-05-05：完成 `plan_initial_actionable_gui_runtime_setup.md` Phase A-D。GUI 现在有最小 `Runtime Setup` dock，可显示 runtime/model snapshot，通过 app service 登记本地 `ffprobe`、`ffmpeg`、Worker Python 和 demo model directory，并显示注册诊断；完整验证为 87 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
 
 ## Blockers（阻塞）
 

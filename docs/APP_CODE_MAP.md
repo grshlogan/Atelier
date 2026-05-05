@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 69
+Code file count: 79
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 44 files
-- `tests/`: 24 files
+- `atelier/`: 49 files
+- `tests/`: 29 files
 
 Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
 
@@ -37,6 +37,7 @@ atelier/
     __init__.py
     bootstrap.py
     paths.py
+    runtime_setup.py
     services.py
   core/
     __init__.py
@@ -54,6 +55,8 @@ atelier/
     entry.py
     layout_store.py
     main_window.py
+    runtime_setup_panel.py
+    runtime_setup_state.py
     state_reader.py
     workspace.py
   i18n/
@@ -70,6 +73,8 @@ atelier/
     health.py
     manager.py
     manifest.py
+    registration.py
+    setup.py
     store.py
   security/
     __init__.py
@@ -94,12 +99,15 @@ atelier/
     graph.py
 
 tests/
+  test_app_runtime_setup_service.py
   test_app_paths.py
   test_app_services.py
   test_failure_recovery.py
   test_gui_app_entry.py
   test_gui_optional_dependency.py
   test_gui_layout_store.py
+  test_gui_runtime_setup.py
+  test_gui_runtime_setup_state.py
   test_gui_smoke.py
   test_gui_state_reader.py
   test_package_integrity.py
@@ -107,6 +115,8 @@ tests/
   test_planning_simple.py
   test_runtime_health.py
   test_runtime_manager.py
+  test_runtime_registration.py
+  test_runtime_setup_snapshot.py
   test_runtime_store.py
   test_resource_locks.py
   test_scheduler_worker_runner_integration.py
@@ -243,12 +253,29 @@ Boundary:
 - Does not open SQLite, instantiate `RuntimeStore`, or install runtimes.
 - Does not put runtime binaries under `atelier/runtime/`.
 
+### `atelier/app/runtime_setup.py`
+
+Responsibility:
+
+- Defines `RuntimeSetupAppService`.
+- Wraps `RuntimeRegistrationService`, `RuntimeHealthChecker`, and `RuntimeSetupSnapshot` refresh for app/UI callers.
+- Provides controlled registration methods for local `ffprobe`, local `ffmpeg`, development Worker Python, and a local demo model directory.
+- Returns refreshed runtime setup snapshots after successful registration.
+
+Boundary:
+
+- Does not open file dialogs or render GUI widgets.
+- Does not run FFmpeg, Python workers, model inference, Scheduler, or external tools.
+- Does not download, install, repair, or overwrite runtimes/models.
+- Keeps runtime/profile defaults centralized for the first GUI Runtime Setup surface.
+
 ### `atelier/app/services.py`
 
 Responsibility:
 
 - Provides app-level factory functions that wire `AppPaths` into lower-level services.
 - `create_runtime_store(paths)` creates a `RuntimeStore` from `paths.data_root` after ensuring local data directories exist.
+- `create_runtime_setup_service(paths)` creates a `RuntimeSetupAppService` over the managed data root.
 - `open_app_database(paths)` opens `paths.database_path` and initializes the SQLite schema.
 
 Boundary:
@@ -381,13 +408,13 @@ Responsibility:
 - Provides the formal development launch entry for the read-only workbench.
 - Supports `.venv/Scripts/python -m atelier.gui.app`.
 - Parses `--workspace-root`, `--data-root`, and `--no-restore-layout`.
-- Opens the app database, reads a `WorkbenchSnapshot`, creates `MainWindow`, optionally restores workspace layout, and starts the Qt event loop from `main()`.
+- Opens the app database, reads a `WorkbenchSnapshot`, creates a `RuntimeSetupAppService`, reads a `RuntimeSetupSnapshot`, creates `MainWindow`, optionally restores workspace layout, and starts the Qt event loop from `main()`.
 
 Boundary:
 
 - Does not trigger Scheduler claim, worker execution, FFmpeg/model adapters, runtime install, plugin loading, or recovery actions.
 - Test helpers build the launch context without entering the Qt event loop.
-- Keeps launch orchestration separate from `MainWindow` rendering and `state_reader` queries.
+- Keeps launch orchestration separate from `MainWindow` rendering, `state_reader` queries, and runtime setup registration behavior.
 
 ### `atelier/gui/entry.py`
 
@@ -422,9 +449,10 @@ Boundary:
 Responsibility:
 
 - Defines the first read-only PySide6 `MainWindow`.
-- Accepts `AppPaths` and an optional `WorkbenchSnapshot`.
-- Creates a `QMainWindow` with dock widgets for workflow, execution, queue, and resources/runtime panels.
+- Accepts `AppPaths`, optional `WorkbenchSnapshot`, optional `RuntimeSetupSnapshot`, and an optional runtime setup service.
+- Creates a `QMainWindow` with dock widgets for workflow, execution, queue, resources/runtime, and Runtime Setup panels.
 - Renders the queue snapshot as read-only text when provided.
+- Renders Runtime Setup through `runtime_setup_panel.py` when a snapshot is provided.
 - Saves and restores workspace geometry/state through `WorkspaceLayoutStore`.
 
 Boundary:
@@ -432,7 +460,40 @@ Boundary:
 - Does not start `QApplication` or the Qt event loop.
 - Does not open SQLite directly.
 - Does not call Scheduler, worker runners, FFmpeg, model backends, or runtime installers.
+- Does not choose executable/model paths itself; Runtime Setup actions go through the supplied app service.
 - Does not implement complex workspace presets, panel visibility policy, or user-facing layout management UI yet.
+
+### `atelier/gui/runtime_setup_panel.py`
+
+Responsibility:
+
+- Defines the first actionable PySide6 Runtime Setup panel.
+- Renders runtime/model summary, component/model details, registration buttons, refresh, and diagnostic errors.
+- Uses `RuntimeSetupServiceProtocol` so widget actions call an app service instead of constructing commands or writing manifests directly.
+- Opens file/directory pickers only for local path selection; registration behavior remains outside the widget.
+
+Boundary:
+
+- Does not run external tools, Scheduler, workers, FFmpeg, Python backends, or model inference.
+- Does not parse shell commands or mutate runtime manifests directly.
+- Does not implement download/install/repair flows or full Settings integration.
+
+### `atelier/gui/runtime_setup_state.py`
+
+Responsibility:
+
+- Defines PySide-independent view models for Runtime Setup:
+  - `RuntimeSetupSummaryView`
+  - `RuntimeSetupItemView`
+  - `RuntimeSetupActionView`
+  - `RuntimeSetupViewState`
+- Converts `RuntimeSetupSnapshot` into GUI-renderable labels, detail lines, and registration action enabled states.
+
+Boundary:
+
+- Does not import PySide6.
+- Does not read/write manifests, register runtimes, or run health checks.
+- Does not own visual styling or file dialogs.
 
 ### `atelier/gui/state_reader.py`
 
@@ -548,15 +609,54 @@ Responsibility:
 
 - Defines runtime-related manifest models:
   - `RuntimeStatus`
+  - `RuntimeKind`
+  - `RuntimeProfileKind`
   - `RuntimeManifest`
   - `ModelAssetManifest`
-- Captures component IDs, versions, declared paths, capabilities, checksums, model locations, and status.
+- Captures component IDs, versions, runtime kind, profile kind, display name, platform, declared component/executable paths, library dirs, scoped env, capabilities, backend tags, integrity/checksums, model locations, model family/task/backend metadata, and status.
 
 Boundary:
 
 - Does not read or write manifest files.
 - Does not validate file existence.
 - Does not install runtimes or models.
+
+### `atelier/runtime/registration.py`
+
+Responsibility:
+
+- Defines `RuntimeRegistrationError` and `RuntimeRegistrationService`.
+- Registers local executable runtime profiles into `RuntimeStore` without copying binaries or mutating system environment.
+- Registers development Worker Python profiles as `kind="worker_env"` / `profile_kind="dev"`.
+- Registers local model asset profiles into `RuntimeStore`.
+- Rejects empty paths, missing paths, relative path traversal, duplicate runtime ids, and duplicate model ids.
+- Stores paths relative to `RuntimeStore.data_root` when possible; user-selected absolute paths outside `AtelierData` remain local profile paths in the user's manifest only.
+
+Boundary:
+
+- Does not download, unpack, install, run, or health-check runtime binaries.
+- Does not parse arbitrary shell commands.
+- Does not write secrets.
+- Does not resolve `RuntimeRequest` or launch Workers.
+
+### `atelier/runtime/setup.py`
+
+Responsibility:
+
+- Defines GUI-readable runtime setup snapshot models:
+  - `RuntimeComponentSnapshot`
+  - `ModelAssetSnapshot`
+  - `RuntimeSetupSnapshot`
+- Provides `build_runtime_setup_snapshot(store, checker)`.
+- Loads runtime/model manifests from `RuntimeStore`.
+- Uses `RuntimeHealthChecker` to attach status, issues, repair hints, and checked paths.
+
+Boundary:
+
+- Does not register, download, repair, or install runtimes.
+- Does not launch Workers or run heavy tools.
+- Does not mutate manifests.
+- Does not render GUI widgets.
 
 ### `atelier/runtime/store.py`
 
@@ -581,6 +681,8 @@ Responsibility:
 - Defines `RuntimeManager`.
 - Resolves `RuntimeRequest` into `RuntimeBinding` from managed runtime/model manifests.
 - Supports `RuntimeManager.from_store(store)` to load manifests from `RuntimeStore`.
+- Defines `RuntimeResolutionError` with `subject_id` and `reason` for missing, disabled, status-mismatched, and capability-mismatched runtime/model resolution failures.
+- Merges manifest-scoped env into `RuntimeBinding.env` without reading global `PATH`.
 
 Boundary:
 
@@ -596,11 +698,13 @@ Responsibility:
 - Defines `RuntimeHealthReport` and `RuntimeHealthChecker`.
 - Checks declared runtime component paths relative to `data_root`.
 - Reports missing paths, checksum mismatch, and ready state.
+- Provides GUI-readable `repair_hints` for missing, broken, disabled, and dry-run failure states.
+- Supports caller-provided safe dry-run probe args using list-based subprocess execution without `shell=True`.
 - Checks model asset local paths and optional model hash.
 
 Boundary:
 
-- Does not start executables for dry-run checks yet.
+- Does not choose dry-run commands itself.
 - Does not check GPU driver/backend compatibility yet.
 - Does not repair or install anything.
 - Does not decide which runtime a task should use.
@@ -875,6 +979,20 @@ Boundary:
 
 ## `tests/`
 
+### `tests/test_app_runtime_setup_service.py`
+
+Responsibility:
+
+- Tests `create_runtime_setup_service(paths)` and `RuntimeSetupAppService`.
+- Confirms registering a local `ffmpeg` path writes a runtime profile and returns a refreshed ready snapshot.
+- Confirms missing executable paths surface `RuntimeRegistrationError` diagnostics.
+
+Boundary:
+
+- Does not construct Qt widgets.
+- Does not run FFmpeg or any external executable.
+- Does not test download/install/repair flows.
+
 ### `tests/test_app_paths.py`
 
 Responsibility:
@@ -895,6 +1013,7 @@ Responsibility:
 
 - Tests app-level wiring from `AppPaths` to `RuntimeStore`.
 - Tests opening `AppPaths.database_path` and initializing SQLite schema through `open_app_database()`.
+- Does not cover Runtime Setup action behavior; that lives in `tests/test_app_runtime_setup_service.py`.
 
 Boundary:
 
@@ -979,10 +1098,41 @@ Responsibility:
 
 - Tests resolving runtime bindings from in-memory manifests.
 - Tests missing runtime component failure.
+- Tests scoped runtime env merging.
+- Tests diagnostic `RuntimeResolutionError` for disabled runtimes, capability mismatch, and missing model assets.
 
 Boundary:
 
 - Does not check filesystem health or package integrity.
+
+### `tests/test_runtime_registration.py`
+
+Responsibility:
+
+- Tests Phase B of `plan_runtime_management_foundation.md`.
+- Verifies local `ffprobe` / `ffmpeg` executable profile registration.
+- Verifies `python.worker-dev` development Worker Python profile registration.
+- Verifies local demo model directory profile registration.
+- Verifies empty path, missing path, path traversal, duplicate runtime id, and duplicate model id rejection.
+
+Boundary:
+
+- Does not health-check executables or run dry-run commands.
+- Does not copy binaries or model files.
+- Does not test GUI runtime setup actions.
+
+### `tests/test_runtime_setup_snapshot.py`
+
+Responsibility:
+
+- Tests Phase E of `plan_runtime_management_foundation.md`.
+- Verifies `build_runtime_setup_snapshot()` creates GUI-readable runtime/model health snapshots from `RuntimeStore` and `RuntimeHealthChecker`.
+- Verifies snapshot counts, ready/problem status, issues, repair hints, runtime capabilities, and model task types.
+
+Boundary:
+
+- Does not render PySide6 widgets.
+- Does not register, install, repair, or execute runtimes.
 
 ### `tests/test_runtime_store.py`
 
@@ -1065,6 +1215,7 @@ Responsibility:
 - Tests Phase F of `plan_readonly_pyside6_workbench.md`.
 - Confirms launch argument parsing for `--workspace-root` and `--no-restore-layout`.
 - Confirms launch context construction creates a `MainWindow`, reads an empty snapshot, and does not enter the Qt event loop.
+- Confirms launch context reads runtime setup manifests into the Runtime Setup dock.
 
 Boundary:
 
@@ -1101,13 +1252,40 @@ Boundary:
 - Does not test real dock movement.
 - Does not test complex workspace presets.
 
+### `tests/test_gui_runtime_setup.py`
+
+Responsibility:
+
+- Tests Phase B and Phase C of `plan_initial_actionable_gui_runtime_setup.md`.
+- Constructs `MainWindow` in offscreen Qt and confirms the Runtime Setup dock renders runtime snapshots.
+- Confirms Runtime Setup panel actions call the app service, refresh displayed snapshot state, and show registration errors.
+
+Boundary:
+
+- Does not run FFmpeg, workers, Scheduler, or model inference.
+- Does not test native file dialog interaction directly; tests call the same panel action methods with explicit paths.
+- Skips when PySide6 is not installed.
+
+### `tests/test_gui_runtime_setup_state.py`
+
+Responsibility:
+
+- Tests Phase A of `plan_initial_actionable_gui_runtime_setup.md`.
+- Confirms PySide-independent Runtime Setup view state exposes summary counts, component/model display rows, status labels, detail lines, and action enabled state.
+
+Boundary:
+
+- Does not import PySide6.
+- Does not read or write runtime manifests.
+- Does not run health checks or registration actions.
+
 ### `tests/test_gui_smoke.py`
 
 Responsibility:
 
 - Tests Phase B and the visible part of Phase C for `plan_readonly_pyside6_workbench.md`.
 - Constructs `QApplication` in offscreen mode and creates `MainWindow` without entering the event loop.
-- Confirms the four read-only dock areas exist and remain movable/floatable.
+- Confirms the five current dock areas exist and remain movable/floatable.
 - Confirms Queue panel can render task id, status, resource device, and artifact path from a `WorkbenchSnapshot`.
 - Skips GUI smoke tests when PySide6 is not installed, preserving the optional dependency boundary.
 - Confirms `MainWindow` can save and restore workspace layout through `WorkspaceLayoutStore`.
@@ -1202,14 +1380,14 @@ These packages are specified in docs but not fully implemented yet:
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
 - `scheduler/`: `SimpleScheduler` and a narrow claimed-task dispatch helper exist; lifecycle timeout/cancel/protocol-error results can be persisted for already claimed stub tasks, but durable queue claiming, full dispatch loops, priorities, concurrency, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
-- `gui/`: optional dependency entry helpers, formal development launch entry, a read-only `MainWindow`, basic dock workspace specs, minimal layout persistence, and read-only SQLite view models exist; real canvases, editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
+- `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models, and a minimal actionable Runtime Setup dock exist; real canvases, workflow editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `atelier/domain/translation.py`: translation / OCR fusion / structured subtitle output models described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `atelier/translation/`: input resolver, timeline builder, OCR context aligner, chunk planner, prompt builder, provider clients, result validator, repair runner, and subtitle rebuilder described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `workers/adapters/`: typed FFmpeg, ffprobe, ASR, OCR recognition, Translate Agent, subtitle review, composition, export, and enhancement adapters.
 - `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; the first claimed-task dispatch seam uses it from Scheduler, including lifecycle timeout/cancel/protocol-error result persistence for stub workers, while production worker lifecycle orchestration is not implemented.
 - `workers/runner`: minimum subprocess boundary plus lifecycle interface, incremental stdout reading, startup/heartbeat timeout handling, timeout/cancel/protocol-error terminate-kill behavior, minimal stdin cancel control, and optional stderr log file persistence exist; pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, full production worker lifecycle behavior, and real adapters are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
-- `runtime` advanced pieces: real runtime import, install, dry-run, backend compatibility, model store operations.
+- `runtime` advanced pieces: real runtime import, install, automatic dry-run selection, backend compatibility, model store operations, and repair flows.
 - `release` implementation: update manifests, staging, rollback.
 - `plugins` implementation: manifest validation, contribution registry, isolation.
 - `i18n` implementation: catalog loading and runtime locale switching.

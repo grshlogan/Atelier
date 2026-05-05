@@ -1371,6 +1371,7 @@ QMainWindow
     Card Detailed Settings / Inspector
     Queue Monitor
     Hardware Resources
+    Runtime Setup
     Logs
     Artifact Browser
 ```
@@ -1385,6 +1386,8 @@ WorkspaceManager 保存和恢复布局
 ```
 
 首版可以先提供少量固定 preset，但不要把 Queue Monitor、Hardware Resources 或 Card Detailed Settings 写死为不可移动区域。`QMainWindow.saveState()` / `restoreState()` 与 `WorkspaceManager` 是布局持久化方向。
+
+当前最小可操作 GUI 已包含 `Runtime Setup` dock：它用于展示 runtime/model health snapshot，并通过 app service 受控登记本地 `ffprobe`、`ffmpeg`、Worker Python 和 demo model directory。该 dock 只做路径选择、状态显示和诊断呈现，不运行 Scheduler、Worker、FFmpeg、模型推理或插件代码；后续视觉绘制应把它归入 Runtime / Settings / Hardware Plan 相关系统入口，而不是主 Workflow Canvas 的核心操作区。
 
 ### 15.2 Workflow Canvas
 

@@ -12,6 +12,8 @@ venv/
 # Temporary user-provided brand SVG drafts
 atelier/assets/brand/001.svg
 atelier/assets/brand/01.svg
+atelier/assets/Main.py
+atelier/assets/Main.svg
 
 # Test and type-check caches
 .pytest_cache/

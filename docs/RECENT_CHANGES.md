@@ -2,6 +2,234 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260505_005000 [Runtime manifest Phase A 字段加固]
+
+- Started `docs/plan/plan_runtime_management_foundation.md` Phase A.
+- Extended `atelier/runtime/manifest.py`:
+  - `RuntimeManifest` now captures runtime kind, display name, platform, executable paths, library dirs, scoped env, backend tags, integrity metadata, and profile kind.
+  - `ModelAssetManifest` now captures display name, model family, task types, compatible backends, size bytes, metadata, and profile kind.
+- Extended `tests/test_runtime_store.py` to verify rich runtime/model manifest fields for `ffprobe`, `python.worker-dev`, and a demo model asset while keeping existing minimal manifest behavior compatible.
+- Updated `docs/RUNTIME_ENVIRONMENT_SPEC.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_runtime_management_foundation.md`.
+
+Runtime folder decision:
+
+- Runtime management source code lives in `atelier/runtime/`.
+- Runtime data lives under `AppPaths.data_root / "runtimes"`.
+- In development, that resolves to `.atelier/AtelierData/runtimes/` under the workspace.
+
+Current boundary:
+
+- Implemented: manifest schema field expansion and persistence tests.
+- Not implemented: runtime registration service, dry-run health checks, RuntimeSetupSnapshot, GUI runtime setup actions, adapter registry, or real external tool execution.
+
+## 20260505_005500 [Runtime registration Phase B]
+
+- Added `atelier/runtime/registration.py` with `RuntimeRegistrationService`.
+- Added `tests/test_runtime_registration.py`.
+- Runtime registration can now write local profiles into `RuntimeStore` for:
+  - `ffprobe` / `ffmpeg` local executable profiles.
+  - `python.worker-dev` development Worker Python profile.
+  - local demo model directory profile.
+- Registration rejects empty paths, missing paths, relative path traversal, duplicate runtime ids, and duplicate model ids.
+- Updated `docs/RUNTIME_ENVIRONMENT_SPEC.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_runtime_management_foundation.md`.
+
+Current boundary:
+
+- Implemented: manifest-only local runtime/model profile registration.
+- Not implemented: runtime download/install, dry-run executable health checks, runtime repair, RuntimeSetupSnapshot, GUI runtime setup actions, AdapterRegistry, or real adapter execution.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_runtime_registration tests.test_runtime_store tests.test_runtime_manager tests.test_runtime_health
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Runtime registration/store/manager/health tests: 12 tests passed.
+- Full unittest discovery: 75 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260505_006000 [Runtime health Phase C repair hints and dry-run]
+
+- Extended `atelier/runtime/health.py`:
+  - `RuntimeHealthReport` now includes `repair_hints`.
+  - `RuntimeHealthChecker.check_runtime()` accepts caller-provided `dry_run_args`.
+  - dry-run probes use list-based `subprocess.run()` without `shell=True`.
+- Extended `tests/test_runtime_health.py` to cover:
+  - missing runtime repair hints.
+  - checksum mismatch repair hints.
+  - dry-run success and dry-run failure.
+- Updated `docs/RUNTIME_ENVIRONMENT_SPEC.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_runtime_management_foundation.md`.
+
+Current boundary:
+
+- Implemented: path/hash health checks, GUI-readable repair hints, and caller-provided safe dry-run probes.
+- Not implemented: automatic dry-run command selection, runtime repair/install, GPU driver/backend compatibility checks, RuntimeSetupSnapshot, GUI runtime setup actions, AdapterRegistry, or real adapter execution.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_runtime_health tests.test_runtime_registration tests.test_runtime_store tests.test_runtime_manager
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Runtime health/registration/store/manager tests: 13 tests passed.
+- Full unittest discovery: 76 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260505_006500 [Runtime resolution Phase D diagnostics]
+
+- Extended `atelier/runtime/manager.py`:
+  - Added `RuntimeResolutionError` with `subject_id` and `reason`.
+  - `RuntimeManager.resolve()` now merges manifest-scoped env into `RuntimeBinding.env`.
+  - Runtime resolution now distinguishes missing component, disabled/non-ready runtime, capability mismatch, missing model asset, and non-ready model asset cases.
+- Extended `tests/test_runtime_manager.py` for scoped env and diagnostic resolution errors.
+- Updated `docs/RUNTIME_ENVIRONMENT_SPEC.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_runtime_management_foundation.md`.
+
+Current boundary:
+
+- Implemented: diagnostic runtime/model resolution and scoped env binding.
+- Not implemented: health-gated resolution, backend tag selection, RuntimeSetupSnapshot, GUI runtime setup actions, AdapterRegistry, or real adapter execution.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_runtime_manager tests.test_runtime_health tests.test_runtime_registration tests.test_runtime_store
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Runtime manager/health/registration/store tests: 16 tests passed.
+- Full unittest discovery: 79 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260505_007000 [Runtime setup snapshot Phase E]
+
+- Added `atelier/runtime/setup.py`.
+- Added `tests/test_runtime_setup_snapshot.py`.
+- Runtime setup snapshot support now includes:
+  - `RuntimeComponentSnapshot`
+  - `ModelAssetSnapshot`
+  - `RuntimeSetupSnapshot`
+  - `build_runtime_setup_snapshot(store, checker)`
+- Snapshot construction loads manifests from `RuntimeStore` and attaches health status, issues, repair hints, and checked paths from `RuntimeHealthChecker`.
+- Updated `docs/APP_CODE_MAP.md`, `docs/plan/plan_runtime_management_foundation.md`, and `docs/plan/plan_main_app_skeleton.md`.
+
+Current boundary:
+
+- Implemented: GUI-readable runtime/model setup snapshot service.
+- Not implemented: PySide6 runtime setup UI, registration actions from GUI, runtime repair/install, AdapterRegistry, or real adapter execution.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_runtime_setup_snapshot tests.test_runtime_manager tests.test_runtime_health tests.test_runtime_registration tests.test_runtime_store
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Runtime setup/manager/health/registration/store tests: 17 tests passed.
+- Full unittest discovery: 80 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260505_007500 [Initial actionable GUI Runtime Setup]
+
+- Completed `docs/plan/plan_initial_actionable_gui_runtime_setup.md` Phase A-D.
+- Added `atelier/gui/runtime_setup_state.py` with PySide-independent Runtime Setup view state for summary counts, runtime/model display rows, status labels, detail lines, and action enabled state.
+- Added `atelier/gui/runtime_setup_panel.py` with the first actionable `Runtime Setup` dock:
+  - displays `RuntimeSetupSnapshot` status, issues, and repair hints.
+  - exposes buttons for local `ffprobe`, `ffmpeg`, Worker Python, demo model directory, and refresh.
+  - sends registration/refresh actions to an app service and renders `RuntimeRegistrationError` diagnostics.
+- Added `atelier/app/runtime_setup.py` and `create_runtime_setup_service(paths)` so GUI actions go through `RuntimeRegistrationService`, `RuntimeHealthChecker`, and snapshot refresh instead of writing manifests or building commands in widgets.
+- Updated `atelier/gui/app.py` and `atelier/gui/main_window.py` so the development launch path wires `RuntimeSetupAppService` into `MainWindow`.
+- Added tests:
+  - `tests/test_app_runtime_setup_service.py`
+  - `tests/test_gui_runtime_setup_state.py`
+  - `tests/test_gui_runtime_setup.py`
+  - extended `tests/test_gui_app_entry.py` and `tests/test_gui_smoke.py`
+- Updated `docs/APP_CODE_MAP.md`, `docs/Atelier_Main_UI_Spec.md`, `docs/plan/plan_initial_actionable_gui_runtime_setup.md`, and `docs/plan/plan_main_app_skeleton.md`.
+
+Current boundary:
+
+- Implemented: minimal local runtime/model registration entry from GUI, snapshot refresh, diagnostic error display, and offscreen Qt coverage.
+- Not implemented: real workflow execution, Scheduler/Worker launch from GUI, runtime download/install/repair, plugin installation UI, full Settings system, theme polish, or real adapter execution.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Full unittest discovery: 87 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260505_004500 [归档一次性完成计划文档]
+
+- Created `docs/plan/archive/one_off_completed_plans_20260505.zip`.
+- Archived six completed one-off import/alignment/planning documents that no longer drive active implementation phases:
+  - `plan_brand_icon_pack_import.md`
+  - `plan_external_tool_integration_spec.md`
+  - `plan_scheduling_docs_import.md`
+  - `plan_split_docs_v2_import_alignment.md`
+  - `plan_translate_agent_spec_alignment.md`
+  - `plan_ui_design_source_alignment.md`
+- Kept active implementation and follow-up plans in `docs/plan/`, including the main app skeleton plan, historical implementation plans, and the new Runtime / actionable GUI / minimal adapter workflow plans.
+
+Current boundary:
+
+- Implemented: archive packaging and active plan folder cleanup.
+- Not implemented: deletion of durable specs or RECENT_CHANGES history.
+
+## 20260505_004000 [新增 Runtime 管理与最简 adapter 后续计划]
+
+- Added `docs/plan/plan_runtime_management_foundation.md` as the next implementation plan before testing a minimal real workflow.
+- Added `docs/plan/plan_initial_actionable_gui_runtime_setup.md` as the follow-up plan for a minimal actionable Runtime Setup GUI surface.
+- Added `docs/plan/plan_minimal_adapter_probe_workflow.md` as the follow-up plan for the first real adapter workflow using `metadata.probe` / ffprobe.
+- Updated `docs/plan/plan_main_app_skeleton.md` execution order so Runtime management comes before actionable GUI and minimal adapter work.
+
+Decision:
+
+- Do not start a real adapter or workflow test before RuntimeManager can register, health-check, resolve, and expose local runtime/model profiles.
+- The first real adapter should be metadata probe rather than ASR/OCR/translation/video enhancement, because it validates runtime path, typed command, artifact, and dispatch boundaries at lower risk.
+
+Current boundary:
+
+- Implemented: planning only.
+- Not implemented: runtime registration service, RuntimeSetupSnapshot, actionable GUI, AdapterRegistry, CommandSpec executor, FFprobeMetadataAdapter, or minimal real workflow.
+
 ## 20260505_003000 [完成 lifecycle dispatch timeout/cancel/protocol-error 覆盖]
 
 - Aligned `docs/plan/plan_scheduler_lifecycle_dispatch_integration.md` with the new external tool integration boundary:

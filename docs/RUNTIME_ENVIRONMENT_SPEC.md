@@ -175,16 +175,42 @@ AtelierData/
 
 用户可在 Settings 中移动 `AtelierData`，但移动必须通过软件执行，不能要求用户手工改路径。
 
+## 4.1 本地 Runtime Profile Registration
+
+首版 registration 只写 managed manifests，不复制大文件，不修改系统环境，也不执行真实工具。
+
+允许登记：
+
+```text
+local executable profile
+  -> ffprobe / ffmpeg / other user-selected local tools
+
+dev worker env profile
+  -> python.worker-dev pointing to development .venv Python
+
+local model asset profile
+  -> user-selected or development model directory / file
+```
+
+规则：
+
+- 空路径、缺失路径、相对路径中的 `..` traversal、重复 runtime id 和重复 model id 必须拒绝。
+- 路径位于 `AtelierData` 内时，manifest 存相对路径。
+- 用户选择的外部绝对路径只保存在用户本地 manifest 中，属于 `profile_kind = "local"`，不得写入仓库。
+- registration service 不负责 health check；health check 由 RuntimeHealthChecker 负责。
+- registration service 不负责 `RuntimeRequest` 解析；解析仍由 RuntimeManager 负责。
+
 ## 5. Runtime Manifest
 
 ```toml
 schema_version = "1"
 runtime_id = "whisper.cpp-cuda-v1.7.0"
-name = "whisper.cpp CUDA"
+display_name = "whisper.cpp CUDA"
 component = "whisper.cpp"
 version = "1.7.0"
 platform = "windows-x86_64"
 kind = "backend"
+profile_kind = "managed"
 status = "ready"
 
 [paths]
@@ -192,11 +218,21 @@ root = "runtimes/components/whisper.cpp/v1.7.0-cuda"
 executable = "bin/whisper-cli.exe"
 library_dir = "bin"
 
+[component_paths]
+whisper = "runtimes/components/whisper.cpp/v1.7.0-cuda/bin/whisper-cli.exe"
+
+[executable_paths]
+whisper = "runtimes/components/whisper.cpp/v1.7.0-cuda/bin/whisper-cli.exe"
+
+[env]
+PATH = "<scoped worker path only>"
+
 [capabilities]
 tasks = ["asr"]
 hardware = ["gpu"]
 backends = ["cuda"]
 formats = ["ggml", "gguf"]
+backend_tags = ["cuda"]
 
 [requirements]
 min_driver = ""
@@ -208,15 +244,18 @@ sha256 = "<sha256>"
 signature = "<signature>"
 ```
 
+当前代码中的 Phase A manifest 字段保持向后兼容：旧的 `component_paths`、`capabilities`、`checksums`、`status` 仍可读取，同时新增 `kind`、`display_name`、`platform`、`executable_paths`、`library_dirs`、`env`、`backend_tags`、`integrity` 和 `profile_kind`，用于覆盖本地工具、backend runtime 和开发期 Worker Python env。
+
 ## 6. Model Asset Manifest
 
 ```yaml
 schema_version: "1"
 model_id: "whisper-large-v3"
 display_name: "Whisper Large V3"
+model_family: "whisper"
 task_types:
   - asr
-backends:
+compatible_backends:
   - faster-whisper
   - whisper.cpp
 formats:
@@ -234,6 +273,8 @@ compatible_runtimes:
   - "faster-whisper-cuda"
   - "whisper.cpp-cuda"
   - "whisper.cpp-cpu"
+profile_kind: "managed"
+size_bytes: 0
 ```
 
 规则：
@@ -241,6 +282,7 @@ compatible_runtimes:
 - `MODEL_ID` 参数必须引用 model store 中的 `model_id`。
 - 用户导入本地模型时，Atelier 生成或补全 manifest。
 - 模型路径不直接暴露给 WorkflowNode，Worker 通过 `RuntimeBinding.model_paths` 使用。
+- 当前代码中的 Phase A model manifest 字段支持 `display_name`、`model_family`、`task_types`、`compatible_backends`、`size_bytes`、`metadata` 和 `profile_kind`；旧的 `backend`、`capabilities`、`sha256`、`status` 仍保持兼容。
 
 ## 7. RuntimeRequest / RuntimeBinding
 
@@ -270,6 +312,14 @@ RuntimeBinding(
     },
 )
 ```
+
+当前 resolution 行为：
+
+- RuntimeManager 只从 managed manifests 解析 runtime/model，不查全局 `PATH`。
+- `RuntimeBinding.component_paths` 来自 ready runtime manifest。
+- `RuntimeBinding.model_paths` 来自 ready model asset manifest。
+- `RuntimeBinding.env` 只合并 manifest 中显式声明的 scoped env，不读取或复制全局进程环境。
+- 缺失 component、禁用 runtime、capability mismatch 和缺失 model asset 会抛出可诊断 `RuntimeResolutionError(subject_id, reason)`。
 
 ## 7.1 External Tool RuntimeBinding
 
@@ -311,6 +361,45 @@ disabled
 incompatible
 update_available
 ```
+
+当前首版 health check 能力：
+
+- 检查 runtime component paths 是否存在。
+- 检查 runtime component SHA-256。
+- 检查 model path 和 model SHA-256。
+- 生成 GUI 可读的 `repair_hints`。
+- 支持调用方传入安全 dry-run probe args，并使用 list-based subprocess 调用；不允许任意 shell command。
+
+Health check 不负责：
+
+- 选择 dry-run 命令。
+- 下载、安装、修复或替换 runtime。
+- 检查完整 GPU driver/backend 兼容性。
+- 启动 Worker 或真实任务。
+
+## 8.1 Runtime Setup Snapshot
+
+当前首版 snapshot service 只为 GUI 提供只读状态：
+
+```text
+RuntimeStore manifests
+  -> RuntimeHealthChecker reports
+  -> RuntimeSetupSnapshot
+  -> GUI Runtime Setup surface
+```
+
+Snapshot 包含：
+
+- runtime component id、display name、version、kind、profile kind。
+- model id、display name、family、backend、task types。
+- status、issues、repair hints、checked paths。
+- runtime/model count、ready runtime count、problem count。
+
+Snapshot 不负责：
+
+- 登记、下载、安装或修复 runtime。
+- 启动 Worker 或真实外部工具。
+- 渲染 PySide6 widget。
 
 健康检查内容：
 

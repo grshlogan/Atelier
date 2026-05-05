@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 from tempfile import TemporaryDirectory
 import unittest
 
@@ -42,6 +43,7 @@ class RuntimeHealthTests(unittest.TestCase):
 
             self.assertEqual(report.status, "missing")
             self.assertIn("missing component path: ffmpeg", report.issues)
+            self.assertIn("Register or repair the ffmpeg runtime path.", report.repair_hints)
 
     def test_runtime_reports_checksum_mismatch(self) -> None:
         with TemporaryDirectory() as temp_dir:
@@ -62,6 +64,42 @@ class RuntimeHealthTests(unittest.TestCase):
 
             self.assertEqual(report.status, "broken")
             self.assertIn("checksum mismatch: ffmpeg", report.issues)
+            self.assertIn("Reinstall or replace the ffmpeg runtime component.", report.repair_hints)
+
+    def test_runtime_dry_run_probe_reports_ready_and_failure_without_shell(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            probe = root / "runtimes" / "components" / "probe" / "probe.py"
+            probe.parent.mkdir(parents=True)
+            probe.write_text(
+                "import sys\n"
+                "raise SystemExit(0 if '--version' in sys.argv else 7)\n",
+                encoding="utf-8",
+            )
+            manifest = RuntimeManifest(
+                runtime_id="probe-local",
+                component="probe",
+                version="1",
+                component_paths={"python": sys.executable},
+                executable_paths={"python": sys.executable},
+                capabilities=["metadata"],
+            )
+            checker = RuntimeHealthChecker(root)
+
+            ready = checker.check_runtime(
+                manifest,
+                dry_run_args={"python": [str(probe), "--version"]},
+            )
+            broken = checker.check_runtime(
+                manifest,
+                dry_run_args={"python": [str(probe)]},
+            )
+
+            self.assertEqual(ready.status, "ready")
+            self.assertEqual(ready.issues, [])
+            self.assertEqual(broken.status, "broken")
+            self.assertIn("dry-run failed: python", broken.issues)
+            self.assertIn("Check the python runtime configuration and probe arguments.", broken.repair_hints)
 
     def test_model_asset_health_checks_local_path(self) -> None:
         with TemporaryDirectory() as temp_dir:

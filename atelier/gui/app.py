@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Sequence
 
 from atelier.app.paths import AppPaths
-from atelier.app.services import open_app_database
+from atelier.app.runtime_setup import RuntimeSetupAppService
+from atelier.app.services import create_runtime_setup_service, open_app_database
 from atelier.gui.entry import ensure_gui_dependency
+from atelier.runtime.setup import RuntimeSetupSnapshot
 
 ensure_gui_dependency()
 
@@ -31,6 +33,8 @@ class GuiLaunchContext:
     app_paths: AppPaths
     connection: sqlite3.Connection
     snapshot: WorkbenchSnapshot
+    runtime_setup_snapshot: RuntimeSetupSnapshot
+    runtime_setup_service: RuntimeSetupAppService
     window: MainWindow
     layout_restored: bool
 
@@ -75,7 +79,14 @@ def build_launch_context(args: LaunchArgs) -> GuiLaunchContext:
     app_paths = resolve_app_paths(args)
     connection = open_app_database(app_paths)
     snapshot = read_workbench_snapshot(connection)
-    window = MainWindow(app_paths=app_paths, snapshot=snapshot)
+    runtime_setup_service = create_runtime_setup_service(app_paths)
+    runtime_setup_snapshot = runtime_setup_service.refresh_snapshot()
+    window = MainWindow(
+        app_paths=app_paths,
+        snapshot=snapshot,
+        runtime_setup_snapshot=runtime_setup_snapshot,
+        runtime_setup_service=runtime_setup_service,
+    )
     layout_restored = False
     if args.restore_layout:
         layout_restored = window.restore_workspace_layout(WorkspaceLayoutStore(app_paths))
@@ -83,6 +94,8 @@ def build_launch_context(args: LaunchArgs) -> GuiLaunchContext:
         app_paths=app_paths,
         connection=connection,
         snapshot=snapshot,
+        runtime_setup_snapshot=runtime_setup_snapshot,
+        runtime_setup_service=runtime_setup_service,
         window=window,
         layout_restored=layout_restored,
     )

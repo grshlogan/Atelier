@@ -45,6 +45,7 @@ class GuiSmokeTests(unittest.TestCase):
                         "execution-panel",
                         "queue-panel",
                         "resources-runtime-panel",
+                        "runtime-setup-panel",
                     },
                 )
                 self.assertTrue(
