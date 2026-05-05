@@ -1,6 +1,6 @@
 # Atelier Artifact Lifecycle Spec
 
-> 状态：规划中，尚未实现。本文档定义 artifact 从计划、生成、验证、缓存、复用、导出、清理到恢复的完整生命周期。已纳入 OCR Recognition 的 `ocr_text_track`、sampled frames 和 fusion metadata。
+> 状态：部分实现。当前已落地首版 `output.export` / `ArtifactFinalizerAdapter`：把 existing staged artifact 安全复制到用户输出目录，验证 size / SHA-256，并通过 WorkerEvent / SQLite 写入 `task_artifacts.role = final_output`。完整 artifact lifecycle、cache、cleanup、startup recovery 仍处于规划中。已纳入 OCR Recognition 的 `ocr_text_track`、sampled frames 和 fusion metadata。
 
 ## 1. Artifact 类型
 
@@ -154,6 +154,33 @@ valid staged artifact
 ```
 
 禁止 Worker 直接写最终目录或静默覆盖。
+
+当前首版实现边界：
+
+```text
+node_type: output.export
+adapter: ArtifactFinalizerAdapter
+input param: input_path
+output param: output_dir
+optional param: filename
+optional param: artifact_type
+copy mode: copy only, keep staged source
+conflict: OUTPUT_CONFLICT, recoverable
+path safety: filename must be a plain basename
+verification: size + sha256
+sqlite link: task_artifacts.role = final_output
+```
+
+暂未实现：
+
+```text
+batch export
+move semantics
+filename templates
+overwrite / rename UI
+artifact resolver from upstream task_artifacts
+cleanup staged source
+```
 
 ## 11. Startup Recovery
 

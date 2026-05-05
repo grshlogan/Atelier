@@ -437,6 +437,7 @@ def _insert_execution_task(
 
 
 def _record_artifact_event(connection: sqlite3.Connection, event: ArtifactEvent) -> None:
+    role = _artifact_link_role(event)
     connection.execute(
         """
         INSERT OR IGNORE INTO artifacts
@@ -461,10 +462,10 @@ def _record_artifact_event(connection: sqlite3.Connection, event: ArtifactEvent)
         VALUES (?, ?, ?, ?, ?)
         """,
         (
-            f"{event.task_id}-{event.artifact_id}-output",
+            f"{event.task_id}-{event.artifact_id}-{role}",
             event.task_id,
             event.artifact_id,
-            "output",
+            role,
             event.timestamp,
         ),
     )
@@ -502,6 +503,12 @@ def _record_partial_artifact_refs(connection: sqlite3.Connection, event: FailedE
                 event.timestamp,
             ),
         )
+
+
+def _artifact_link_role(event: ArtifactEvent) -> str:
+    if event.metadata.get("role") == "final_output":
+        return "final_output"
+    return "output"
 
 
 def _update_task_from_terminal_event(

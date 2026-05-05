@@ -17,7 +17,7 @@
 - 对齐首版 specs，确保 artifacts、cache hit、cancel、resource binding、runtime ownership、release/update、plugin、workspace、i18n、hardware scheduling、failure recovery、security/privacy 等基础契约不互相冲突。
 - 建立 Python 包骨架、测试基线、SQLite schema 初始化、runtime manifest 管理、runtime health check、package hash 校验、开发 `.venv` 和 `AppPaths` 路径事实源。
 - 保持根目录清爽：根目录文档只保留 `README.md`、`AGENTS.md`、`DESIGN.md`；计划与阶段文档放在 `docs/plan/`。
-- 当前阶段已实现只读 PySide6 工作台壳，并开始实现 Worker JSON Lines 协议边界、事件流验证、`ExecutionTask -> task.json -> WorkerProcessSpec` 边界、最小 subprocess runner 边界、窄的 claimed-task dispatch seam、lifecycle runner 接口形状、增量 stdout 读取、startup/heartbeat timeout、最小 cancel control、protocol-error worker 终止、stderr 文件落盘，以及 claimed-task dispatch 对 lifecycle timeout/cancel/protocol-error 的 SQLite 持久化；真实 adapter 目前只覆盖 `metadata.probe` 和 `media.audio_extract` 的最小 fake-tool 后端闭环，仍不实现真实编辑型 GUI、生产级 Scheduler、完整生产级 worker lifecycle 行为、完整 FFmpeg/model adapters、打包发布链或插件加载链。
+- 当前阶段已实现只读 PySide6 工作台壳，并开始实现 Worker JSON Lines 协议边界、事件流验证、`ExecutionTask -> task.json -> WorkerProcessSpec` 边界、最小 subprocess runner 边界、窄的 claimed-task dispatch seam、lifecycle runner 接口形状、增量 stdout 读取、startup/heartbeat timeout、最小 cancel control、protocol-error worker 终止、stderr 文件落盘，以及 claimed-task dispatch 对 lifecycle timeout/cancel/protocol-error 的 SQLite 持久化；真实 adapter 目前只覆盖 `metadata.probe`、`media.audio_extract` 和 `output.export` 的最小 fake/staged 后端闭环，仍不实现真实编辑型 GUI、生产级 Scheduler、完整生产级 worker lifecycle 行为、完整 FFmpeg/model adapters、打包发布链或插件加载链。
 
 ## Current Facts（当前事实）
 
@@ -35,11 +35,11 @@
 - 当前已有 `atelier/workers/protocol.py`，支持单个 WorkerEvent 的 JSON Lines 编解码、最小 stdout event stream validation，并补齐 `LogEvent` / `HeartbeatEvent` 事件模型。
 - 当前已有 `atelier/workers/runner.py`，支持可控 subprocess 命令、`--task-file`、`cwd`、env、stdout event stream validation、stderr capture、return code capture、保留 stderr/returncode 的 protocol-error exception、lifecycle runner 接口形状、增量 stdout 读取、startup/heartbeat timeout、最小 cancel control、protocol-error worker 终止和 stderr 文件落盘。
 - 当前已有 `atelier/workers/task_file.py`，支持 `ExecutionTask` 写入 `task.json`，并生成 `WorkerProcessSpec`。
-- 当前已有 `atelier/adapters/` 最小 adapter contract、built-in registry、typed command executor、`metadata.probe` / `FFprobeMetadataAdapter` 和 `media.audio_extract` / `FFmpegAudioExtractAdapter`。
+- 当前已有 `atelier/adapters/` 最小 adapter contract、built-in registry、typed command executor、`metadata.probe` / `FFprobeMetadataAdapter`、`media.audio_extract` / `FFmpegAudioExtractAdapter` 和 `output.export` / `ArtifactFinalizerAdapter`。
 - 当前已有 `atelier/workers/adapter_entry.py`，可从 task.json 调用 built-in adapter 并输出 Worker JSON Lines。
 - 当前已有 `atelier/scheduler/dispatch.py`，支持把已 claim 的 `ClaimedTask` 接到 `task.json`、stub worker runner / lifecycle runner 和 SQLite event/artifact/failure persistence，并返回结构化 dispatch result；已验证 completed、timeout、cancel、failed 和 protocol-error stub paths。
 - 当前已有 `atelier/assets/`，作为 Atelier 主界面 toolbar、navigation、workflow nodes、queue、hardware、status、inspector 和 system 的 SVG 线性图标资源库。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 105 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 112 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -242,6 +242,7 @@
 - [plan_initial_actionable_gui_runtime_setup.md](./plan_initial_actionable_gui_runtime_setup.md)：第 8 个后续子计划。在 Runtime 管理骨架完成后，让 GUI 具备最小 runtime setup 操作面。
 - [plan_minimal_adapter_probe_workflow.md](./plan_minimal_adapter_probe_workflow.md)：第 9 个后续子计划。在 Runtime 管理骨架完成后，接入最简 metadata.probe / ffprobe adapter workflow。
 - [plan_ffmpeg_audio_extract_adapter.md](./plan_ffmpeg_audio_extract_adapter.md)：第 10 个后续子计划。在 metadata probe 跑通后，接入第一个产物型 `media.audio_extract` / FFmpeg audio adapter workflow。
+- [plan_output_export_finalizer.md](./plan_output_export_finalizer.md)：第 11 个后续子计划。在 staged artifact workflow 跑通后，接入最小 `output.export` / final output link。
 
 执行顺序：
 
@@ -255,6 +256,7 @@
 8. 再执行 `plan_initial_actionable_gui_runtime_setup.md`，让 GUI 具备最小 runtime setup 操作面。
 9. 再执行 `plan_minimal_adapter_probe_workflow.md`，用 metadata probe 跑通首个最简真实 adapter workflow。
 10. 再执行 `plan_ffmpeg_audio_extract_adapter.md`，用 audio extract 跑通首个 staged audio artifact workflow。
+11. 再执行 `plan_output_export_finalizer.md`，把 staged artifact 安全复制为 final output artifact。
 
 如后续某一阶段继续变复杂，例如 Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
 
@@ -270,7 +272,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：105 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：112 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -334,6 +336,7 @@ python -m mypy .
 - 2026-05-05：完成 `plan_initial_actionable_gui_runtime_setup.md` Phase A-D。GUI 现在有最小 `Runtime Setup` dock，可显示 runtime/model snapshot，通过 app service 登记本地 `ffprobe`、`ffmpeg`、Worker Python 和 demo model directory，并显示注册诊断；完整验证为 87 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
 - 2026-05-05：完成 `plan_minimal_adapter_probe_workflow.md` Phase A-F。首个真实 adapter 链路已跑通：fake ffprobe `metadata.probe` workflow 通过 RuntimeManager binding、adapter worker entrypoint、Worker JSON Lines 和 SQLite event/artifact persistence 完成后端闭环。
 - 2026-05-06：新增并执行 `plan_ffmpeg_audio_extract_adapter.md` Phase A/B。首个产物型 adapter 链路已跑通：fake FFmpeg `media.audio_extract` workflow 通过 RuntimeManager binding、adapter worker entrypoint、Worker JSON Lines 和 SQLite event/artifact persistence 生成 staged `audio.wav` artifact。
+- 2026-05-06：新增并执行 `plan_output_export_finalizer.md` Phase A/B。最小 `output.export` 链路已跑通：existing staged artifact 可安全复制到用户输出目录，产生 final output artifact，并在 SQLite 中记录 `task_artifacts.role = final_output`。
 
 ## Blockers（阻塞）
 

@@ -1,6 +1,6 @@
 # Atelier FFmpeg Adapter Spec
 
-> 状态：部分实现。当前已落地 `metadata.probe` / `FFprobeMetadataAdapter`，通过 `RuntimeBinding.component_paths["ffprobe"]` 调用 ffprobe 并输出 `probe.json` metadata artifact；已落地 `media.audio_extract` / `FFmpegAudioExtractAdapter`，通过 `RuntimeBinding.component_paths["ffmpeg"]` 调用 FFmpeg 并输出 `audio.wav` staged audio artifact。Soft Subtitle Mux、Burn Subtitle、Output Export，以及 OCR/Video Enhance 所需 helper 仍处于规划中。
+> 状态：部分实现。当前已落地 `metadata.probe` / `FFprobeMetadataAdapter`，通过 `RuntimeBinding.component_paths["ffprobe"]` 调用 ffprobe 并输出 `probe.json` metadata artifact；已落地 `media.audio_extract` / `FFmpegAudioExtractAdapter`，通过 `RuntimeBinding.component_paths["ffmpeg"]` 调用 FFmpeg 并输出 `audio.wav` staged audio artifact；已落地非 FFmpeg 转码型 `output.export` / `ArtifactFinalizerAdapter`，用于安全复制 final output。Soft Subtitle Mux、Burn Subtitle，以及 OCR/Video Enhance 所需 helper 仍处于规划中。
 
 ## 1. 覆盖 node_type
 
@@ -150,6 +150,8 @@ Worker 不直接写用户最终目录。最终导出由 ArtifactFinalizer：
 ```text
 valid staged artifact -> conflict check -> copy/move -> final_output link
 ```
+
+当前首版 `output.export` 已实现安全 copy 和 `final_output` link；FFmpeg 转码型 export、容器转换和 mux/burn 仍未实现。
 
 ## 9. Progress
 

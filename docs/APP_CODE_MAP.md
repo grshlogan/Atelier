@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 93
+Code file count: 96
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 57 files
-- `tests/`: 35 files
+- `atelier/`: 58 files
+- `tests/`: 37 files
 
 Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
 
@@ -23,6 +23,7 @@ atelier/
     base.py
     builtins.py
     command.py
+    finalize.py
     ffmpeg.py
     ffprobe.py
     registry.py
@@ -112,6 +113,7 @@ tests/
   test_app_runtime_setup_service.py
   test_app_paths.py
   test_app_services.py
+  test_artifact_finalizer_adapter.py
   test_command_executor.py
   test_failure_recovery.py
   test_ffmpeg_audio_extract_adapter.py
@@ -124,6 +126,8 @@ tests/
   test_gui_smoke.py
   test_gui_state_reader.py
   test_minimal_audio_extract_workflow.py
+  test_minimal_probe_workflow.py
+  test_output_export_workflow.py
   test_package_integrity.py
   test_phase6_minimal_loop.py
   test_planning_simple.py
@@ -200,7 +204,7 @@ Rules:
 Responsibility:
 
 - Provides the first Worker adapter boundary for real tool execution.
-- Keeps adapter contract, registry, typed command execution, ffprobe metadata probing, and FFmpeg audio extraction outside GUI, Scheduler, and SQLite layers.
+- Keeps adapter contract, registry, typed command execution, ffprobe metadata probing, FFmpeg audio extraction, and final output copying outside GUI, Scheduler, and SQLite layers.
 
 Boundary:
 
@@ -261,6 +265,24 @@ Boundary:
 - Does not select executable paths; RuntimeManager / RuntimeBinding must supply them.
 - Does not redact stdout/stderr automatically beyond exposing a redacted command shape.
 
+### `atelier/adapters/finalize.py`
+
+Responsibility:
+
+- Defines `ArtifactFinalizerAdapter` for `output.export`.
+- Copies an existing staged artifact from task `input_path` to task `output_dir`.
+- Uses an optional safe `filename`, defaulting to the source filename.
+- Rejects output conflicts instead of overwriting user files.
+- Verifies final output size and SHA-256 after copy.
+- Returns a final output artifact ref with `metadata.role = final_output`.
+
+Boundary:
+
+- Does not run FFmpeg or any external executable.
+- Does not write SQLite directly.
+- Does not delete or move the staged source artifact.
+- Does not implement GUI file dialogs, batch export, naming templates, mux/burn, or format conversion.
+
 ### `atelier/adapters/ffprobe.py`
 
 Responsibility:
@@ -300,7 +322,7 @@ Boundary:
 Responsibility:
 
 - Provides `create_builtin_adapter_registry()`.
-- Registers the current built-in `metadata.probe` / `FFprobeMetadataAdapter` and `media.audio_extract` / `FFmpegAudioExtractAdapter`.
+- Registers the current built-in `metadata.probe` / `FFprobeMetadataAdapter`, `media.audio_extract` / `FFmpegAudioExtractAdapter`, and `output.export` / `ArtifactFinalizerAdapter`.
 
 Boundary:
 
@@ -939,6 +961,7 @@ Responsibility:
 - Provides the current minimal SQLite persistence functions for Phase 6.
 - `persist_planned_execution()` writes a project, workflow graph, job, execution plan, execution tasks, and task dependencies.
 - `record_worker_events()` writes structured worker events to `task_events`, records `ArtifactEvent` rows to `artifacts` / `task_artifacts`, updates terminal task status, and releases active task resource locks on terminal events.
+- Records `ArtifactEvent.metadata.role == "final_output"` as `task_artifacts.role = "final_output"`; other artifact events remain role `output`.
 - Provides minimum queue helpers for Phase 7: `fetch_next_runnable_task()`, `mark_task_running()`, and `fetch_task_resource_binding()`.
 - Provides minimum resource lock helpers for the resource-lock plan: `ResourceLockRecord`, `StaleResourceLockRecord`, `fetch_active_resource_lock()`, `fetch_stale_resource_locks()`, and `release_stale_resource_lock()`.
 - Provides minimum failure recovery helpers for the resource-lock plan: `FailureFacts`, `RecoveryOption`, `fetch_failure_facts()`, and `suggest_recovery_options()`.
@@ -1377,6 +1400,20 @@ Boundary:
 - Does not test stale lock detection.
 - Does not test GUI failure panels.
 
+### `tests/test_artifact_finalizer_adapter.py`
+
+Responsibility:
+
+- Tests Phase A of `plan_output_export_finalizer.md`.
+- Confirms `ArtifactFinalizerAdapter` copies a staged artifact to the requested output directory, verifies size/hash, and returns a final output artifact.
+- Confirms default filename behavior, output conflict handling, unsafe filename rejection, and missing input mapping.
+
+Boundary:
+
+- Does not run worker subprocesses.
+- Does not write SQLite.
+- Does not test GUI export dialogs or FFmpeg format conversion.
+
 ### `tests/test_ffmpeg_audio_extract_adapter.py`
 
 Responsibility:
@@ -1534,6 +1571,20 @@ Boundary:
 - Uses a fake `ffprobe.cmd` executable, not a system FFmpeg installation.
 - Does not implement GUI trigger, final export, production retry/recovery execution, or multi-worker concurrency.
 
+### `tests/test_output_export_workflow.py`
+
+Responsibility:
+
+- Tests Phase B of `plan_output_export_finalizer.md`.
+- Confirms the adapter worker entrypoint can run `output.export` from a task file, copy an existing staged artifact, emit `started -> artifact -> completed`, and let `dispatch_claimed_task()` persist final output artifact rows.
+- Confirms `task_artifacts` stores role `final_output` when Worker artifact metadata declares `role=final_output`.
+- Confirms output conflicts emit `started -> failed` and persist structured `OUTPUT_CONFLICT` failure facts.
+
+Boundary:
+
+- Uses an existing temporary staged file, not a real upstream media adapter.
+- Does not implement GUI trigger, batch export, overwrite UI, move semantics, mux/burn, or format conversion.
+
 ### `tests/test_runtime_health.py`
 
 Responsibility:
@@ -1607,9 +1658,9 @@ These packages are specified in docs but not fully implemented yet:
 - `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models, and a minimal actionable Runtime Setup dock exist; real canvases, workflow editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `atelier/domain/translation.py`: translation / OCR fusion / structured subtitle output models described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `atelier/translation/`: input resolver, timeline builder, OCR context aligner, chunk planner, prompt builder, provider clients, result validator, repair runner, and subtitle rebuilder described by `docs/TRANSLATE_AGENT_SPEC.md`.
-- `adapters`: minimal adapter contract, built-in registry, typed command executor, `metadata.probe` / `FFprobeMetadataAdapter`, and `media.audio_extract` / `FFmpegAudioExtractAdapter` exist; subtitle mux/burn, export, ASR, OCR recognition, Translate Agent, subtitle review, composition, enhancement, plugin adapter discovery, and production adapter cancellation are not implemented.
+- `adapters`: minimal adapter contract, built-in registry, typed command executor, `metadata.probe` / `FFprobeMetadataAdapter`, `media.audio_extract` / `FFmpegAudioExtractAdapter`, and `output.export` / `ArtifactFinalizerAdapter` exist; subtitle mux/burn, ASR, OCR recognition, Translate Agent, subtitle review, composition, enhancement, plugin adapter discovery, and production adapter cancellation are not implemented.
 - `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; the first claimed-task dispatch seam uses it from Scheduler, including lifecycle timeout/cancel/protocol-error result persistence for stub workers, while production worker lifecycle orchestration is not implemented.
-- `workers/adapter_entry`: first built-in adapter worker entrypoint exists for task-file based `metadata.probe` and `media.audio_extract`; plugin adapters, GUI trigger, and broader production adapter orchestration are not implemented.
+- `workers/adapter_entry`: first built-in adapter worker entrypoint exists for task-file based `metadata.probe`, `media.audio_extract`, and `output.export`; plugin adapters, GUI trigger, and broader production adapter orchestration are not implemented.
 - `workers/runner`: minimum subprocess boundary plus lifecycle interface, incremental stdout reading, startup/heartbeat timeout handling, timeout/cancel/protocol-error terminate-kill behavior, minimal stdin cancel control, and optional stderr log file persistence exist; pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, and full production worker lifecycle behavior are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, automatic dry-run selection, backend compatibility, model store operations, and repair flows.

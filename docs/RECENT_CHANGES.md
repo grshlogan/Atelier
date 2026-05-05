@@ -2,6 +2,47 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260506_001500 [Output export ArtifactFinalizer workflow]
+
+- Created and executed `docs/plan/plan_output_export_finalizer.md` Phase A-B.
+- Added `atelier/adapters/finalize.py` with `ArtifactFinalizerAdapter` for `output.export`.
+- Registered `output.export` in `atelier/adapters/builtins.py`.
+- Updated `atelier/storage/repositories.py` so `ArtifactEvent.metadata.role == "final_output"` is persisted as `task_artifacts.role = "final_output"`.
+- Implemented the first final output path:
+  - reads staged artifact path from `input_path`.
+  - writes only to `output_dir`.
+  - accepts optional safe `filename`.
+  - rejects output conflicts instead of overwriting user files.
+  - verifies size and SHA-256 after copy.
+  - returns a final output artifact and maps conflict/path/input failures to structured adapter failures.
+- Added tests:
+  - `tests/test_artifact_finalizer_adapter.py`
+  - `tests/test_output_export_workflow.py`
+- Updated `README.md`, `docs/ADAPTER_SPEC.md`, `docs/ARTIFACT_LIFECYCLE_SPEC.md`, `docs/FFMPEG_ADAPTER_SPEC.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md`.
+
+Current boundary:
+
+- Implemented: existing staged artifact -> safe copy -> final output artifact -> WorkerEvent -> SQLite `final_output` link.
+- Not implemented: GUI export dialog, multi-artifact export, move semantics, output naming templates, artifact resolver from upstream `task_artifacts`, overwrite/rename UI, mux/burn, FFmpeg transcode export, or cleanup of staged sources.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_artifact_finalizer_adapter tests.test_output_export_workflow tests.test_minimal_audio_extract_workflow tests.test_phase6_minimal_loop
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Output export related tests: 10 tests passed.
+- Full unittest discovery: 112 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260506_001000 [FFmpeg audio extract adapter workflow]
 
 - Created and executed `docs/plan/plan_ffmpeg_audio_extract_adapter.md` Phase A-B.

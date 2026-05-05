@@ -1,6 +1,6 @@
 # Atelier Adapter Spec
 
-> 状态：部分实现。当前已落地最小 `WorkerAdapter` / `AdapterRegistry`、typed `CommandSpec` / safe executor、`metadata.probe` / `FFprobeMetadataAdapter`、`media.audio_extract` / `FFmpegAudioExtractAdapter` 和 adapter worker entrypoint。其他 Adapter 仍处于规划中。具体工具细节见 `FFMPEG_ADAPTER_SPEC.md`、`ASR_ADAPTER_SPEC.md`、`OCR_ADAPTER_SPEC.md`、`VIDEO_ENHANCE_ADAPTER_SPEC.md`。
+> 状态：部分实现。当前已落地最小 `WorkerAdapter` / `AdapterRegistry`、typed `CommandSpec` / safe executor、`metadata.probe` / `FFprobeMetadataAdapter`、`media.audio_extract` / `FFmpegAudioExtractAdapter`、`output.export` / `ArtifactFinalizerAdapter` 和 adapter worker entrypoint。其他 Adapter 仍处于规划中。具体工具细节见 `FFMPEG_ADAPTER_SPEC.md`、`ASR_ADAPTER_SPEC.md`、`OCR_ADAPTER_SPEC.md`、`VIDEO_ENHANCE_ADAPTER_SPEC.md`。
 
 ## 1. Adapter 定位
 
@@ -101,6 +101,7 @@ secret values redacted before logging
 | 外部依赖失败 | DEPENDENCY |
 | 权限不足 | PERMISSION |
 | 磁盘满 | DISK_FULL |
+| 输出文件冲突 | OUTPUT_CONFLICT |
 | 用户取消 | CANCELLED |
 | 心跳超时 | TIMEOUT |
 | 未分类异常 | INTERNAL |
