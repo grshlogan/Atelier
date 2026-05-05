@@ -39,7 +39,7 @@
 - 当前已有 `atelier/workers/adapter_entry.py`，可从 task.json 调用 built-in adapter 并输出 Worker JSON Lines。
 - 当前已有 `atelier/scheduler/dispatch.py`，支持把已 claim 的 `ClaimedTask` 接到 `task.json`、stub worker runner / lifecycle runner 和 SQLite event/artifact/failure persistence，并返回结构化 dispatch result；已验证 completed、timeout、cancel、failed 和 protocol-error stub paths。
 - 当前已有 `atelier/assets/`，作为 Atelier 主界面 toolbar、navigation、workflow nodes、queue、hardware、status、inspector 和 system 的 SVG 线性图标资源库。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 113 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 115 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -274,7 +274,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：113 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：115 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -340,6 +340,7 @@ python -m mypy .
 - 2026-05-06：新增并执行 `plan_ffmpeg_audio_extract_adapter.md` Phase A/B。首个产物型 adapter 链路已跑通：fake FFmpeg `media.audio_extract` workflow 通过 RuntimeManager binding、adapter worker entrypoint、Worker JSON Lines 和 SQLite event/artifact persistence 生成 staged `audio.wav` artifact。
 - 2026-05-06：新增并执行 `plan_output_export_finalizer.md` Phase A-C。最小 `output.export` 链路已跑通：existing staged artifact 可安全复制到用户输出目录，产生 final output artifact，并在 SQLite 中记录 `task_artifacts.role = final_output`；adapter、artifact lifecycle、worker protocol、code map 和 recent changes 文档已对齐。
 - 2026-05-06：新增 `plan_minimal_backend_workflow_runner.md`，并轻度执行 Phase A。新增 `fetch_task_output_artifacts()`，可从 SQLite 查询上游 task 的 role=`output` artifact，为后续 downstream params materialization 和最小 backend runner 做前置。
+- 2026-05-06：继续执行 `plan_minimal_backend_workflow_runner.md` Phase B。新增 `scheduler/handoff.py`，可为 `output.export` 从唯一上游 output artifact 物化 `input_path`，遇到多候选时返回 `UPSTREAM_ARTIFACT_AMBIGUOUS` blocked result。
 
 ## Blockers（阻塞）
 

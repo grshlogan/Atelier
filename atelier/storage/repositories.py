@@ -212,6 +212,19 @@ def fetch_task_output_artifacts(
     ]
 
 
+def fetch_task_dependency_ids(connection: sqlite3.Connection, task_id: str) -> list[str]:
+    rows = connection.execute(
+        """
+        SELECT depends_on_task_id
+        FROM task_dependencies
+        WHERE task_id = ?
+        ORDER BY depends_on_task_id
+        """,
+        (task_id,),
+    ).fetchall()
+    return [row[0] for row in rows]
+
+
 def fetch_task_status(connection: sqlite3.Connection, task_id: str) -> str:
     row = connection.execute(
         "SELECT status FROM execution_tasks WHERE task_id = ?",

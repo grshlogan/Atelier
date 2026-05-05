@@ -53,9 +53,9 @@ upstream artifact
 - 当前已有 `dispatch_claimed_task()`，可执行一个已 claim task，写入 `task.json`，运行 adapter worker entrypoint，并把 Worker events 持久化到 SQLite。
 - 当前已有 `RuntimeManager.resolve()`，可为 `metadata.probe`、`media.audio_extract` 和 `output.export` 提供 runtime binding。
 - 当前已有 built-in adapter：`metadata.probe`、`media.audio_extract`、`output.export`。
-- 当前 `output.export` 首版仍需要显式 `input_path`；还没有从上游 `task_artifacts` 自动解析 staged artifact 的服务。
+- 当前 `output.export` 首版 adapter 仍需要 `input_path`；dispatch 准备边界已有 `materialize_downstream_task_inputs()` 可从唯一上游 role=`output` artifact 物化该参数。
 - 当前 `planning.simple.build_linear_execution_plan()` 已把 `WorkflowEdge` 转成 `depends_on_tasks`，但没有端口级 artifact 参数映射。
-- 当前完整验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近结果为 113 tests passed。
+- 当前完整验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近结果为 115 tests passed。
 - `rg` 在本地环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints
@@ -108,7 +108,7 @@ upstream artifact
 
 状态：
 
-- 未开始。
+- 已完成首版最小切片。
 
 ### Phase C: 最小 sequential workflow runner
 
@@ -194,8 +194,8 @@ git diff --check
 
 最近验证事实：
 
-- `.venv\Scripts\python -m unittest tests.test_backend_workflow_handoff`：1 test passed。
-- `.venv\Scripts\python -m unittest discover -s tests`：113 tests passed。
+- `.venv\Scripts\python -m unittest tests.test_backend_workflow_handoff`：3 tests passed。
+- `.venv\Scripts\python -m unittest discover -s tests`：115 tests passed。
 - `.venv\Scripts\python -m compileall -q atelier tests`：passed。
 - `Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'`：no matches。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
@@ -205,6 +205,7 @@ git diff --check
 - 2026-05-06：创建本计划。决策：下一阶段先做最小后端 workflow runner，不直接跳到 ASR/OCR/Translate 或 GUI 运行按钮。
 - 2026-05-06：决策：轻度执行先落 Phase A artifact handoff 查询能力，因为它是多节点 workflow 自动推进的最小前置能力。
 - 2026-05-06：完成 Phase A 首个轻度切片。新增 `TaskArtifactRecord` 和 `fetch_task_output_artifacts()`，测试覆盖 role=`output` artifact 查询和 `artifact_type` 过滤；尚未做 downstream params materialization。
+- 2026-05-06：完成 Phase B 首版最小切片。新增 `scheduler/handoff.py`，`materialize_downstream_task_inputs()` 可为 `output.export` 注入唯一上游 output artifact 的 `input_path`，并在多候选时返回 `UPSTREAM_ARTIFACT_AMBIGUOUS`；尚未实现 full port-level mapping 或 runner loop。
 
 ## Blockers
 

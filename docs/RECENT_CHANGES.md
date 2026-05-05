@@ -2,6 +2,41 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260506_002500 [Downstream artifact input materialization]
+
+- Continued `docs/plan/plan_minimal_backend_workflow_runner.md` Phase B.
+- Added `atelier/scheduler/handoff.py` with:
+  - `TaskInputMaterialization`.
+  - `materialize_downstream_task_inputs()`.
+- Added `fetch_task_dependency_ids()` in `atelier/storage/repositories.py`.
+- Extended `tests/test_backend_workflow_handoff.py` to cover:
+  - injecting `output.export.input_path` from one persisted upstream role=`output` artifact.
+  - preserving the original `ExecutionTask.params`.
+  - blocking ambiguous multi-upstream artifact candidates with `UPSTREAM_ARTIFACT_AMBIGUOUS`.
+
+Current boundary:
+
+- Implemented: minimum dispatch-preparation materialization for `output.export.input_path`.
+- Not implemented: full port-level mapping, broad node param materialization, claim/dispatch loop, retry/recovery execution, GUI run entry, or filesystem artifact discovery.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_backend_workflow_handoff
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Backend workflow handoff tests: 3 tests passed.
+- Full unittest discovery: 115 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260506_002000 [Minimal backend workflow runner plan]
 
 - Created `docs/plan/plan_minimal_backend_workflow_runner.md`.
