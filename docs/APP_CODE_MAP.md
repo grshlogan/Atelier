@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 90
+Code file count: 93
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 56 files
-- `tests/`: 33 files
+- `atelier/`: 57 files
+- `tests/`: 35 files
 
 Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
 
@@ -23,6 +23,7 @@ atelier/
     base.py
     builtins.py
     command.py
+    ffmpeg.py
     ffprobe.py
     registry.py
   assets/
@@ -113,6 +114,7 @@ tests/
   test_app_services.py
   test_command_executor.py
   test_failure_recovery.py
+  test_ffmpeg_audio_extract_adapter.py
   test_ffprobe_metadata_adapter.py
   test_gui_app_entry.py
   test_gui_optional_dependency.py
@@ -121,6 +123,7 @@ tests/
   test_gui_runtime_setup_state.py
   test_gui_smoke.py
   test_gui_state_reader.py
+  test_minimal_audio_extract_workflow.py
   test_package_integrity.py
   test_phase6_minimal_loop.py
   test_planning_simple.py
@@ -197,7 +200,7 @@ Rules:
 Responsibility:
 
 - Provides the first Worker adapter boundary for real tool execution.
-- Keeps adapter contract, registry, typed command execution, and ffprobe metadata probing outside GUI, Scheduler, and SQLite layers.
+- Keeps adapter contract, registry, typed command execution, ffprobe metadata probing, and FFmpeg audio extraction outside GUI, Scheduler, and SQLite layers.
 
 Boundary:
 
@@ -275,12 +278,29 @@ Boundary:
 - Does not write SQLite or final user output directories.
 - Does not implement audio extraction, mux/burn, export, ASR, OCR, translation, or enhancement.
 
+### `atelier/adapters/ffmpeg.py`
+
+Responsibility:
+
+- Defines `FFmpegAudioExtractAdapter` for `media.audio_extract`.
+- Reads the `ffmpeg` executable path from `RuntimeBinding.component_paths`.
+- Validates the input media path from task params.
+- Runs `ffmpeg -y -i <input> -vn audio.wav` through typed `CommandSpec`.
+- Verifies `audio.wav` exists under the task work directory and returns an `audio` artifact ref.
+- Maps missing runtime, missing input, command failure, and missing output into structured `AdapterExecutionError` values.
+
+Boundary:
+
+- Does not call global `PATH`.
+- Does not write SQLite or final user output directories.
+- Does not implement no-audio policy, progress parsing, ASR, OCR, translation, mux/burn, or final export.
+
 ### `atelier/adapters/builtins.py`
 
 Responsibility:
 
 - Provides `create_builtin_adapter_registry()`.
-- Registers the current built-in `metadata.probe` / `FFprobeMetadataAdapter`.
+- Registers the current built-in `metadata.probe` / `FFprobeMetadataAdapter` and `media.audio_extract` / `FFmpegAudioExtractAdapter`.
 
 Boundary:
 
@@ -1357,6 +1377,20 @@ Boundary:
 - Does not test stale lock detection.
 - Does not test GUI failure panels.
 
+### `tests/test_ffmpeg_audio_extract_adapter.py`
+
+Responsibility:
+
+- Tests Phase A of `plan_ffmpeg_audio_extract_adapter.md`.
+- Confirms `FFmpegAudioExtractAdapter` reads `ffmpeg` from `RuntimeBinding`, builds the expected FFmpeg argument list, writes a staged `audio.wav`, and returns an audio artifact.
+- Confirms missing runtime path, missing input path, FFmpeg command failure, and command success without output map to structured adapter failures.
+
+Boundary:
+
+- Uses an injected command runner for adapter behavior tests.
+- Does not require a real FFmpeg installation.
+- Does not write SQLite or run Scheduler.
+
 ### `tests/test_ffprobe_metadata_adapter.py`
 
 Responsibility:
@@ -1473,6 +1507,19 @@ Boundary:
 - Does not write GUI state.
 - Does not execute real external tools.
 
+### `tests/test_minimal_audio_extract_workflow.py`
+
+Responsibility:
+
+- Tests Phase B of `plan_ffmpeg_audio_extract_adapter.md`.
+- Confirms the adapter worker entrypoint can run `media.audio_extract` from a task file, invoke a fake FFmpeg executable, emit `started -> artifact -> completed`, and let `dispatch_claimed_task()` persist task events, audio artifact rows, and completed task status.
+- Confirms failing fake FFmpeg output emits `started -> failed` and persists structured `DEPENDENCY` failure facts.
+
+Boundary:
+
+- Uses a fake `ffmpeg.cmd` executable, not a system FFmpeg installation.
+- Does not implement GUI trigger, no-audio policy, final export, production retry/recovery execution, or multi-worker concurrency.
+
 ### `tests/test_minimal_probe_workflow.py`
 
 Responsibility:
@@ -1560,13 +1607,12 @@ These packages are specified in docs but not fully implemented yet:
 - `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models, and a minimal actionable Runtime Setup dock exist; real canvases, workflow editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `atelier/domain/translation.py`: translation / OCR fusion / structured subtitle output models described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `atelier/translation/`: input resolver, timeline builder, OCR context aligner, chunk planner, prompt builder, provider clients, result validator, repair runner, and subtitle rebuilder described by `docs/TRANSLATE_AGENT_SPEC.md`.
-- `adapters`: minimal adapter contract, built-in registry, typed command executor, and `metadata.probe` / `FFprobeMetadataAdapter` exist; audio extract, subtitle mux/burn, export, ASR, OCR recognition, Translate Agent, subtitle review, composition, enhancement, plugin adapter discovery, and production adapter cancellation are not implemented.
+- `adapters`: minimal adapter contract, built-in registry, typed command executor, `metadata.probe` / `FFprobeMetadataAdapter`, and `media.audio_extract` / `FFmpegAudioExtractAdapter` exist; subtitle mux/burn, export, ASR, OCR recognition, Translate Agent, subtitle review, composition, enhancement, plugin adapter discovery, and production adapter cancellation are not implemented.
 - `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; the first claimed-task dispatch seam uses it from Scheduler, including lifecycle timeout/cancel/protocol-error result persistence for stub workers, while production worker lifecycle orchestration is not implemented.
-- `workers/adapter_entry`: first built-in adapter worker entrypoint exists for task-file based `metadata.probe`; plugin adapters, GUI trigger, and broader production adapter orchestration are not implemented.
+- `workers/adapter_entry`: first built-in adapter worker entrypoint exists for task-file based `metadata.probe` and `media.audio_extract`; plugin adapters, GUI trigger, and broader production adapter orchestration are not implemented.
 - `workers/runner`: minimum subprocess boundary plus lifecycle interface, incremental stdout reading, startup/heartbeat timeout handling, timeout/cancel/protocol-error terminate-kill behavior, minimal stdin cancel control, and optional stderr log file persistence exist; pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, and full production worker lifecycle behavior are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, automatic dry-run selection, backend compatibility, model store operations, and repair flows.
 - `release` implementation: update manifests, staging, rollback.
 - `plugins` implementation: manifest validation, contribution registry, isolation.
 - `i18n` implementation: catalog loading and runtime locale switching.
-  test_minimal_probe_workflow.py

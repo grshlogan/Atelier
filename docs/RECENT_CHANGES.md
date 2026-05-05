@@ -2,6 +2,45 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260506_001000 [FFmpeg audio extract adapter workflow]
+
+- Created and executed `docs/plan/plan_ffmpeg_audio_extract_adapter.md` Phase A-B.
+- Added `atelier/adapters/ffmpeg.py` with `FFmpegAudioExtractAdapter` for `media.audio_extract`.
+- Registered `media.audio_extract` in `atelier/adapters/builtins.py`.
+- Implemented the first staged audio artifact path:
+  - reads `ffmpeg` path from `RuntimeBinding.component_paths`.
+  - validates `input_path`.
+  - runs typed FFmpeg command without shell strings.
+  - writes `audio.wav` under the task work directory.
+  - returns an audio artifact and maps missing runtime/input, command failure, and missing output to structured adapter failures.
+- Added tests:
+  - `tests/test_ffmpeg_audio_extract_adapter.py`
+  - `tests/test_minimal_audio_extract_workflow.py`
+- Updated `README.md`, `docs/ADAPTER_SPEC.md`, `docs/FFMPEG_ADAPTER_SPEC.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md`.
+
+Current boundary:
+
+- Implemented: fake-FFmpeg `media.audio_extract` backend workflow through `WorkflowGraph -> ExecutionPlan -> Scheduler claim -> RuntimeManager RuntimeBinding -> task.json -> AdapterRegistry -> FFmpegAudioExtractAdapter -> WorkerEvent/Artifact -> SQLite`.
+- Not implemented: real FFmpeg smoke test, no-audio policy, FFmpeg progress pipe, cancel long transcode, GUI trigger, final export, subtitle mux/burn, ASR, OCR, Translate Agent, enhancement adapters, plugin adapter discovery, production adapter cancellation, or retry/recovery action execution.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_ffmpeg_audio_extract_adapter tests.test_minimal_audio_extract_workflow
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Audio extract adapter/workflow tests: 7 tests passed.
+- Full unittest discovery: 105 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260505_008000 [Minimal metadata probe adapter workflow]
 
 - Completed `docs/plan/plan_minimal_adapter_probe_workflow.md` Phase A-F.

@@ -1,6 +1,6 @@
 # Atelier Adapter Spec
 
-> 状态：部分实现。当前已落地最小 `WorkerAdapter` / `AdapterRegistry`、typed `CommandSpec` / safe executor、`metadata.probe` / `FFprobeMetadataAdapter` 和 adapter worker entrypoint。其他 Adapter 仍处于规划中。具体工具细节见 `FFMPEG_ADAPTER_SPEC.md`、`ASR_ADAPTER_SPEC.md`、`OCR_ADAPTER_SPEC.md`、`VIDEO_ENHANCE_ADAPTER_SPEC.md`。
+> 状态：部分实现。当前已落地最小 `WorkerAdapter` / `AdapterRegistry`、typed `CommandSpec` / safe executor、`metadata.probe` / `FFprobeMetadataAdapter`、`media.audio_extract` / `FFmpegAudioExtractAdapter` 和 adapter worker entrypoint。其他 Adapter 仍处于规划中。具体工具细节见 `FFMPEG_ADAPTER_SPEC.md`、`ASR_ADAPTER_SPEC.md`、`OCR_ADAPTER_SPEC.md`、`VIDEO_ENHANCE_ADAPTER_SPEC.md`。
 
 ## 1. Adapter 定位
 

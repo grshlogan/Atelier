@@ -1,6 +1,6 @@
 # Atelier FFmpeg Adapter Spec
 
-> 状态：部分实现。当前已落地 `metadata.probe` / `FFprobeMetadataAdapter`，通过 `RuntimeBinding.component_paths["ffprobe"]` 调用 ffprobe 并输出 `probe.json` metadata artifact。Audio Extract、Soft Subtitle Mux、Burn Subtitle、Output Export，以及 OCR/Video Enhance 所需 helper 仍处于规划中。
+> 状态：部分实现。当前已落地 `metadata.probe` / `FFprobeMetadataAdapter`，通过 `RuntimeBinding.component_paths["ffprobe"]` 调用 ffprobe 并输出 `probe.json` metadata artifact；已落地 `media.audio_extract` / `FFmpegAudioExtractAdapter`，通过 `RuntimeBinding.component_paths["ffmpeg"]` 调用 FFmpeg 并输出 `audio.wav` staged audio artifact。Soft Subtitle Mux、Burn Subtitle、Output Export，以及 OCR/Video Enhance 所需 helper 仍处于规划中。
 
 ## 1. 覆盖 node_type
 
@@ -60,6 +60,16 @@ metadata:
 
 输入：`video artifact`
 
+当前实现边界：
+
+```text
+node_type: media.audio_extract
+adapter: FFmpegAudioExtractAdapter
+runtime component: ffmpeg
+input param: input_path
+staged output: audio.wav
+```
+
 输出：
 
 ```text
@@ -77,7 +87,13 @@ metadata:
 ffmpeg -i input -vn audio.wav
 ```
 
-无音轨时按 workflow policy failed/skip。
+首版当前命令意图：
+
+```text
+ffmpeg -y -i input -vn audio.wav
+```
+
+无音轨时当前会随 FFmpeg 失败映射为 `DEPENDENCY`；后续再按 workflow policy 扩展 failed/skip。
 
 ## 5. Frame Extract for OCR
 
