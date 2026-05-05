@@ -2,9 +2,36 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260506_002000 [Minimal backend workflow runner plan]
+
+- Created `docs/plan/plan_minimal_backend_workflow_runner.md`.
+- Lightly executed Phase A with the first artifact handoff query:
+  - added `TaskArtifactRecord`.
+  - added `fetch_task_output_artifacts()` in `atelier/storage/repositories.py`.
+  - added `tests/test_backend_workflow_handoff.py`.
+- Scope remains intentionally narrow: this only queries persisted role=`output` artifacts for an upstream task and supports `artifact_type` filtering. It does not materialize downstream params or run a claim/dispatch loop yet.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_backend_workflow_handoff
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Backend workflow handoff tests: 1 test passed.
+- Full unittest discovery: 113 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260506_001500 [Output export ArtifactFinalizer workflow]
 
-- Created and executed `docs/plan/plan_output_export_finalizer.md` Phase A-B.
+- Created and executed `docs/plan/plan_output_export_finalizer.md` Phase A-C.
 - Added `atelier/adapters/finalize.py` with `ArtifactFinalizerAdapter` for `output.export`.
 - Registered `output.export` in `atelier/adapters/builtins.py`.
 - Updated `atelier/storage/repositories.py` so `ArtifactEvent.metadata.role == "final_output"` is persisted as `task_artifacts.role = "final_output"`.
@@ -18,7 +45,7 @@
 - Added tests:
   - `tests/test_artifact_finalizer_adapter.py`
   - `tests/test_output_export_workflow.py`
-- Updated `README.md`, `docs/ADAPTER_SPEC.md`, `docs/ARTIFACT_LIFECYCLE_SPEC.md`, `docs/FFMPEG_ADAPTER_SPEC.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md`.
+- Updated `README.md`, `docs/ADAPTER_SPEC.md`, `docs/ARTIFACT_LIFECYCLE_SPEC.md`, `docs/FFMPEG_ADAPTER_SPEC.md`, `docs/WORKER_PROTOCOL.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md`.
 
 Current boundary:
 
@@ -37,7 +64,8 @@ git diff --check
 
 Result:
 
-- Output export related tests: 10 tests passed.
+- Output export adapter tests: 5 tests passed.
+- Output export workflow tests: 2 tests passed.
 - Full unittest discovery: 112 tests passed.
 - `compileall`: passed.
 - Trailing whitespace scan: no matches.

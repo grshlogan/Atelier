@@ -53,8 +53,8 @@ staged artifact path
 - `media.audio_extract` / `FFmpegAudioExtractAdapter` 已实现并提交。
 - `adapter_entry` 已可从 `task.json` 调用 built-in adapter 并输出 Worker JSON Lines。
 - `RuntimeManager.resolve(RuntimeRequest())` 可返回 `runtime:none` binding，因此 `output.export` 首版不需要真实 runtime component。
-- `record_worker_events()` 当前会把所有 `ArtifactEvent` 记录为 role=`output`；本计划需要为 final output 增加受控 role。
-- 当前完整验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近结果为 105 tests passed。
+- `record_worker_events()` 当前会把 `ArtifactEvent.metadata.role == "final_output"` 记录为 role=`final_output`；其他 `ArtifactEvent` 保持 role=`output`。
+- 当前完整验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近结果为 112 tests passed。
 
 ## Constraints
 
@@ -168,7 +168,8 @@ git diff --check
 
 最近验证事实：
 
-- `.venv/Scripts/python -m unittest tests.test_artifact_finalizer_adapter tests.test_output_export_workflow tests.test_minimal_audio_extract_workflow tests.test_phase6_minimal_loop`：10 tests passed。
+- `.venv\Scripts\python -m unittest tests.test_artifact_finalizer_adapter`：5 tests passed。
+- `.venv\Scripts\python -m unittest tests.test_output_export_workflow`：2 tests passed。
 - `.venv/Scripts/python -m unittest discover -s tests`：112 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'`：no matches。
@@ -179,7 +180,8 @@ git diff --check
 - 2026-05-06：创建本计划。决策：第一个 `output.export` 只做安全复制和 final output link，不做格式转换、mux/burn、GUI 导出或批量导出。
 - 2026-05-06：完成 Phase A。新增 `atelier/adapters/finalize.py`，`ArtifactFinalizerAdapter` 可复制 existing staged artifact 到 `output_dir`，拒绝输出冲突和不安全 filename，并验证 size / SHA-256。
 - 2026-05-06：完成 Phase B。built-in registry 已注册 `output.export`；`record_worker_events()` 可将 `ArtifactEvent.metadata.role == "final_output"` 记录为 `task_artifacts.role = "final_output"`；worker dispatch 已验证 completed 和 `OUTPUT_CONFLICT` failed paths。
-- 2026-05-06：完成 Phase C。`README.md`、`ADAPTER_SPEC.md`、`ARTIFACT_LIFECYCLE_SPEC.md`、`FFMPEG_ADAPTER_SPEC.md`、`APP_CODE_MAP.md`、`RECENT_CHANGES.md` 和主计划已对齐。
+- 2026-05-06：完成 Phase C。`README.md`、`ADAPTER_SPEC.md`、`ARTIFACT_LIFECYCLE_SPEC.md`、`FFMPEG_ADAPTER_SPEC.md`、`WORKER_PROTOCOL.md`、`APP_CODE_MAP.md`、`RECENT_CHANGES.md` 和主计划已对齐。
+- 2026-05-06：接手复验时补齐 `WORKER_PROTOCOL.md` 对齐：`output.export` 明确为 `ArtifactFinalizerAdapter` / internal file copy / `runtime:none`，并记录为普通 Worker 写工作目录规则的受控 finalization 例外。
 
 ## Blockers
 

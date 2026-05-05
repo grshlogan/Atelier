@@ -73,12 +73,12 @@ Worker:
 
 - 工作目录：`{work_dir}/{task_id}/`
 - 临时文件写入工作目录，使用 `.part` 后缀。
-- Worker 进程不应修改工作目录之外的文件。
+- 普通 Worker 进程不应修改工作目录之外的文件；`output.export` / `ArtifactFinalizerAdapter` 是受控 finalization 例外，只能在给定 `output_dir` 内复制已存在 staged artifact，并且必须先做冲突检查与安全文件名校验。
 - Worker 进程不应读取或依赖 Atelier 数据库。
 - Worker 进程不应假设系统 `PATH` 中存在 FFmpeg、CUDA 工具、llama.cpp、whisper.cpp 或模型文件。
 - Scheduler 启动 Worker 前必须通过 RuntimeManager 解析 `runtime_binding`，并把组件路径、模型路径和必要环境变量写入 `task.json` 或 Worker 环境。
 - Worker 只能使用 `runtime_binding` 中声明的外部工具和模型路径；缺失时返回 `RUNTIME_MISSING` 或 `DEPENDENCY`，不自行安装依赖。
-- 面向用户的最终导出路径由 Scheduler / ArtifactFinalizer 负责确认和落盘。Worker 包括 `output.export` adapter 在内，只能先写入自己的 task 工作目录并产出可验证 artifact。
+- 面向用户的最终导出路径由 Scheduler / ArtifactFinalizer 负责确认和落盘。除 `output.export` finalization 任务外，Worker 只能先写入自己的 task 工作目录并产出可验证 artifact。
 
 ## 4. 事件类型 (WorkerEvent)
 
@@ -259,7 +259,7 @@ class HeartbeatEvent(WorkerEvent):
 3. 原子 rename：`{filename}.part` → `{filename}`。
 4. 发送 `artifact` 事件。
 
-如果任务语义是导出到用户目录，Worker 仍只生成 staged artifact。Scheduler 验证 artifact 后，再由 ArtifactFinalizer 复制或移动到用户确认的输出目录，并避免静默覆盖已有文件。
+如果任务语义是导出到用户目录，上游 Worker 仍只生成 staged artifact。Scheduler 验证 artifact 后，再由 `output.export` / `ArtifactFinalizerAdapter` 复制到用户确认的输出目录，并避免静默覆盖已有文件。当前首版只支持 copy，不支持 move、命名模板、FFmpeg 转码或 staged source cleanup。
 
 ### 5.2 Scheduler 验证
 
@@ -430,7 +430,7 @@ class WorkerAdapter(ABC):
 | `compose.mux_subtitle` | MuxSubtitleAdapter | FFmpeg |
 | `compose.burn_subtitle` | BurnSubtitleAdapter | FFmpeg |
 | `compose.mux_audio` | MuxAudioAdapter | FFmpeg |
-| `output.export` | ExportAdapter | FFmpeg |
+| `output.export` | ArtifactFinalizerAdapter | internal file copy / runtime:none |
 
 表中的外部工具名是逻辑组件名。真实可执行文件、动态库、模型目录和环境变量由 RuntimeManager 管理并通过 `runtime_binding` 传入 Worker。
 

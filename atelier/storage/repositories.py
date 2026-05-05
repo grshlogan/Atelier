@@ -58,6 +58,14 @@ class RecoveryOption:
     reason: str
 
 
+@dataclass(frozen=True)
+class TaskArtifactRecord:
+    artifact_id: str
+    artifact_type: str
+    path: str
+    role: str
+
+
 def persist_planned_execution(
     connection: sqlite3.Connection,
     *,
@@ -167,6 +175,41 @@ def fetch_task_artifact_links(connection: sqlite3.Connection, task_id: str) -> l
         (task_id,),
     ).fetchall()
     return [(row[0], row[1]) for row in rows]
+
+
+def fetch_task_output_artifacts(
+    connection: sqlite3.Connection,
+    task_id: str,
+    *,
+    artifact_type: str | None = None,
+) -> list[TaskArtifactRecord]:
+    params: list[str] = [task_id]
+    artifact_filter = ""
+    if artifact_type is not None:
+        artifact_filter = " AND artifacts.artifact_type = ?"
+        params.append(artifact_type)
+    rows = connection.execute(
+        f"""
+        SELECT artifacts.artifact_id, artifacts.artifact_type, artifacts.path, task_artifacts.role
+        FROM artifacts
+        JOIN task_artifacts
+          ON task_artifacts.artifact_id = artifacts.artifact_id
+        WHERE task_artifacts.task_id = ?
+          AND task_artifacts.role = 'output'
+          {artifact_filter}
+        ORDER BY artifacts.created_at, artifacts.artifact_id
+        """,
+        tuple(params),
+    ).fetchall()
+    return [
+        TaskArtifactRecord(
+            artifact_id=row[0],
+            artifact_type=row[1],
+            path=row[2],
+            role=row[3],
+        )
+        for row in rows
+    ]
 
 
 def fetch_task_status(connection: sqlite3.Connection, task_id: str) -> str:

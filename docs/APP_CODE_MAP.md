@@ -114,6 +114,7 @@ tests/
   test_app_paths.py
   test_app_services.py
   test_artifact_finalizer_adapter.py
+  test_backend_workflow_handoff.py
   test_command_executor.py
   test_failure_recovery.py
   test_ffmpeg_audio_extract_adapter.py
@@ -962,6 +963,7 @@ Responsibility:
 - `persist_planned_execution()` writes a project, workflow graph, job, execution plan, execution tasks, and task dependencies.
 - `record_worker_events()` writes structured worker events to `task_events`, records `ArtifactEvent` rows to `artifacts` / `task_artifacts`, updates terminal task status, and releases active task resource locks on terminal events.
 - Records `ArtifactEvent.metadata.role == "final_output"` as `task_artifacts.role = "final_output"`; other artifact events remain role `output`.
+- Provides `TaskArtifactRecord` and `fetch_task_output_artifacts()` as the first artifact handoff query for downstream workflow runner work.
 - Provides minimum queue helpers for Phase 7: `fetch_next_runnable_task()`, `mark_task_running()`, and `fetch_task_resource_binding()`.
 - Provides minimum resource lock helpers for the resource-lock plan: `ResourceLockRecord`, `StaleResourceLockRecord`, `fetch_active_resource_lock()`, `fetch_stale_resource_locks()`, and `release_stale_resource_lock()`.
 - Provides minimum failure recovery helpers for the resource-lock plan: `FailureFacts`, `RecoveryOption`, `fetch_failure_facts()`, and `suggest_recovery_options()`.
@@ -975,6 +977,7 @@ Boundary:
 - Does not own SQLite connection lifecycle.
 - Does not implement migrations.
 - Does not implement durable queue claiming, retry execution, crash recovery scans, cache lookups, or production scheduler locks.
+- Does not materialize downstream task params or choose between ambiguous multi-output artifacts.
 - Does not parse logs; it records structured worker events only.
 
 ### `atelier/storage/schema.sql`
@@ -1350,6 +1353,18 @@ Boundary:
 
 - Does not test real concurrency, resource locks, worker subprocesses, or GPU policy.
 
+### `tests/test_backend_workflow_handoff.py`
+
+Responsibility:
+
+- Tests Phase A of `plan_minimal_backend_workflow_runner.md`.
+- Confirms `fetch_task_output_artifacts()` returns persisted role=`output` artifact links for an upstream task.
+- Confirms artifact type filtering works without scanning the filesystem.
+
+Boundary:
+
+- Does not materialize downstream params, run Scheduler dispatch loops, start worker subprocesses, or touch GUI.
+
 ### `tests/test_scheduler_worker_runner_integration.py`
 
 Responsibility:
@@ -1654,7 +1669,7 @@ These packages are specified in docs but not fully implemented yet:
 
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
-- `scheduler/`: `SimpleScheduler` and a narrow claimed-task dispatch helper exist; lifecycle timeout/cancel/protocol-error results can be persisted for already claimed stub tasks, but durable queue claiming, full dispatch loops, priorities, concurrency, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
+- `scheduler/`: `SimpleScheduler`, a narrow claimed-task dispatch helper, and the first storage-backed artifact handoff query exist; lifecycle timeout/cancel/protocol-error results can be persisted for already claimed stub tasks, but durable queue claiming, full dispatch loops, downstream param materialization, priorities, concurrency, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
 - `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models, and a minimal actionable Runtime Setup dock exist; real canvases, workflow editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `atelier/domain/translation.py`: translation / OCR fusion / structured subtitle output models described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `atelier/translation/`: input resolver, timeline builder, OCR context aligner, chunk planner, prompt builder, provider clients, result validator, repair runner, and subtitle rebuilder described by `docs/TRANSLATE_AGENT_SPEC.md`.
@@ -1662,7 +1677,7 @@ These packages are specified in docs but not fully implemented yet:
 - `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; the first claimed-task dispatch seam uses it from Scheduler, including lifecycle timeout/cancel/protocol-error result persistence for stub workers, while production worker lifecycle orchestration is not implemented.
 - `workers/adapter_entry`: first built-in adapter worker entrypoint exists for task-file based `metadata.probe`, `media.audio_extract`, and `output.export`; plugin adapters, GUI trigger, and broader production adapter orchestration are not implemented.
 - `workers/runner`: minimum subprocess boundary plus lifecycle interface, incremental stdout reading, startup/heartbeat timeout handling, timeout/cancel/protocol-error terminate-kill behavior, minimal stdin cancel control, and optional stderr log file persistence exist; pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, and full production worker lifecycle behavior are not implemented.
-- `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
+- `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, failure fact/recovery option queries, and a first `fetch_task_output_artifacts()` handoff query exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, automatic dry-run selection, backend compatibility, model store operations, and repair flows.
 - `release` implementation: update manifests, staging, rollback.
 - `plugins` implementation: manifest validation, contribution registry, isolation.
