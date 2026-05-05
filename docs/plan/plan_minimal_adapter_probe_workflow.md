@@ -49,7 +49,9 @@ WorkflowGraph
 ## Current Facts（当前事实）
 
 - Scheduler claim、task file、runner、lifecycle dispatch、SQLite event/artifact/failure persistence 已有 stub worker 闭环。
-- RuntimeManager 已有最小 `RuntimeRequest -> RuntimeBinding` 解析，并将在 Runtime 管理计划中补本地 runtime profile / health / GUI snapshot。
+- RuntimeManager 已有 `RuntimeRequest -> RuntimeBinding` 解析、本地 runtime profile registration、health check 和 GUI snapshot。
+- 当前已新增 `atelier/adapters/` 最小 adapter contract / registry / typed command executor / `FFprobeMetadataAdapter`。
+- 当前已新增 `atelier/workers/adapter_entry.py`，可从 task.json 调用 built-in adapter 并输出 Worker JSON Lines。
 - `docs/ADAPTER_SPEC.md` 已定义 `WorkerAdapter`、`AdapterContext`、`AdapterResult` 和 typed command builder 原则。
 - `docs/FFMPEG_ADAPTER_SPEC.md` 已规划 ffprobe / FFmpeg adapters。
 - `docs/WORKFLOW_NODE_SPEC.md` 已列出 `metadata.probe` 与主要 node catalog。
@@ -85,7 +87,7 @@ WorkflowGraph
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase B：typed command executor
 
@@ -107,7 +109,7 @@ WorkflowGraph
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase C：metadata.probe adapter
 
@@ -130,7 +132,7 @@ WorkflowGraph
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase D：adapter worker dispatch 集成
 
@@ -152,7 +154,7 @@ WorkflowGraph
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase E：最简 workflow 闭环
 
@@ -175,7 +177,7 @@ WorkflowGraph
 
 状态：
 
-- 待执行。
+- 已完成。
 
 ### Phase F：文档状态对齐
 
@@ -196,9 +198,17 @@ WorkflowGraph
 git diff --check
 ```
 
+最近验证事实：
+
+- `.venv/Scripts/python -m unittest tests.test_adapter_registry tests.test_command_executor tests.test_ffprobe_metadata_adapter tests.test_minimal_probe_workflow`：11 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：98 tests passed。
+- `.venv/Scripts/python -m compileall -q atelier tests`：passed。
+- `Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'`：no matches。
+- `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
+
 状态：
 
-- 待执行。
+- 已完成。
 
 ## Child Plans（子计划）
 
@@ -220,7 +230,12 @@ git diff --check
 ## Progress / Decisions（进展 / 决策）
 
 - 2026-05-05：创建本计划。决策：首个真实 adapter 选择 `metadata.probe` / ffprobe，因为它能验证 runtime path、typed command、artifact 和 dispatch 闭环，同时比 ASR/OCR/翻译/视频增强风险低。
+- 2026-05-05：完成 Phase A。新增 `atelier/adapters/base.py` 与 `atelier/adapters/registry.py`，可按 `node_type` 注册/解析 adapter，并对重复/缺失注册给出明确错误。
+- 2026-05-05：完成 Phase B。新增 `atelier/adapters/command.py`，以 typed `CommandSpec` 执行 `[executable, *args]`，覆盖 cwd/env/stdout/stderr/redacted command 和 nonzero exit。
+- 2026-05-05：完成 Phase C。新增 `atelier/adapters/ffprobe.py`，`metadata.probe` 可从 `RuntimeBinding` 读取 `ffprobe` path、验证输入、解析 ffprobe JSON、写入 `probe.json` metadata artifact，并映射结构化 adapter failure。
+- 2026-05-05：完成 Phase D/E。新增 `atelier/workers/adapter_entry.py` 和 built-in registry；fake ffprobe workflow 已验证 `WorkflowGraph -> ExecutionPlan -> Scheduler claim -> RuntimeManager RuntimeBinding -> task.json -> AdapterRegistry -> FFprobeMetadataAdapter -> WorkerEvent/Artifact -> SQLite`。
+- 2026-05-05：完成 Phase F。`ADAPTER_SPEC.md`、`FFMPEG_ADAPTER_SPEC.md`、`APP_CODE_MAP.md`、`RECENT_CHANGES.md` 和主计划已对齐。
 
 ## Blockers（阻塞）
 
-- 依赖 `plan_runtime_management_foundation.md` 完成可用 runtime profile / RuntimeBinding。
+- 暂无。

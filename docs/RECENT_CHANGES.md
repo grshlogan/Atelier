@@ -2,6 +2,53 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260505_008000 [Minimal metadata probe adapter workflow]
+
+- Completed `docs/plan/plan_minimal_adapter_probe_workflow.md` Phase A-F.
+- Added the first adapter foundation:
+  - `atelier/adapters/base.py`
+  - `atelier/adapters/registry.py`
+  - `atelier/adapters/command.py`
+  - `atelier/adapters/ffprobe.py`
+  - `atelier/adapters/builtins.py`
+- Added `atelier/workers/adapter_entry.py`, a task-file based adapter worker entrypoint that emits Worker JSON Lines.
+- Updated `atelier/scheduler/dispatch.py` so `dispatch_claimed_task()` can receive a RuntimeManager-produced `RuntimeBinding` and write it into worker `task.json`.
+- Implemented `metadata.probe` / `FFprobeMetadataAdapter`:
+  - reads `ffprobe` path from `RuntimeBinding.component_paths`.
+  - validates `input_path`.
+  - runs typed ffprobe command without shell strings.
+  - parses ffprobe JSON and writes `probe.json` under the task work directory.
+  - returns a metadata artifact and maps missing runtime/input, command failure, and invalid JSON to structured adapter failures.
+- Added tests:
+  - `tests/test_adapter_registry.py`
+  - `tests/test_command_executor.py`
+  - `tests/test_ffprobe_metadata_adapter.py`
+  - `tests/test_minimal_probe_workflow.py`
+- Updated `docs/ADAPTER_SPEC.md`, `docs/FFMPEG_ADAPTER_SPEC.md`, `docs/APP_CODE_MAP.md`, and `docs/plan/plan_main_app_skeleton.md`.
+
+Current boundary:
+
+- Implemented: first fake-ffprobe `metadata.probe` backend workflow through `WorkflowGraph -> ExecutionPlan -> Scheduler claim -> RuntimeManager RuntimeBinding -> task.json -> AdapterRegistry -> FFprobeMetadataAdapter -> WorkerEvent/Artifact -> SQLite`.
+- Not implemented: GUI trigger, real ffprobe smoke test, video transcode, audio extract, subtitle mux/burn, ASR, OCR, Translate Agent, enhancement adapters, plugin adapter discovery, production adapter cancellation, or retry/recovery action execution.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_adapter_registry tests.test_command_executor tests.test_ffprobe_metadata_adapter tests.test_minimal_probe_workflow
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Adapter/probe tests: 11 tests passed.
+- Full unittest discovery: 98 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260505_005000 [Runtime manifest Phase A 字段加固]
 
 - Started `docs/plan/plan_runtime_management_foundation.md` Phase A.

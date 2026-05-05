@@ -1,6 +1,6 @@
 # Atelier FFmpeg Adapter Spec
 
-> 状态：规划中，尚未实现。本文档定义 FFmpeg / ffprobe 相关 Adapter：Metadata Probe、Audio Extract、Soft Subtitle Mux、Burn Subtitle、Output Export，以及 OCR/Video Enhance 所需的受控抽帧/编码 helper。
+> 状态：部分实现。当前已落地 `metadata.probe` / `FFprobeMetadataAdapter`，通过 `RuntimeBinding.component_paths["ffprobe"]` 调用 ffprobe 并输出 `probe.json` metadata artifact。Audio Extract、Soft Subtitle Mux、Burn Subtitle、Output Export，以及 OCR/Video Enhance 所需 helper 仍处于规划中。
 
 ## 1. 覆盖 node_type
 

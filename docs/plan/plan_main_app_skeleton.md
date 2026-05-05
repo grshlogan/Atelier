@@ -35,9 +35,11 @@
 - 当前已有 `atelier/workers/protocol.py`，支持单个 WorkerEvent 的 JSON Lines 编解码、最小 stdout event stream validation，并补齐 `LogEvent` / `HeartbeatEvent` 事件模型。
 - 当前已有 `atelier/workers/runner.py`，支持可控 subprocess 命令、`--task-file`、`cwd`、env、stdout event stream validation、stderr capture、return code capture、保留 stderr/returncode 的 protocol-error exception、lifecycle runner 接口形状、增量 stdout 读取、startup/heartbeat timeout、最小 cancel control、protocol-error worker 终止和 stderr 文件落盘。
 - 当前已有 `atelier/workers/task_file.py`，支持 `ExecutionTask` 写入 `task.json`，并生成 `WorkerProcessSpec`。
+- 当前已有 `atelier/adapters/` 最小 adapter contract、built-in registry、typed command executor 和 `metadata.probe` / `FFprobeMetadataAdapter`。
+- 当前已有 `atelier/workers/adapter_entry.py`，可从 task.json 调用 built-in adapter 并输出 Worker JSON Lines。
 - 当前已有 `atelier/scheduler/dispatch.py`，支持把已 claim 的 `ClaimedTask` 接到 `task.json`、stub worker runner / lifecycle runner 和 SQLite event/artifact/failure persistence，并返回结构化 dispatch result；已验证 completed、timeout、cancel、failed 和 protocol-error stub paths。
 - 当前已有 `atelier/assets/`，作为 Atelier 主界面 toolbar、navigation、workflow nodes、queue、hardware、status、inspector 和 system 的 SVG 线性图标资源库。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 87 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 98 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -266,7 +268,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：87 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：98 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -328,6 +330,7 @@ python -m mypy .
 - 2026-05-05：完成 `plan_runtime_management_foundation.md` Phase E。新增 RuntimeSetupSnapshot service，为后续 GUI runtime setup 面板提供只读 runtime/model health snapshot。
 - 2026-05-05：完成 `plan_runtime_management_foundation.md` Phase F。Runtime 管理骨架接手文档已对齐；完整验证为 80 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
 - 2026-05-05：完成 `plan_initial_actionable_gui_runtime_setup.md` Phase A-D。GUI 现在有最小 `Runtime Setup` dock，可显示 runtime/model snapshot，通过 app service 登记本地 `ffprobe`、`ffmpeg`、Worker Python 和 demo model directory，并显示注册诊断；完整验证为 87 tests passed，`compileall` passed，`git diff --check` passed with CRLF warnings only。
+- 2026-05-05：完成 `plan_minimal_adapter_probe_workflow.md` Phase A-F。首个真实 adapter 链路已跑通：fake ffprobe `metadata.probe` workflow 通过 RuntimeManager binding、adapter worker entrypoint、Worker JSON Lines 和 SQLite event/artifact persistence 完成后端闭环。
 
 ## Blockers（阻塞）
 

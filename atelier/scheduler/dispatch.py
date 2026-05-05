@@ -8,6 +8,7 @@ from pathlib import Path
 
 from atelier.core.time import utc_now_iso
 from atelier.domain.execution_plan import TaskStatus
+from atelier.domain.resources import RuntimeBinding
 from atelier.domain.worker_event import FailedEvent
 from atelier.scheduler.simple import ClaimedTask
 from atelier.storage.repositories import fetch_task_status, record_worker_events
@@ -41,6 +42,7 @@ def dispatch_claimed_task(
     work_root: Path,
     command_args: tuple[str, ...],
     env: Mapping[str, str] | None = None,
+    runtime_binding: RuntimeBinding | None = None,
     lifecycle_config: WorkerLifecycleConfig | None = None,
     cancel_event: threading.Event | None = None,
     stderr_log_path: Path | None = None,
@@ -48,6 +50,7 @@ def dispatch_claimed_task(
     task = claimed_task.task.model_copy(
         update={
             "resource_binding": claimed_task.resource_binding,
+            "runtime_binding": runtime_binding or claimed_task.task.runtime_binding,
             "status": "running",
         }
     )

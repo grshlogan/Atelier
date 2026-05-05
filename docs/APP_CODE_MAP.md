@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 79
+Code file count: 90
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 49 files
-- `tests/`: 29 files
+- `atelier/`: 56 files
+- `tests/`: 33 files
 
 Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
 
@@ -18,6 +18,13 @@ Non-code asset files are listed for ownership and handoff, but are not included 
 pyproject.toml
 
 atelier/
+  adapters/
+    __init__.py
+    base.py
+    builtins.py
+    command.py
+    ffprobe.py
+    registry.py
   assets/
     README.md
     icon_manifest.json
@@ -90,6 +97,7 @@ atelier/
     schema.sql
   workers/
     __init__.py
+    adapter_entry.py
     protocol.py
     runner.py
     simulated.py
@@ -99,10 +107,13 @@ atelier/
     graph.py
 
 tests/
+  test_adapter_registry.py
   test_app_runtime_setup_service.py
   test_app_paths.py
   test_app_services.py
+  test_command_executor.py
   test_failure_recovery.py
+  test_ffprobe_metadata_adapter.py
   test_gui_app_entry.py
   test_gui_optional_dependency.py
   test_gui_layout_store.py
@@ -180,6 +191,101 @@ Rules:
 - Release packaging owns GUI runtime layout; RuntimeManager owns tool/model/backend runtime state.
 
 ## `atelier/`
+
+### `atelier/adapters/`
+
+Responsibility:
+
+- Provides the first Worker adapter boundary for real tool execution.
+- Keeps adapter contract, registry, typed command execution, and ffprobe metadata probing outside GUI, Scheduler, and SQLite layers.
+
+Boundary:
+
+- Adapter code does not schedule tasks, claim resources, or write SQLite directly.
+- Adapters consume `ExecutionTask`, `RuntimeBinding`, `ResourceBinding`, and a task work directory, then return artifact refs / metadata or raise structured adapter errors.
+- External tools are invoked only through typed command specs, not shell strings.
+
+### `atelier/adapters/__init__.py`
+
+Responsibility:
+
+- Marks the adapter package.
+
+Boundary:
+
+- No registry loading or command execution at import time.
+
+### `atelier/adapters/base.py`
+
+Responsibility:
+
+- Defines the current minimal adapter contract:
+  - `AdapterContext`
+  - `AdapterResult`
+  - `AdapterValidationError`
+  - `AdapterExecutionError`
+  - `WorkerAdapter`
+- Provides default `prepare()` behavior for task work directories.
+
+Boundary:
+
+- Does not import PySide6, Scheduler, SQLite, subprocess runner, or concrete tool adapters.
+- Does not own cancellation transport beyond the future `WorkerAdapter.cancel()` hook.
+
+### `atelier/adapters/registry.py`
+
+Responsibility:
+
+- Defines `AdapterRegistry` and `AdapterRegistryError`.
+- Registers adapter instances by `node_type`.
+- Provides explicit duplicate and missing-adapter diagnostics.
+
+Boundary:
+
+- Does not auto-discover plugins or load third-party code.
+- Does not validate node schemas or runtime requirements.
+
+### `atelier/adapters/command.py`
+
+Responsibility:
+
+- Defines `CommandSpec`, `CommandResult`, `CommandExecutionError`, and `run_command()`.
+- Runs typed commands as `[executable, *args]` with caller-provided `cwd`, env overlay, UTF-8 text capture, optional timeout, and redacted command metadata.
+
+Boundary:
+
+- Does not support arbitrary shell strings or `shell=True`.
+- Does not select executable paths; RuntimeManager / RuntimeBinding must supply them.
+- Does not redact stdout/stderr automatically beyond exposing a redacted command shape.
+
+### `atelier/adapters/ffprobe.py`
+
+Responsibility:
+
+- Defines `FFprobeMetadataAdapter` for `metadata.probe`.
+- Reads the `ffprobe` executable path from `RuntimeBinding.component_paths`.
+- Validates the input media path from task params.
+- Runs `ffprobe -v error -print_format json -show_format -show_streams <input>`.
+- Writes `probe.json` under the task work directory and returns a `metadata` artifact ref plus summarized metadata.
+- Maps missing runtime, missing input, command failure, and invalid JSON into structured `AdapterExecutionError` values.
+
+Boundary:
+
+- Does not call global `PATH`.
+- Does not write SQLite or final user output directories.
+- Does not implement audio extraction, mux/burn, export, ASR, OCR, translation, or enhancement.
+
+### `atelier/adapters/builtins.py`
+
+Responsibility:
+
+- Provides `create_builtin_adapter_registry()`.
+- Registers the current built-in `metadata.probe` / `FFprobeMetadataAdapter`.
+
+Boundary:
+
+- Does not load plugin adapters.
+- Does not perform runtime health checks or command execution during registry construction.
 
 ### `atelier/assets/`
 
@@ -752,8 +858,9 @@ Responsibility:
 - Defines `WorkerDispatchResult`.
 - Provides `dispatch_claimed_task()` for the first narrow Scheduler-to-runner integration seam.
 - Accepts an already claimed `ClaimedTask`, writes `task.json` through `build_worker_process_spec()`, runs the supplied stub worker command through `run_worker_process()` or `run_worker_lifecycle()`, persists returned Worker events through `record_worker_events()`, and returns task id, parsed events, stderr, return code, final SQLite task status, and optional lifecycle facts.
-- Supports optional `lifecycle_config`, `cancel_event`, and `stderr_log_path` parameters for callers that need lifecycle timeout/cancel/log behavior.
+- Supports optional `runtime_binding`, `lifecycle_config`, `cancel_event`, and `stderr_log_path` parameters for callers that need RuntimeManager binding or lifecycle timeout/cancel/log behavior.
 - Copies the Scheduler-provided `ResourceBinding` onto the task payload before writing `task.json`.
+- Copies the caller-provided `RuntimeBinding` onto the task payload before writing `task.json`.
 - Converts `WorkerProcessProtocolError` into a persisted `FailedEvent(error_code="INTERNAL")` so malformed worker stdout does not leave a task running or a resource lock active.
 - Persists lifecycle timeout as `TIMEOUT`, lifecycle cancel as `CANCELLED` / `cancelled`, and lifecycle protocol errors as `INTERNAL`, while preserving stderr log path facts and releasing active resource locks.
 
@@ -761,7 +868,7 @@ Boundary:
 
 - Does not claim tasks; callers must use Scheduler first.
 - Does not choose runtime/model paths, command args, or hardware resources.
-- Does not implement multi-worker concurrency, priority scheduling, retry execution, protocol-error retry/recovery actions, automatic timeout/cancel policy selection, or real FFmpeg/model adapters.
+- Does not implement multi-worker concurrency, priority scheduling, retry execution, protocol-error retry/recovery actions, or automatic timeout/cancel policy selection.
 - Does not let `workers.runner` write SQLite; persistence remains in storage repositories.
 
 ### `atelier/scheduler/simple.py`
@@ -864,6 +971,22 @@ Responsibility:
 Boundary:
 
 - No worker process startup at import time.
+
+### `atelier/workers/adapter_entry.py`
+
+Responsibility:
+
+- Provides the first adapter worker entrypoint.
+- Supports `.venv/Scripts/python -m atelier.workers.adapter_entry --task-file <task.json>`.
+- Loads an `ExecutionTask` from `task.json`, resolves the adapter by `node_type` from the built-in adapter registry, builds `AdapterContext`, runs the adapter, and emits Worker JSON Lines.
+- Emits `started -> artifact -> completed` on success and `started -> failed` for structured adapter failures.
+
+Boundary:
+
+- Does not read or write SQLite.
+- Does not claim Scheduler tasks or assign hardware.
+- Does not resolve runtime paths itself; it requires `runtime_binding` to already be present in the task payload.
+- Does not load plugin adapters or run GUI code.
 
 ### `atelier/workers/protocol.py`
 
@@ -979,6 +1102,18 @@ Boundary:
 
 ## `tests/`
 
+### `tests/test_adapter_registry.py`
+
+Responsibility:
+
+- Tests Phase A of `plan_minimal_adapter_probe_workflow.md`.
+- Confirms `AdapterRegistry` can register and resolve adapters by `node_type`.
+- Confirms duplicate node types and missing node types produce explicit diagnostics.
+
+Boundary:
+
+- Does not run external tools, workers, Scheduler, RuntimeManager, or SQLite.
+
 ### `tests/test_app_runtime_setup_service.py`
 
 Responsibility:
@@ -992,6 +1127,20 @@ Boundary:
 - Does not construct Qt widgets.
 - Does not run FFmpeg or any external executable.
 - Does not test download/install/repair flows.
+
+### `tests/test_command_executor.py`
+
+Responsibility:
+
+- Tests Phase B of `plan_minimal_adapter_probe_workflow.md`.
+- Confirms `CommandSpec` uses executable + args list + cwd + env.
+- Confirms `run_command()` captures stdout/stderr/return code facts and exposes redacted command metadata.
+- Confirms nonzero command exits raise `CommandExecutionError` with stderr and redacted command facts.
+
+Boundary:
+
+- Does not test ffprobe-specific arguments or AdapterRegistry.
+- Does not use `shell=True`.
 
 ### `tests/test_app_paths.py`
 
@@ -1208,6 +1357,20 @@ Boundary:
 - Does not test stale lock detection.
 - Does not test GUI failure panels.
 
+### `tests/test_ffprobe_metadata_adapter.py`
+
+Responsibility:
+
+- Tests Phase C of `plan_minimal_adapter_probe_workflow.md`.
+- Confirms `FFprobeMetadataAdapter` reads `ffprobe` from `RuntimeBinding`, builds the expected ffprobe argument list, parses JSON, writes `probe.json`, and returns a metadata artifact.
+- Confirms missing runtime path, missing input path, and invalid ffprobe JSON map to structured adapter failures.
+
+Boundary:
+
+- Uses an injected command runner for adapter behavior tests.
+- Does not require a real FFmpeg installation.
+- Does not write SQLite or run Scheduler.
+
 ### `tests/test_gui_app_entry.py`
 
 Responsibility:
@@ -1310,6 +1473,20 @@ Boundary:
 - Does not write GUI state.
 - Does not execute real external tools.
 
+### `tests/test_minimal_probe_workflow.py`
+
+Responsibility:
+
+- Tests Phase D and Phase E of `plan_minimal_adapter_probe_workflow.md`.
+- Confirms the adapter worker entrypoint can run `metadata.probe` from a task file, invoke a fake ffprobe executable, emit `started -> artifact -> completed`, and let `dispatch_claimed_task()` persist task events, metadata artifact rows, and completed task status.
+- Confirms malformed fake ffprobe output emits `started -> failed` and persists structured `DEPENDENCY` failure facts.
+- Confirms the RuntimeManager-produced `RuntimeBinding` is present in worker `task.json`.
+
+Boundary:
+
+- Uses a fake `ffprobe.cmd` executable, not a system FFmpeg installation.
+- Does not implement GUI trigger, final export, production retry/recovery execution, or multi-worker concurrency.
+
 ### `tests/test_runtime_health.py`
 
 Responsibility:
@@ -1383,11 +1560,13 @@ These packages are specified in docs but not fully implemented yet:
 - `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models, and a minimal actionable Runtime Setup dock exist; real canvases, workflow editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `atelier/domain/translation.py`: translation / OCR fusion / structured subtitle output models described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `atelier/translation/`: input resolver, timeline builder, OCR context aligner, chunk planner, prompt builder, provider clients, result validator, repair runner, and subtitle rebuilder described by `docs/TRANSLATE_AGENT_SPEC.md`.
-- `workers/adapters/`: typed FFmpeg, ffprobe, ASR, OCR recognition, Translate Agent, subtitle review, composition, export, and enhancement adapters.
+- `adapters`: minimal adapter contract, built-in registry, typed command executor, and `metadata.probe` / `FFprobeMetadataAdapter` exist; audio extract, subtitle mux/burn, export, ASR, OCR recognition, Translate Agent, subtitle review, composition, enhancement, plugin adapter discovery, and production adapter cancellation are not implemented.
 - `workers/task_file`: `ExecutionTask -> task.json -> WorkerProcessSpec` bridge exists; the first claimed-task dispatch seam uses it from Scheduler, including lifecycle timeout/cancel/protocol-error result persistence for stub workers, while production worker lifecycle orchestration is not implemented.
-- `workers/runner`: minimum subprocess boundary plus lifecycle interface, incremental stdout reading, startup/heartbeat timeout handling, timeout/cancel/protocol-error terminate-kill behavior, minimal stdin cancel control, and optional stderr log file persistence exist; pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, full production worker lifecycle behavior, and real adapters are not implemented.
+- `workers/adapter_entry`: first built-in adapter worker entrypoint exists for task-file based `metadata.probe`; plugin adapters, GUI trigger, and broader production adapter orchestration are not implemented.
+- `workers/runner`: minimum subprocess boundary plus lifecycle interface, incremental stdout reading, startup/heartbeat timeout handling, timeout/cancel/protocol-error terminate-kill behavior, minimal stdin cancel control, and optional stderr log file persistence exist; pause, GUI/Scheduler cancellation wiring, adapter-specific cancellation, and full production worker lifecycle behavior are not implemented.
 - `storage/repositories/`: minimal Phase 6 persistence, Phase 7 queue helpers, resource lock persistence/release/stale detection, and failure fact/recovery option queries exist; durable repository APIs are not complete.
 - `runtime` advanced pieces: real runtime import, install, automatic dry-run selection, backend compatibility, model store operations, and repair flows.
 - `release` implementation: update manifests, staging, rollback.
 - `plugins` implementation: manifest validation, contribution registry, isolation.
 - `i18n` implementation: catalog loading and runtime locale switching.
+  test_minimal_probe_workflow.py
