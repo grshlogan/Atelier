@@ -60,6 +60,7 @@ class RecoveryOption:
 
 @dataclass(frozen=True)
 class TaskArtifactRecord:
+    task_id: str
     artifact_id: str
     artifact_type: str
     path: str
@@ -190,7 +191,12 @@ def fetch_task_output_artifacts(
         params.append(artifact_type)
     rows = connection.execute(
         f"""
-        SELECT artifacts.artifact_id, artifacts.artifact_type, artifacts.path, task_artifacts.role
+        SELECT
+            artifacts.task_id,
+            artifacts.artifact_id,
+            artifacts.artifact_type,
+            artifacts.path,
+            task_artifacts.role
         FROM artifacts
         JOIN task_artifacts
           ON task_artifacts.artifact_id = artifacts.artifact_id
@@ -203,10 +209,11 @@ def fetch_task_output_artifacts(
     ).fetchall()
     return [
         TaskArtifactRecord(
-            artifact_id=row[0],
-            artifact_type=row[1],
-            path=row[2],
-            role=row[3],
+            task_id=row[0],
+            artifact_id=row[1],
+            artifact_type=row[2],
+            path=row[3],
+            role=row[4],
         )
         for row in rows
     ]
@@ -223,6 +230,19 @@ def fetch_task_dependency_ids(connection: sqlite3.Connection, task_id: str) -> l
         (task_id,),
     ).fetchall()
     return [row[0] for row in rows]
+
+
+def fetch_plan_task_statuses(connection: sqlite3.Connection, plan_id: str) -> list[tuple[str, str]]:
+    rows = connection.execute(
+        """
+        SELECT task_id, status
+        FROM execution_tasks
+        WHERE plan_id = ?
+        ORDER BY created_at, task_id
+        """,
+        (plan_id,),
+    ).fetchall()
+    return [(row[0], row[1]) for row in rows]
 
 
 def fetch_task_status(connection: sqlite3.Connection, task_id: str) -> str:

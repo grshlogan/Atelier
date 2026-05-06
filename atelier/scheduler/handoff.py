@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from atelier.domain.execution_plan import ExecutionTask
@@ -22,6 +23,8 @@ class TaskInputMaterialization:
 def materialize_downstream_task_inputs(
     connection: sqlite3.Connection,
     task: ExecutionTask,
+    *,
+    work_root: Path | None = None,
 ) -> TaskInputMaterialization:
     if task.node_type != "output.export" or task.params.get("input_path"):
         return TaskInputMaterialization(status="ready", task=task)
@@ -56,8 +59,15 @@ def materialize_downstream_task_inputs(
         )
 
     params = dict(task.params)
-    params["input_path"] = candidates[0].path
+    params["input_path"] = _resolve_artifact_path(candidates[0].task_id, candidates[0].path, work_root)
     return TaskInputMaterialization(
         status="ready",
         task=task.model_copy(update={"params": params}),
     )
+
+
+def _resolve_artifact_path(task_id: str, artifact_path: str, work_root: Path | None) -> str:
+    path = Path(artifact_path)
+    if path.is_absolute() or work_root is None:
+        return artifact_path
+    return str(work_root / task_id / path)

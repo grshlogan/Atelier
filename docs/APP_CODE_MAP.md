@@ -93,6 +93,7 @@ atelier/
     dispatch.py
     handoff.py
     simple.py
+    workflow_runner.py
   storage/
     __init__.py
     db.py
@@ -128,6 +129,7 @@ tests/
   test_gui_smoke.py
   test_gui_state_reader.py
   test_minimal_audio_extract_workflow.py
+  test_minimal_backend_workflow_runner.py
   test_minimal_probe_workflow.py
   test_output_export_workflow.py
   test_package_integrity.py
@@ -652,7 +654,7 @@ Responsibility:
 - Defines GUI-facing read-only view models:
   - `WorkbenchTaskItem`
   - `WorkbenchSnapshot`
-- Provides `read_workbench_snapshot(connection)` to read task status, resource device, event count, and artifact paths from SQLite.
+- Provides `read_workbench_snapshot(connection)` to read task status, resource device, event count, artifact paths, final output paths, and persisted failure code/message from SQLite.
 
 Boundary:
 
@@ -930,6 +932,23 @@ Boundary:
 - Does not resolve full port-level mappings, multi-output policies, naming templates, or GUI interactions.
 - Does not mutate the original `ExecutionTask`; it returns a copied task payload for dispatch preparation.
 
+### `atelier/scheduler/workflow_runner.py`
+
+Responsibility:
+
+- Defines `WorkflowRunResult`.
+- Provides `run_sequential_workflow()` for the first minimum backend workflow runner.
+- Repeatedly claims tasks through `SimpleScheduler`, materializes downstream inputs through `materialize_downstream_task_inputs()`, resolves runtime binding through `RuntimeManager`, and dispatches claimed tasks through `dispatch_claimed_task()`.
+- Stops with `completed` when all plan tasks complete.
+- Stops with `failed` when a dispatched task fails or is cancelled.
+- Stops with `blocked` when there is no runnable task, materialization is blocked, or the step limit is reached.
+
+Boundary:
+
+- Does not implement concurrency, durable queue claiming, retry/recovery execution, GUI run entry, or production worker orchestration.
+- Does not choose command args or runtime profiles; callers provide command args and a `RuntimeManager`.
+- Does not persist a separate workflow-run table yet; task/event/artifact persistence remains in existing repositories.
+
 ### `atelier/scheduler/simple.py`
 
 Responsibility:
@@ -980,6 +999,7 @@ Responsibility:
 - `record_worker_events()` writes structured worker events to `task_events`, records `ArtifactEvent` rows to `artifacts` / `task_artifacts`, updates terminal task status, and releases active task resource locks on terminal events.
 - Records `ArtifactEvent.metadata.role == "final_output"` as `task_artifacts.role = "final_output"`; other artifact events remain role `output`.
 - Provides `TaskArtifactRecord`, `fetch_task_output_artifacts()`, and `fetch_task_dependency_ids()` as the first artifact handoff queries for downstream workflow runner work.
+- Provides `fetch_plan_task_statuses()` for minimum sequential runner stop conditions.
 - Provides minimum queue helpers for Phase 7: `fetch_next_runnable_task()`, `mark_task_running()`, and `fetch_task_resource_binding()`.
 - Provides minimum resource lock helpers for the resource-lock plan: `ResourceLockRecord`, `StaleResourceLockRecord`, `fetch_active_resource_lock()`, `fetch_stale_resource_locks()`, and `release_stale_resource_lock()`.
 - Provides minimum failure recovery helpers for the resource-lock plan: `FailureFacts`, `RecoveryOption`, `fetch_failure_facts()`, and `suggest_recovery_options()`.
@@ -1383,6 +1403,19 @@ Boundary:
 
 - Does not run Scheduler dispatch loops, start worker subprocesses, or touch GUI.
 
+### `tests/test_minimal_backend_workflow_runner.py`
+
+Responsibility:
+
+- Tests Phase C of `plan_minimal_backend_workflow_runner.md`.
+- Confirms `run_sequential_workflow()` can run fake `media.audio_extract -> output.export` through Scheduler claim, RuntimeManager binding, adapter worker dispatch, SQLite event/artifact persistence, and final output copy.
+- Confirms runner stops when an upstream task fails and does not dispatch the downstream export task.
+
+Boundary:
+
+- Uses fake FFmpeg and the built-in adapter worker entrypoint; does not require real FFmpeg.
+- Does not test concurrency, retry/recovery execution, GUI run entry, lifecycle timeout/cancel options, or blocked materialization persistence.
+
 ### `tests/test_scheduler_worker_runner_integration.py`
 
 Responsibility:
@@ -1554,6 +1587,7 @@ Responsibility:
 - Constructs `QApplication` in offscreen mode and creates `MainWindow` without entering the event loop.
 - Confirms the five current dock areas exist and remain movable/floatable.
 - Confirms Queue panel can render task id, status, resource device, and artifact path from a `WorkbenchSnapshot`.
+- Confirms `WorkbenchTaskItem` remains manually constructible with default final output / failure fields.
 - Skips GUI smoke tests when PySide6 is not installed, preserving the optional dependency boundary.
 - Confirms `MainWindow` can save and restore workspace layout through `WorkspaceLayoutStore`.
 
@@ -1568,8 +1602,10 @@ Boundary:
 Responsibility:
 
 - Tests Phase C of `plan_readonly_pyside6_workbench.md`.
+- Tests Phase D of `plan_minimal_backend_workflow_runner.md`.
 - Builds a temporary SQLite state through existing workflow/planning/scheduler/worker test helpers.
 - Confirms `read_workbench_snapshot()` returns task id, node type, status, resource device, event count, and artifact paths for GUI consumption.
+- Confirms backend runner results expose final output paths and failure code/message through the read-only snapshot.
 
 Boundary:
 
@@ -1687,8 +1723,8 @@ These packages are specified in docs but not fully implemented yet:
 
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
-- `scheduler/`: `SimpleScheduler`, a narrow claimed-task dispatch helper, the first storage-backed artifact handoff query, and minimal downstream `output.export.input_path` materialization exist; lifecycle timeout/cancel/protocol-error results can be persisted for already claimed stub tasks, but durable queue claiming, full dispatch loops, broad port-level param materialization, priorities, concurrency, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
-- `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models, and a minimal actionable Runtime Setup dock exist; real canvases, workflow editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
+- `scheduler/`: `SimpleScheduler`, a narrow claimed-task dispatch helper, the first storage-backed artifact handoff query, minimal downstream `output.export.input_path` materialization, and a minimum sequential workflow runner exist; lifecycle timeout/cancel/protocol-error results can be persisted for already claimed stub tasks, but durable queue claiming, concurrent dispatch loops, broad port-level param materialization, priorities, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
+- `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models including final output / failure fields, and a minimal actionable Runtime Setup dock exist; real canvases, workflow editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
 - `atelier/domain/translation.py`: translation / OCR fusion / structured subtitle output models described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `atelier/translation/`: input resolver, timeline builder, OCR context aligner, chunk planner, prompt builder, provider clients, result validator, repair runner, and subtitle rebuilder described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `adapters`: minimal adapter contract, built-in registry, typed command executor, `metadata.probe` / `FFprobeMetadataAdapter`, `media.audio_extract` / `FFmpegAudioExtractAdapter`, and `output.export` / `ArtifactFinalizerAdapter` exist; subtitle mux/burn, ASR, OCR recognition, Translate Agent, subtitle review, composition, enhancement, plugin adapter discovery, and production adapter cancellation are not implemented.

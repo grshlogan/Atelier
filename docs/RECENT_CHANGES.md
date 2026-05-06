@@ -2,6 +2,87 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260506_003500 [Workbench snapshot explains runner outputs]
+
+- Continued `docs/plan/plan_minimal_backend_workflow_runner.md` Phase D.
+- Extended `atelier/gui/state_reader.py` so `WorkbenchTaskItem` includes:
+  - `final_output_paths`.
+  - `failure_error_code`.
+  - `failure_message`.
+- Kept the new fields defaulted so existing manual `WorkbenchTaskItem` construction remains compatible.
+- Extended `tests/test_gui_state_reader.py` to verify read-only snapshots can explain:
+  - final output paths after fake `media.audio_extract -> output.export` completes.
+  - failure code/message after the backend runner stops on a failed upstream task.
+
+Current boundary:
+
+- Implemented: read-only queue snapshot fields needed to inspect runner output/failure states.
+- Not implemented: GUI run button, workflow editing, recovery action execution, richer blocked-state persistence, or visual/screenshot verification.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_backend_workflow_handoff tests.test_minimal_backend_workflow_runner tests.test_gui_state_reader
+.venv\Scripts\python -m unittest tests.test_gui_state_reader tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Backend workflow handoff + runner + state reader tests: 8 tests passed.
+- GUI state reader + smoke tests: 6 tests passed.
+- Full unittest discovery: 119 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260506_003000 [Minimal sequential backend workflow runner]
+
+- Continued `docs/plan/plan_minimal_backend_workflow_runner.md` Phase C.
+- Added `atelier/scheduler/workflow_runner.py` with:
+  - `WorkflowRunResult`.
+  - `run_sequential_workflow()`.
+- Added `fetch_plan_task_statuses()` in `atelier/storage/repositories.py`.
+- Updated artifact handoff path resolution so relative upstream artifact paths are resolved against `work_root / upstream_task_id / artifact_path` when preparing downstream dispatch.
+- Added `tests/test_minimal_backend_workflow_runner.py`.
+
+Implemented path:
+
+```text
+SimpleScheduler.claim_next_task()
+  -> materialize_downstream_task_inputs()
+  -> RuntimeManager.resolve()
+  -> dispatch_claimed_task()
+  -> WorkerEvent / SQLite
+  -> next task
+```
+
+Current boundary:
+
+- Implemented: sequential fake `media.audio_extract -> output.export` backend workflow and stop-on-task-failure behavior.
+- Not implemented: concurrent queue workers, retry/recovery execution, GUI run entry, lifecycle timeout/cancel options in the workflow runner, separate workflow-run persistence, or rich blocked-state persistence.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_backend_workflow_handoff tests.test_minimal_backend_workflow_runner
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Backend workflow handoff + runner tests: 5 tests passed.
+- Full unittest discovery: 117 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260506_002500 [Downstream artifact input materialization]
 
 - Continued `docs/plan/plan_minimal_backend_workflow_runner.md` Phase B.
