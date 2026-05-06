@@ -85,4 +85,10 @@ def _panel_body(
         )
         for artifact_path in task.artifact_paths:
             lines.append(f"artifact: {artifact_path}")
+        for final_output_path in task.final_output_paths:
+            lines.append(f"final output: {final_output_path}")
+        if task.failure_error_code or task.failure_message:
+            code = task.failure_error_code or "-"
+            message = task.failure_message or "-"
+            lines.append(f"failure: {code} | {message}")
     return "\n".join(lines)

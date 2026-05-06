@@ -2,6 +2,48 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260506_004000 [GUI workflow run entry app service]
+
+- Created `docs/plan/plan_gui_minimal_run_workflow_entry.md`.
+- Updated `docs/plan/plan_main_app_skeleton.md` to list it as the 13th follow-up plan.
+- Continued Phase A with the first app service slice:
+  - added `atelier/app/workflow_run.py`.
+  - added `tests/test_gui_workflow_run_entry.py`.
+- Added `WorkflowRunAppService`, which accepts a persisted `plan_id`, builds `SimpleScheduler`, builds `RuntimeManager.from_store()`, and calls `run_sequential_workflow()`.
+- Continued Phase B with the first Queue panel visibility slice:
+  - updated `atelier/gui/workspace.py` to display final output paths and failure facts from `WorkbenchSnapshot`.
+  - extended `tests/test_gui_smoke.py`.
+
+Current boundary:
+
+- Implemented: GUI-facing app service boundary can run a persisted fake `media.audio_extract -> output.export` plan and return structured `WorkflowRunResult`.
+- Implemented: Queue panel can expose final output paths and failure facts that `state_reader` already reads.
+- Not implemented: GUI run control, background execution, durable run queue, retry/cancel/recovery actions, file picker, or full Workflow Canvas editing.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry
+.venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry tests.test_minimal_backend_workflow_runner tests.test_gui_state_reader
+.venv\Scripts\python -m unittest tests.test_gui_smoke
+.venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry tests.test_gui_smoke tests.test_minimal_backend_workflow_runner tests.test_gui_state_reader
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- GUI workflow run entry tests: 1 test passed.
+- GUI workflow run entry + backend runner + state reader tests: 6 tests passed.
+- GUI smoke tests: 4 tests passed.
+- GUI run entry + GUI smoke + backend runner + state reader tests: 10 tests passed.
+- Full unittest discovery: 121 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260506_003500 [Workbench snapshot explains runner outputs]
 
 - Continued `docs/plan/plan_minimal_backend_workflow_runner.md` Phase D.

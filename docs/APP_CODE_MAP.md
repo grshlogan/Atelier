@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 96
+Code file count: 98
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 58 files
-- `tests/`: 37 files
+- `atelier/`: 59 files
+- `tests/`: 38 files
 
 Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
 
@@ -48,6 +48,7 @@ atelier/
     paths.py
     runtime_setup.py
     services.py
+    workflow_run.py
   core/
     __init__.py
     time.py
@@ -128,6 +129,7 @@ tests/
   test_gui_runtime_setup_state.py
   test_gui_smoke.py
   test_gui_state_reader.py
+  test_gui_workflow_run_entry.py
   test_minimal_audio_extract_workflow.py
   test_minimal_backend_workflow_runner.py
   test_minimal_probe_workflow.py
@@ -437,6 +439,21 @@ Boundary:
 - Does not make `runtime/` or `storage/` depend on `app/`.
 - Callers still own database connection lifetime and must close returned SQLite connections.
 
+### `atelier/app/workflow_run.py`
+
+Responsibility:
+
+- Defines `WorkflowRunAppService`, the first app-level run intent boundary for GUI-facing callers.
+- Accepts a persisted `plan_id`, constructs `SimpleScheduler` from a caller-provided `HardwareSnapshot`, constructs `RuntimeManager` from the managed `RuntimeStore`, and calls `run_sequential_workflow()`.
+- Returns `WorkflowRunResult` without exposing worker stdout or adapter internals to GUI callers.
+
+Boundary:
+
+- Does not construct `WorkflowGraph` or `ExecutionPlan`.
+- Does not import PySide6 or mutate GUI widgets.
+- Does not call adapters, FFmpeg, or worker commands directly; execution still flows through Scheduler, RuntimeManager, and backend runner boundaries.
+- Does not implement background threading, durable queue execution, retry/cancel/recovery actions, or file-picker intents.
+
 ## `atelier/core/`
 
 ### `atelier/core/__init__.py`
@@ -669,7 +686,7 @@ Responsibility:
 
 - Defines `WorkspacePanelSpec` and `DEFAULT_WORKSPACE_PANELS`.
 - Creates read-only placeholder panel widgets for the workstation shell.
-- Formats queue snapshot rows for the current minimal Queue panel.
+- Formats queue snapshot rows for the current minimal Queue panel, including normal artifact paths, final output paths, and persisted failure code/message.
 
 Boundary:
 
@@ -1586,7 +1603,7 @@ Responsibility:
 - Tests Phase B and the visible part of Phase C for `plan_readonly_pyside6_workbench.md`.
 - Constructs `QApplication` in offscreen mode and creates `MainWindow` without entering the event loop.
 - Confirms the five current dock areas exist and remain movable/floatable.
-- Confirms Queue panel can render task id, status, resource device, and artifact path from a `WorkbenchSnapshot`.
+- Confirms Queue panel can render task id, status, resource device, artifact path, final output path, and failure facts from a `WorkbenchSnapshot`.
 - Confirms `WorkbenchTaskItem` remains manually constructible with default final output / failure fields.
 - Skips GUI smoke tests when PySide6 is not installed, preserving the optional dependency boundary.
 - Confirms `MainWindow` can save and restore workspace layout through `WorkspaceLayoutStore`.
@@ -1612,6 +1629,20 @@ Boundary:
 - Does not construct Qt widgets.
 - Does not write GUI state.
 - Does not execute real external tools.
+
+### `tests/test_gui_workflow_run_entry.py`
+
+Responsibility:
+
+- Tests Phase A of `plan_gui_minimal_run_workflow_entry.md`.
+- Confirms `WorkflowRunAppService` can run a persisted fake `media.audio_extract -> output.export` plan through `RuntimeStore`, `RuntimeManager.from_store()`, `SimpleScheduler`, `run_sequential_workflow()`, adapter worker dispatch, SQLite event/artifact persistence, and read-only snapshot refresh.
+- Confirms the app service returns structured `WorkflowRunResult` without exposing worker stdout.
+
+Boundary:
+
+- Uses a fake `ffmpeg.cmd` executable, not a system FFmpeg installation.
+- Does not construct Qt widgets or enter the Qt event loop.
+- Does not test background execution, GUI button wiring, file picking, retry/cancel/recovery actions, or full Workflow Canvas editing.
 
 ### `tests/test_minimal_audio_extract_workflow.py`
 

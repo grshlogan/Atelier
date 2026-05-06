@@ -96,6 +96,48 @@ class GuiSmokeTests(unittest.TestCase):
             finally:
                 window.close()
 
+    def test_main_window_queue_panel_renders_outputs_and_failure_facts(self) -> None:
+        app = QApplication.instance() or QApplication([])
+        self.assertIsNotNone(app)
+
+        snapshot = WorkbenchSnapshot(
+            tasks=[
+                WorkbenchTaskItem(
+                    task_id="task-export",
+                    node_type="output.export",
+                    status="completed",
+                    resource_device_id="cpu",
+                    event_count=3,
+                    artifact_paths=["worker/task-export/final.wav"],
+                    final_output_paths=["exports/final.wav"],
+                ),
+                WorkbenchTaskItem(
+                    task_id="task-audio",
+                    node_type="media.audio_extract",
+                    status="failed",
+                    resource_device_id="cpu",
+                    event_count=2,
+                    artifact_paths=[],
+                    failure_error_code="DEPENDENCY",
+                    failure_message="no audio stream",
+                ),
+            ]
+        )
+        with TemporaryDirectory() as temp_dir:
+            paths = AppPaths.for_development(Path(temp_dir))
+
+            window = MainWindow(app_paths=paths, snapshot=snapshot)
+            try:
+                body = window.findChild(QDockWidget, "queue-panel").widget().findChild(
+                    QLabel,
+                    "queue-panel-body",
+                )
+
+                self.assertIn("final output: exports/final.wav", body.text())
+                self.assertIn("failure: DEPENDENCY | no audio stream", body.text())
+            finally:
+                window.close()
+
     def test_main_window_saves_and_restores_workspace_layout(self) -> None:
         app = QApplication.instance() or QApplication([])
         self.assertIsNotNone(app)

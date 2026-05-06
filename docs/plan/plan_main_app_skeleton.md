@@ -30,6 +30,8 @@
 - 当前已有 `atelier/` 包、`tests/` 测试目录、`pyproject.toml`、`docs/APP_CODE_MAP.md` 和 `docs/RECENT_CHANGES.md`。
 - 当前已有 `AppPaths`，开发期默认数据目录为 `.atelier/AtelierData/`。
 - 当前已有 app-level factories：`create_runtime_store(paths)`、`create_runtime_setup_service(paths)` 和 `open_app_database(paths)`。
+- 当前已有 `WorkflowRunAppService`，可从 GUI-facing app service 边界接收 persisted `plan_id`，并通过 `SimpleScheduler`、`RuntimeManager.from_store()` 和 `run_sequential_workflow()` 推进最小后端 workflow。
+- 当前 Queue panel 仍是只读 placeholder widget，但已可从 `WorkbenchSnapshot` 展示 final output paths 和 failure code/message。
 - 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、`RuntimeRegistrationService`、`RuntimeSetupSnapshot` service、package SHA-256 helper、SQLite schema 初始化和 simulated Worker；`RuntimeManifest` / `ModelAssetManifest` 已完成 Phase A 字段加固，可表达 runtime kind、profile kind、display name、platform、executable paths、library dirs、scoped env、backend tags、integrity metadata、model family、task types、compatible backends、size bytes 和 metadata。
 - 当前已有 `atelier/gui/` 工作台壳：optional dependency entry、formal development launch entry、`MainWindow`、dock workspace panel specs、workspace layout store、SQLite read-only `WorkbenchSnapshot`，以及最小可操作 `Runtime Setup` dock。
 - 当前已有 `atelier/workers/protocol.py`，支持单个 WorkerEvent 的 JSON Lines 编解码、最小 stdout event stream validation，并补齐 `LogEvent` / `HeartbeatEvent` 事件模型。
@@ -39,7 +41,7 @@
 - 当前已有 `atelier/workers/adapter_entry.py`，可从 task.json 调用 built-in adapter 并输出 Worker JSON Lines。
 - 当前已有 `atelier/scheduler/dispatch.py`，支持把已 claim 的 `ClaimedTask` 接到 `task.json`、stub worker runner / lifecycle runner 和 SQLite event/artifact/failure persistence，并返回结构化 dispatch result；已验证 completed、timeout、cancel、failed 和 protocol-error stub paths。当前已有 `atelier/scheduler/workflow_runner.py`，可顺序推进 fake `media.audio_extract -> output.export` 后端 workflow。当前 `WorkbenchSnapshot` 可读出 final output paths 和 failure code/message。
 - 当前已有 `atelier/assets/`，作为 Atelier 主界面 toolbar、navigation、workflow nodes、queue、hardware、status、inspector 和 system 的 SVG 线性图标资源库。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 119 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 121 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -244,6 +246,7 @@
 - [plan_ffmpeg_audio_extract_adapter.md](./plan_ffmpeg_audio_extract_adapter.md)：第 10 个后续子计划。在 metadata probe 跑通后，接入第一个产物型 `media.audio_extract` / FFmpeg audio adapter workflow。
 - [plan_output_export_finalizer.md](./plan_output_export_finalizer.md)：第 11 个后续子计划。在 staged artifact workflow 跑通后，接入最小 `output.export` / final output link。
 - [plan_minimal_backend_workflow_runner.md](./plan_minimal_backend_workflow_runner.md)：第 12 个后续子计划。把单节点 adapter dispatch 推进为最小多节点后端 workflow runner。
+- [plan_gui_minimal_run_workflow_entry.md](./plan_gui_minimal_run_workflow_entry.md)：第 13 个后续子计划。让 GUI 提交最小 workflow run intent，并保持执行链路归后端 service / Scheduler / RuntimeManager。
 
 执行顺序：
 
@@ -259,6 +262,7 @@
 10. 再执行 `plan_ffmpeg_audio_extract_adapter.md`，用 audio extract 跑通首个 staged audio artifact workflow。
 11. 再执行 `plan_output_export_finalizer.md`，把 staged artifact 安全复制为 final output artifact。
 12. 再执行 `plan_minimal_backend_workflow_runner.md`，让上游 artifact 能进入下游任务，并形成最小 claim / dispatch / persist loop。
+13. 再执行 `plan_gui_minimal_run_workflow_entry.md`，让 GUI 进入 run intent 阶段，但不把后端 runner、Scheduler、RuntimeManager 或 adapter 逻辑塞进 GUI。
 
 如后续某一阶段继续变复杂，例如 Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
 
@@ -274,7 +278,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：119 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：121 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -344,6 +348,9 @@ python -m mypy .
 - 2026-05-06：继续执行 `plan_minimal_backend_workflow_runner.md` Phase C。新增 `scheduler/workflow_runner.py`，可通过 `SimpleScheduler -> RuntimeManager -> dispatch_claimed_task()` 顺序跑通 fake `media.audio_extract -> output.export`，并在上游失败时停止。
 - 2026-05-06：继续执行 `plan_minimal_backend_workflow_runner.md` Phase D。扩展 `WorkbenchSnapshot`，可读出 final output paths 和 failure code/message；新增字段带默认值以保持 GUI smoke 手动构造兼容。
 - 2026-05-06：收口 `plan_minimal_backend_workflow_runner.md` Phase E。文档地图、recent changes 和主计划已对齐最小 backend runner、artifact handoff、GUI snapshot 读取事实与验证基线。
+- 2026-05-06：新增 `plan_gui_minimal_run_workflow_entry.md`。决策：下一阶段先建立 GUI run intent 到 app service 的最小边界，保持 GUI 只提交意图和读取 snapshot，不直接运行 worker 或外部工具。
+- 2026-05-06：继续执行 `plan_gui_minimal_run_workflow_entry.md` Phase A。新增 `WorkflowRunAppService` 和测试，GUI-facing app service 可运行 persisted fake `media.audio_extract -> output.export` plan，并通过 snapshot 读出 final output。
+- 2026-05-06：继续执行 `plan_gui_minimal_run_workflow_entry.md` Phase B。Queue panel 继续只读 `WorkbenchSnapshot`，现在展示 final output paths 和 failure facts。
 
 ## Blockers（阻塞）
 
