@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 98
+Code file count: 100
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 59 files
-- `tests/`: 38 files
+- `atelier/`: 60 files
+- `tests/`: 39 files
 
 Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
 
@@ -68,6 +68,7 @@ atelier/
     runtime_setup_panel.py
     runtime_setup_state.py
     state_reader.py
+    workflow_run_intent.py
     workspace.py
   i18n/
     __init__.py
@@ -130,6 +131,7 @@ tests/
   test_gui_smoke.py
   test_gui_state_reader.py
   test_gui_workflow_run_entry.py
+  test_gui_workflow_run_intent.py
   test_minimal_audio_extract_workflow.py
   test_minimal_backend_workflow_runner.py
   test_minimal_probe_workflow.py
@@ -619,7 +621,10 @@ Responsibility:
 
 - Defines the first read-only PySide6 `MainWindow`.
 - Accepts `AppPaths`, optional `WorkbenchSnapshot`, optional `RuntimeSetupSnapshot`, and an optional runtime setup service.
+- Accepts an optional active plan id plus workflow run intent service protocol for the first GUI run-control boundary.
 - Creates a `QMainWindow` with dock widgets for workflow, execution, queue, resources/runtime, and Runtime Setup panels.
+- Renders a minimal central run-intent control that calls `request_run(plan_id)` when a plan and service are supplied.
+- Submits run intents through `WorkflowRunIntentExecutor` so a slow run-intent service does not block the button click path.
 - Renders the queue snapshot as read-only text when provided.
 - Renders Runtime Setup through `runtime_setup_panel.py` when a snapshot is provided.
 - Saves and restores workspace geometry/state through `WorkspaceLayoutStore`.
@@ -630,7 +635,21 @@ Boundary:
 - Does not open SQLite directly.
 - Does not call Scheduler, worker runners, FFmpeg, model backends, or runtime installers.
 - Does not choose executable/model paths itself; Runtime Setup actions go through the supplied app service.
+- Does not call `WorkflowRunAppService.run_plan()` or backend runner internals directly; the central run control only submits a run intent through an injected protocol.
 - Does not implement complex workspace presets, panel visibility policy, or user-facing layout management UI yet.
+
+### `atelier/gui/workflow_run_intent.py`
+
+Responsibility:
+
+- Defines `WorkflowRunIntentServiceProtocol` for GUI run-intent submissions.
+- Defines `WorkflowRunIntentExecutor`, a minimal `ThreadPoolExecutor` wrapper used by `MainWindow` to submit `request_run(plan_id)` without blocking the Qt click handler.
+
+Boundary:
+
+- Does not know how to build workflows, run Scheduler, resolve runtimes, dispatch workers, or refresh snapshots.
+- Does not own durable queue state, cancellation, progress callbacks, retry/recovery, or thread-to-Qt signal delivery.
+- Does not import SQLite or PySide6.
 
 ### `atelier/gui/runtime_setup_panel.py`
 
@@ -1605,6 +1624,8 @@ Responsibility:
 - Confirms the five current dock areas exist and remain movable/floatable.
 - Confirms Queue panel can render task id, status, resource device, artifact path, final output path, and failure facts from a `WorkbenchSnapshot`.
 - Confirms `WorkbenchTaskItem` remains manually constructible with default final output / failure fields.
+- Confirms the central run button can submit a plan id to an injected run-intent service without constructing backend runner dependencies inside `MainWindow`.
+- Confirms the central run button does not block while a slow run-intent service is still running.
 - Skips GUI smoke tests when PySide6 is not installed, preserving the optional dependency boundary.
 - Confirms `MainWindow` can save and restore workspace layout through `WorkspaceLayoutStore`.
 
@@ -1613,6 +1634,20 @@ Boundary:
 - Does not start a long-running Qt event loop.
 - Does not perform screenshot-level visual verification.
 - Does not execute Scheduler or worker tasks.
+
+### `tests/test_gui_workflow_run_intent.py`
+
+Responsibility:
+
+- Tests Phase D of `plan_gui_minimal_run_workflow_entry.md`.
+- Confirms `WorkflowRunIntentExecutor` submits `request_run(plan_id)` without waiting for a slow service to complete.
+- Confirms callers can wait on the returned future when they explicitly need completion.
+
+Boundary:
+
+- Does not construct Qt widgets.
+- Does not execute Scheduler, workers, adapters, or external tools.
+- Does not implement cancellation, retry/recovery, progress callbacks, or Qt signal delivery.
 
 ### `tests/test_gui_state_reader.py`
 

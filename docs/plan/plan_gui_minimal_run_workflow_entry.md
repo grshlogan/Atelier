@@ -46,7 +46,7 @@ GUI run intent
 - 当前已有 `RuntimeManager.from_store()`，可从 managed runtime manifests 构造 runtime resolution 边界。
 - 当前已有 `open_app_database(paths)`、`create_runtime_store(paths)` 和 `create_runtime_setup_service(paths)` app-level factories。
 - 当前 GUI launch path 只读：`build_launch_context()` 打开 SQLite、读取 snapshot、创建 runtime setup service，然后构建 `MainWindow`。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近结果为 121 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近结果为 124 tests passed。
 
 ## Constraints
 
@@ -118,7 +118,7 @@ GUI run intent
 
 状态：
 
-- 未开始。
+- 已完成首版最小切片。
 
 ### Phase D: Non-blocking execution boundary
 
@@ -138,7 +138,7 @@ GUI run intent
 
 状态：
 
-- 未开始。
+- 已完成首版最小切片。
 
 ### Phase E: 文档对齐
 
@@ -161,7 +161,7 @@ git diff --check
 
 状态：
 
-- 未开始。
+- 已完成。
 
 ## Child Plans
 
@@ -186,16 +186,25 @@ git diff --check
 
 - `.venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry`：1 test passed。
 - `.venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry tests.test_minimal_backend_workflow_runner tests.test_gui_state_reader`：6 tests passed。
-- `.venv\Scripts\python -m unittest tests.test_gui_smoke`：4 tests passed。
-- `.venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry tests.test_gui_smoke tests.test_minimal_backend_workflow_runner tests.test_gui_state_reader`：10 tests passed。
-- `.venv\Scripts\python -m unittest discover -s tests`：121 tests passed。
+- `.venv\Scripts\python -m unittest tests.test_gui_smoke`：6 tests passed。
+- `.venv\Scripts\python -m unittest tests.test_gui_app_entry`：3 tests passed。
+- `.venv\Scripts\python -m unittest tests.test_gui_smoke tests.test_gui_app_entry`：8 tests passed。
+- `.venv\Scripts\python -m unittest tests.test_gui_workflow_run_intent tests.test_gui_smoke`：7 tests passed。
+- `.venv\Scripts\python -m unittest tests.test_gui_workflow_run_intent tests.test_gui_smoke tests.test_gui_app_entry tests.test_gui_workflow_run_entry`：11 tests passed。
+- `.venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry tests.test_gui_smoke tests.test_minimal_backend_workflow_runner tests.test_gui_state_reader`：11 tests passed。
+- `.venv\Scripts\python -m unittest discover -s tests`：124 tests passed。
 - `.venv\Scripts\python -m compileall -q atelier tests`：passed。
+- `Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'`：no matches。
+- `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
 ## Progress / Decisions
 
 - 2026-05-06：创建本计划。决策：下一阶段先建立 GUI run intent 到 app service 的最小边界，不把 runner、Scheduler、RuntimeManager 或 adapter 逻辑塞进 `MainWindow`。
 - 2026-05-06：完成 Phase A 首版最小切片。新增 `WorkflowRunAppService`，可从 GUI-facing app service 边界接收 persisted `plan_id`，通过 `RuntimeStore -> RuntimeManager.from_store()`、`SimpleScheduler` 和 `run_sequential_workflow()` 跑通 fake `media.audio_extract -> output.export`；尚未做 GUI 控件、后台执行或 Queue panel 展示扩展。
 - 2026-05-06：完成 Phase B 首版最小切片。Queue panel 继续只读 `WorkbenchSnapshot`，现在会展示 `final_output_paths` 和 `failure_error_code` / `failure_message`；尚未做 GUI run 控件或后台执行边界。
+- 2026-05-06：完成 Phase C 首版最小切片。`MainWindow` 现在可接收 active plan id 和 run intent service protocol，中央 run 控件只调用 `request_run(plan_id)`，不直接执行 `WorkflowRunAppService.run_plan()`、Scheduler、worker 或外部工具；真正非阻塞执行留给 Phase D。
+- 2026-05-07：完成 Phase D 首版最小切片。新增 `WorkflowRunIntentExecutor`，`MainWindow` 使用后台 executor 提交 `request_run(plan_id)`，慢 run-intent service 不会阻塞按钮点击路径；durable queue、取消、进度回调和 Qt signal 投递留给后续计划。
+- 2026-05-07：完成 Phase E 文档对齐。`APP_CODE_MAP.md`、`RECENT_CHANGES.md`、主计划和本计划均已记录 Phase D/E 边界与验证事实。
 
 ## Blockers
 

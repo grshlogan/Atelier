@@ -2,7 +2,40 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
-## 20260506_004000 [GUI workflow run entry app service]
+## 20260507_001000 [Interactive GUI workbench main plan]
+
+- Created `docs/plan/plan_main_interactive_gui_workbench.md`.
+- Updated `docs/plan/plan_main_app_skeleton.md` to link the GUI-specific main plan.
+- Updated `README.md` to include the GUI-specific main plan in the document index.
+- Recorded the working split:
+  - GUI-focused conversation owns interactive workbench, Workflow Canvas, Execution Canvas, Queue Monitor, Inspector, workspace, visual behavior, and motion.
+  - Global/backend conversation owns broader project guidance and backend execution systems.
+- Recorded the next GUI direction as `workflow_canvas_foundation`.
+
+Current boundary:
+
+- Planned next: create and execute `docs/plan/plan_workflow_canvas_foundation.md`.
+- Not prioritized: `gui_file_import_output_intent`, because a low-completion demo path is less useful than building the real card-based Workflow Canvas foundation.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_workflow_run_intent tests.test_gui_smoke tests.test_gui_app_entry tests.test_gui_workflow_run_entry
+.venv\Scripts\python -m compileall -q atelier tests
+.venv\Scripts\python -m unittest discover -s tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- GUI intent/smoke/app-entry/run-entry tests: 11 tests passed.
+- `compileall`: passed.
+- Full unittest discovery: 124 tests passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260506_004000 [GUI workflow run entry boundary]
 
 - Created `docs/plan/plan_gui_minimal_run_workflow_entry.md`.
 - Updated `docs/plan/plan_main_app_skeleton.md` to list it as the 13th follow-up plan.
@@ -13,12 +46,23 @@
 - Continued Phase B with the first Queue panel visibility slice:
   - updated `atelier/gui/workspace.py` to display final output paths and failure facts from `WorkbenchSnapshot`.
   - extended `tests/test_gui_smoke.py`.
+- Continued Phase C with the first GUI run-control slice:
+  - updated `atelier/gui/main_window.py` to accept an active plan id and injected run-intent service protocol.
+  - added a central run button that calls `request_run(plan_id)`.
+  - extended `tests/test_gui_smoke.py`.
+- Continued Phase D with the first non-blocking run-intent slice:
+  - added `atelier/gui/workflow_run_intent.py`.
+  - added `tests/test_gui_workflow_run_intent.py`.
+  - updated `MainWindow` to submit run intents through `WorkflowRunIntentExecutor`.
+- Completed Phase E documentation alignment for this plan.
 
 Current boundary:
 
 - Implemented: GUI-facing app service boundary can run a persisted fake `media.audio_extract -> output.export` plan and return structured `WorkflowRunResult`.
 - Implemented: Queue panel can expose final output paths and failure facts that `state_reader` already reads.
-- Not implemented: GUI run control, background execution, durable run queue, retry/cancel/recovery actions, file picker, or full Workflow Canvas editing.
+- Implemented: minimal GUI run control can submit a run intent through an injected protocol without constructing backend runner dependencies in `MainWindow`.
+- Implemented: minimal background execution boundary keeps slow `request_run(plan_id)` calls out of the Qt click handler.
+- Not implemented: durable run queue, retry/cancel/recovery actions, file picker, full Workflow Canvas editing, progress callbacks, or Qt signal-based snapshot refresh.
 
 Validation run:
 
@@ -26,6 +70,9 @@ Validation run:
 .venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry
 .venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry tests.test_minimal_backend_workflow_runner tests.test_gui_state_reader
 .venv\Scripts\python -m unittest tests.test_gui_smoke
+.venv\Scripts\python -m unittest tests.test_gui_app_entry
+.venv\Scripts\python -m unittest tests.test_gui_smoke tests.test_gui_app_entry
+.venv\Scripts\python -m unittest tests.test_gui_workflow_run_intent tests.test_gui_smoke
 .venv\Scripts\python -m unittest tests.test_gui_workflow_run_entry tests.test_gui_smoke tests.test_minimal_backend_workflow_runner tests.test_gui_state_reader
 .venv\Scripts\python -m unittest discover -s tests
 .venv\Scripts\python -m compileall -q atelier tests
@@ -38,8 +85,12 @@ Result:
 - GUI workflow run entry tests: 1 test passed.
 - GUI workflow run entry + backend runner + state reader tests: 6 tests passed.
 - GUI smoke tests: 4 tests passed.
-- GUI run entry + GUI smoke + backend runner + state reader tests: 10 tests passed.
-- Full unittest discovery: 121 tests passed.
+- GUI smoke tests after run-control slice: 5 tests passed.
+- GUI app entry tests: 3 tests passed.
+- GUI smoke + app entry tests: 8 tests passed.
+- GUI workflow run intent + smoke tests: 7 tests passed.
+- GUI run entry + GUI smoke + backend runner + state reader tests: 11 tests passed.
+- Full unittest discovery: 124 tests passed.
 - `compileall`: passed.
 - Trailing whitespace scan: no matches.
 - `git diff --check`: passed with only Windows CRLF conversion warnings.

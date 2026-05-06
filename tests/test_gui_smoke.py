@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -13,11 +14,12 @@ from atelier.gui.state_reader import WorkbenchSnapshot, WorkbenchTaskItem
 GUI_AVAILABLE = check_gui_dependency().available
 
 if GUI_AVAILABLE:
-    from PySide6.QtWidgets import QApplication, QDockWidget, QLabel
+    from PySide6.QtWidgets import QApplication, QDockWidget, QLabel, QPushButton
     from atelier.gui.main_window import MainWindow
 else:
     QApplication = None
     QLabel = None
+    QPushButton = None
     QDockWidget = None
     MainWindow = None
 
@@ -138,6 +140,60 @@ class GuiSmokeTests(unittest.TestCase):
             finally:
                 window.close()
 
+    def test_main_window_run_button_submits_workflow_run_intent(self) -> None:
+        app = QApplication.instance() or QApplication([])
+        self.assertIsNotNone(app)
+
+        run_service = _FakeWorkflowRunIntentService()
+        with TemporaryDirectory() as temp_dir:
+            paths = AppPaths.for_development(Path(temp_dir))
+
+            window = MainWindow(
+                app_paths=paths,
+                active_plan_id="plan-gui-intent",
+                workflow_run_intent_service=run_service,
+            )
+            try:
+                button = window.findChild(QPushButton, "workflow-run-intent-button")
+                status = window.findChild(QLabel, "workflow-run-intent-status")
+
+                self.assertIsNotNone(button)
+                self.assertTrue(button.isEnabled())
+
+                button.click()
+
+                self.assertEqual(run_service.requested_plan_ids, ["plan-gui-intent"])
+                self.assertIn("Run requested: plan-gui-intent", status.text())
+            finally:
+                window.close()
+
+    def test_main_window_run_button_does_not_block_on_run_intent_completion(self) -> None:
+        app = QApplication.instance() or QApplication([])
+        self.assertIsNotNone(app)
+
+        run_service = _SlowWorkflowRunIntentService()
+        with TemporaryDirectory() as temp_dir:
+            paths = AppPaths.for_development(Path(temp_dir))
+
+            window = MainWindow(
+                app_paths=paths,
+                active_plan_id="plan-gui-nonblocking",
+                workflow_run_intent_service=run_service,
+            )
+            try:
+                button = window.findChild(QPushButton, "workflow-run-intent-button")
+                status = window.findChild(QLabel, "workflow-run-intent-status")
+
+                started_at = time.perf_counter()
+                button.click()
+                elapsed = time.perf_counter() - started_at
+
+                self.assertLess(elapsed, 0.2)
+                self.assertEqual(run_service.requested_plan_ids, ["plan-gui-nonblocking"])
+                self.assertIn("Run requested: plan-gui-nonblocking", status.text())
+            finally:
+                window.close()
+
     def test_main_window_saves_and_restores_workspace_layout(self) -> None:
         app = QApplication.instance() or QApplication([])
         self.assertIsNotNone(app)
@@ -163,6 +219,20 @@ class GuiSmokeTests(unittest.TestCase):
                 self.assertTrue(restored_window.restore_workspace_layout(store, name="default"))
             finally:
                 restored_window.close()
+
+
+class _FakeWorkflowRunIntentService:
+    def __init__(self) -> None:
+        self.requested_plan_ids: list[str] = []
+
+    def request_run(self, plan_id: str) -> None:
+        self.requested_plan_ids.append(plan_id)
+
+
+class _SlowWorkflowRunIntentService(_FakeWorkflowRunIntentService):
+    def request_run(self, plan_id: str) -> None:
+        super().request_run(plan_id)
+        time.sleep(0.5)
 
 
 if __name__ == "__main__":

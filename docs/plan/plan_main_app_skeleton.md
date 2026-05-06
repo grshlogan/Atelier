@@ -31,7 +31,7 @@
 - 当前已有 `AppPaths`，开发期默认数据目录为 `.atelier/AtelierData/`。
 - 当前已有 app-level factories：`create_runtime_store(paths)`、`create_runtime_setup_service(paths)` 和 `open_app_database(paths)`。
 - 当前已有 `WorkflowRunAppService`，可从 GUI-facing app service 边界接收 persisted `plan_id`，并通过 `SimpleScheduler`、`RuntimeManager.from_store()` 和 `run_sequential_workflow()` 推进最小后端 workflow。
-- 当前 Queue panel 仍是只读 placeholder widget，但已可从 `WorkbenchSnapshot` 展示 final output paths 和 failure code/message。
+- 当前 Queue panel 仍是只读 placeholder widget，但已可从 `WorkbenchSnapshot` 展示 final output paths 和 failure code/message；`MainWindow` 中央 run 控件已可通过 `WorkflowRunIntentExecutor` 向注入的 run-intent service 提交 `request_run(plan_id)`，避免点击路径等待慢服务完成。
 - 当前已有 `RuntimeStore`、`RuntimeManager`、`RuntimeHealthChecker`、`RuntimeRegistrationService`、`RuntimeSetupSnapshot` service、package SHA-256 helper、SQLite schema 初始化和 simulated Worker；`RuntimeManifest` / `ModelAssetManifest` 已完成 Phase A 字段加固，可表达 runtime kind、profile kind、display name、platform、executable paths、library dirs、scoped env、backend tags、integrity metadata、model family、task types、compatible backends、size bytes 和 metadata。
 - 当前已有 `atelier/gui/` 工作台壳：optional dependency entry、formal development launch entry、`MainWindow`、dock workspace panel specs、workspace layout store、SQLite read-only `WorkbenchSnapshot`，以及最小可操作 `Runtime Setup` dock。
 - 当前已有 `atelier/workers/protocol.py`，支持单个 WorkerEvent 的 JSON Lines 编解码、最小 stdout event stream validation，并补齐 `LogEvent` / `HeartbeatEvent` 事件模型。
@@ -41,7 +41,7 @@
 - 当前已有 `atelier/workers/adapter_entry.py`，可从 task.json 调用 built-in adapter 并输出 Worker JSON Lines。
 - 当前已有 `atelier/scheduler/dispatch.py`，支持把已 claim 的 `ClaimedTask` 接到 `task.json`、stub worker runner / lifecycle runner 和 SQLite event/artifact/failure persistence，并返回结构化 dispatch result；已验证 completed、timeout、cancel、failed 和 protocol-error stub paths。当前已有 `atelier/scheduler/workflow_runner.py`，可顺序推进 fake `media.audio_extract -> output.export` 后端 workflow。当前 `WorkbenchSnapshot` 可读出 final output paths 和 failure code/message。
 - 当前已有 `atelier/assets/`，作为 Atelier 主界面 toolbar、navigation、workflow nodes、queue、hardware、status、inspector 和 system 的 SVG 线性图标资源库。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 121 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 124 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -247,6 +247,7 @@
 - [plan_output_export_finalizer.md](./plan_output_export_finalizer.md)：第 11 个后续子计划。在 staged artifact workflow 跑通后，接入最小 `output.export` / final output link。
 - [plan_minimal_backend_workflow_runner.md](./plan_minimal_backend_workflow_runner.md)：第 12 个后续子计划。把单节点 adapter dispatch 推进为最小多节点后端 workflow runner。
 - [plan_gui_minimal_run_workflow_entry.md](./plan_gui_minimal_run_workflow_entry.md)：第 13 个后续子计划。让 GUI 提交最小 workflow run intent，并保持执行链路归后端 service / Scheduler / RuntimeManager。
+- [plan_main_interactive_gui_workbench.md](./plan_main_interactive_gui_workbench.md)：GUI 专线主计划。把 GUI 后续长期工作拆成 Workflow Canvas、Execution Canvas、Queue Monitor、Inspector、workspace 和 motion 等方向。
 
 执行顺序：
 
@@ -263,6 +264,7 @@
 11. 再执行 `plan_output_export_finalizer.md`，把 staged artifact 安全复制为 final output artifact。
 12. 再执行 `plan_minimal_backend_workflow_runner.md`，让上游 artifact 能进入下游任务，并形成最小 claim / dispatch / persist loop。
 13. 再执行 `plan_gui_minimal_run_workflow_entry.md`，让 GUI 进入 run intent 阶段，但不把后端 runner、Scheduler、RuntimeManager 或 adapter 逻辑塞进 GUI。
+14. GUI 后续进入 `plan_main_interactive_gui_workbench.md`，优先拆 `plan_workflow_canvas_foundation.md`，不优先走低完成度 file import 演示路线。
 
 如后续某一阶段继续变复杂，例如 Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
 
@@ -278,7 +280,7 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：121 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：124 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
 
@@ -351,6 +353,9 @@ python -m mypy .
 - 2026-05-06：新增 `plan_gui_minimal_run_workflow_entry.md`。决策：下一阶段先建立 GUI run intent 到 app service 的最小边界，保持 GUI 只提交意图和读取 snapshot，不直接运行 worker 或外部工具。
 - 2026-05-06：继续执行 `plan_gui_minimal_run_workflow_entry.md` Phase A。新增 `WorkflowRunAppService` 和测试，GUI-facing app service 可运行 persisted fake `media.audio_extract -> output.export` plan，并通过 snapshot 读出 final output。
 - 2026-05-06：继续执行 `plan_gui_minimal_run_workflow_entry.md` Phase B。Queue panel 继续只读 `WorkbenchSnapshot`，现在展示 final output paths 和 failure facts。
+- 2026-05-06：继续执行 `plan_gui_minimal_run_workflow_entry.md` Phase C。`MainWindow` 可接收 active plan id 和 run-intent service protocol，中央 run 控件只提交 `request_run(plan_id)`，不直接运行后端任务。
+- 2026-05-07：完成 `plan_gui_minimal_run_workflow_entry.md` Phase D/E。新增 `WorkflowRunIntentExecutor`，GUI run intent 不阻塞 Qt 点击路径；文档地图、recent changes、主计划和本计划已对齐。
+- 2026-05-07：新增 `plan_main_interactive_gui_workbench.md`。决策：GUI 专线对话长期负责交互式工作台；全局/后端对话负责后端统筹。下一步选择 `workflow_canvas_foundation`，暂不优先做低完成度 file import 演示。
 
 ## Blockers（阻塞）
 
