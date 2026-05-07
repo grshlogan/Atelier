@@ -9,6 +9,10 @@ venv/
 # Local Atelier development data
 .atelier/
 
+# AtelierUI component workbench generated review artifacts
+.atelier/component-workbench/
+.atelier/component-workbench/reviews/
+
 # Temporary user-provided brand SVG drafts
 atelier/assets/brand/001.svg
 atelier/assets/brand/01.svg

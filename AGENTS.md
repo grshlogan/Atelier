@@ -164,6 +164,10 @@ The default UI should feel like a calm professional creator workstation.
 - Cards are for real functional areas, not decorative section wrappers.
 - Do not nest cards inside cards.
 - Motion should explain state changes, not perform decoration.
+- Atelier must have a local project-specific UI library, tentatively `AtelierUI`, for self-painted widgets, animation effects, theme tokens, overlays, shared motion helpers, and other GUI visual infrastructure.
+- `AtelierUI` is not a mature external library and must not be presented or packaged as one. It should ship only as Atelier-specific code inside the application runtime or core code package.
+- New self-painted widgets must be reviewed by the user before they are added to `AtelierUI` and before product code starts calling them as shared library components.
+- When reference code or open-source projects exist for a self-painted widget, animation, delegate, overlay, or transition, inspect and learn from those references first. Borrow structure, behavior, test ideas, and interaction boundaries; do not copy incompatible code or invent complex custom drawing without grounded reference.
 
 ## 8. Persistence, Artifacts, And Recovery
 

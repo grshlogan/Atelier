@@ -3,6 +3,7 @@
 > 状态：规划中，尚未实现。本文档定义 Atelier 专属 `AtelierUI` 动效系统、motion token、动画驱动、覆盖层、自绘控件和开源参考边界。
 > 事实源关系：根目录 `DESIGN.md` 仍是产品视觉与交互事实源；本文档服从 `DESIGN.md`，并补充 `docs/Atelier_Main_UI_Spec.md` 与 `docs/UI_WORKSPACE_SPEC.md` 中的动效实现边界。
 > 工程边界：本文档不引入成熟 UI 库，不声明任何第三方项目已被 vendored、forked 或作为运行时依赖。
+> 本地库边界：Atelier 必须保留本软件专属的 `AtelierUI` 本地库方向，用于自绘控件、动画效果和共享 GUI 视觉基础；该库只随 Atelier Runtime 或核心代码打包，不作为成熟通用库发布。
 
 ## 1. 目标
 
@@ -34,18 +35,26 @@ Make failure and recovery paths easier to locate.
 - `DESIGN.md` 已定义动效原则：短、可打断、解释状态变化，不影响按钮、日志、状态灯和进度可信度。
 - `docs/Atelier_Main_UI_Spec.md` 已给出首版时长：card hover `120ms`、card select `140ms`、snap `180ms`、panel expand/collapse `180ms`、progress update `160ms`、error pulse `220ms`。
 - `docs/UI_WORKSPACE_SPEC.md` 已定义 `QMainWindow + QDockWidget`、collapsible sidebar、workspace preset、floating panels 和 layout persistence。
-- 当前 GUI 代码仍是最小 PySide6 workbench shell，没有实际动画系统。
+- 当前 GUI 代码仍是最小 PySide6 workbench shell，没有实际动画系统；`AtelierUI Component Workbench` 已有 dev-only 入口用于 token / checklist 预览、story selection、controls metadata、手动截图和 JSON 审查备注留痕。
 - `pyproject.toml` 中 PySide6 位于 optional `gui` extra；AtelierUI 不能变成非 GUI 安装路径的硬依赖。
 
 ## 3. AtelierUI 定位
 
 `AtelierUI` 是项目专属 UI 基础层，不是成熟通用库。
 
+它的使用边界：
+
+- 只服务 Atelier GUI，不承诺对外 API、PyPI 发布、语义化版本或第三方复用。
+- 只随 Atelier application runtime 或核心代码包一起打包。
+- 用来承载软件自绘控件、动画效果、theme tokens、motion values、overlay layer、page transition、queue delegate 和其他共享 GUI 视觉基础。
+- 不运行 worker、FFmpeg、模型推理、硬件调度、外部 shell 或 storage mutation。
+
 它可以作为未来内部模块组织：
 
 ```text
 atelier/gui/ui/
   theme_tokens.py
+  widget_intake.py
   easing.py
   motion.py
   overlay.py
@@ -54,7 +63,13 @@ atelier/gui/ui/
   queue_delegate.py
 ```
 
-这些路径是规划方向，不表示当前已经存在。
+当前已存在：
+
+- `atelier/gui/ui/__init__.py`
+- `atelier/gui/ui/theme_tokens.py`
+- `atelier/gui/ui/widget_intake.py`
+
+其余路径仍是规划方向，不表示当前已经存在。
 
 采用 `AtelierUI` 的条件：
 
@@ -68,6 +83,31 @@ atelier/gui/ui/
 - 单个按钮 hover 或 focus 可以由普通 Qt style 完成。
 - 一次性 prototype 不影响公共交互模型。
 - 第三方组件会绕过 `WorkspaceManager`、`I18nManager`、`Scheduler` 或现有 state flow。
+
+### 3.1 入库审查流程
+
+新的自绘控件、delegate、overlay、page transition 或动画基础进入 `AtelierUI` 并被软件调用前，必须先经过用户审查。
+
+准入流程：
+
+1. 写清控件用途、调用场景、所属界面和非职责。
+2. 调研相关开源项目、Qt 示例或现有项目代码，记录可借鉴的结构、状态模型、测试方式和许可证边界。
+3. 先写最小失败测试或可复查的 GUI smoke / visual 验证说明。
+4. 做 Atelier 自己的最小实现，保持 PySide6-native、view model 分离和 GUI-only visual state。
+5. 提交给用户审查；审查通过后，才能作为 `AtelierUI` 共享组件被产品代码调用。
+
+审查前允许：
+
+- 在 feature 模块中做小范围候选实现。
+- 用测试证明 visual state、selection、hover、animation value 不污染 domain state。
+- 在文档中说明参考项目和取舍。
+
+审查前禁止：
+
+- 把候选控件作为通用 `AtelierUI` 组件大面积调用。
+- 复制 GPL 或未授权代码。
+- 为一个控件新增运行时依赖。
+- 绕过 `DESIGN.md`、`I18nManager`、Workspace 边界或 GUI intent / snapshot / view model 边界。
 
 ## 4. 技术方向
 
@@ -235,6 +275,8 @@ CompactToggle
 MotionOverlay
 ```
 
+这些名称是候选方向，不表示已经进入 `AtelierUI`。每个新自绘控件都必须按第 3.1 节完成参考调研、最小验证和用户审查后，才能作为专属库组件被软件调用。
+
 自绘规则：
 
 - 使用 `QPainter` 绘制背景、边框、进度、badge 和状态层。
@@ -243,6 +285,32 @@ MotionOverlay
 - 文字布局必须稳定，状态变化不能导致 row height 或 card size 跳动。
 - 状态色来自 `DESIGN.md` palette role，不在控件内部散落 magic color。
 - icons 优先来自 `atelier/assets/`，继承 `currentColor` 的设计意图。
+
+### 9.1 Component Workbench
+
+候选自绘控件不应直接放进真实产品 GUI 中调参。AtelierUI 需要 dev-only 控件画板，用于在入库前调试参数、状态、尺寸、theme token、motion token 和截图记录。
+
+当前第一阶段入口：
+
+```powershell
+.venv\Scripts\python -m atelier.gui.ui.component_workbench
+```
+
+控件画板边界：
+
+- 只作为开发 / 审查工具，不进入默认工作台。
+- 可以展示候选控件、参数 controls、状态 presets、token swatches 和 review checklist。
+- 不运行 worker、FFmpeg、模型推理、硬件调度、任意 shell 或 SQLite mutation。
+- 候选控件在画板可见，不代表已经进入 `AtelierUI` 共享调用。
+- 当前已实现 token swatches、typography samples、intake checklist、story selection、controls metadata、手动 screenshot / review snapshot 和 `WorkflowNodeItem` 候选 placeholder；尚未实现真实参数 controls 驱动绘制、motion token playback、视觉 diff 或已审查共享控件。
+
+参考模型：
+
+- Storybook / Widgetbook 的 component catalog、story、controls、use case 组织方式。
+- Qt Designer custom widget preview 的插件边界。
+- Qt Design Studio 的 state / transition / timeline 思路。
+
+规划见 `docs/plan/plan_atelier_ui_component_workbench.md`；第一阶段实现计划见 `docs/plan/plan_atelier_ui_component_workbench_foundation.md`；第二阶段 controls 计划见 `docs/plan/plan_atelier_ui_component_workbench_controls.md`；第三阶段 screenshot / review notes 计划见 `docs/plan/plan_atelier_ui_component_workbench_screenshot.md`。
 
 ## 10. Queue Delegate Animation
 
@@ -428,10 +496,17 @@ AtelierUI 必须提供 reduced motion 策略。
 
 - 可以阅读开源项目代码和文档。
 - 可以记录学习结论和设计模式。
+- 有参考代码或参考项目时，先阅读、比较和提炼，再实现 Atelier 自己的版本。
+- 只把结构清晰、维护状态可信、bug 风险可控、许可证明确的项目纳入 Atelier 参考体系。
+- 明显不稳定、bug 过多、许可证或维护状态不可确认的项目只能作为 rejected candidate 记录，不进入可借鉴清单。
 - 不复制 GPL 或未授权代码。
 - 不把第三方项目代码粘贴到 Atelier。
 - 不新增运行时依赖，除非有单独 plan、license review、security review 和 packaging plan。
 - 如果未来确实引用 permissive licensed code，需要新增 third-party notice、许可证文本、源码来源、版本、hash 和修改说明。
+
+Rejected reference candidates：
+
+- `Moekotori/ECHO`：不纳入 Atelier GUI / AtelierUI / plugin / release / smoke checklist 参考体系。原因：用户评估该软件 bug 过多，不适合作为本项目参考依据。
 
 当前结论：
 
@@ -439,6 +514,7 @@ AtelierUI 必须提供 reduced motion 策略。
 AtelierUI should be designed as project-specific code.
 AtelierUI should not be a mature reusable library.
 AtelierUI should not vendor the reference projects.
+AtelierUI self-painted widgets need user review before shared adoption.
 ```
 
 ## 19. Implementation Phases

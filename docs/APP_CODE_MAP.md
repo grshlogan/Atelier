@@ -2,13 +2,13 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 100
+Code file count: 114
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 60 files
-- `tests/`: 39 files
+- `atelier/`: 69 files
+- `tests/`: 44 files
 
 Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
 
@@ -28,6 +28,8 @@ atelier/
     ffprobe.py
     registry.py
   assets/
+    Main.py
+    Main.svg
     README.md
     icon_manifest.json
     preview.html
@@ -68,8 +70,16 @@ atelier/
     runtime_setup_panel.py
     runtime_setup_state.py
     state_reader.py
+    workflow_canvas.py
     workflow_run_intent.py
     workspace.py
+    ui/
+      __init__.py
+      component_workbench.py
+      component_workbench_state.py
+      theme_tokens.py
+      widget_intake.py
+      README.md
   i18n/
     __init__.py
   planning/
@@ -123,6 +133,8 @@ tests/
   test_failure_recovery.py
   test_ffmpeg_audio_extract_adapter.py
   test_ffprobe_metadata_adapter.py
+  test_gui_atelier_ui_component_workbench.py
+  test_gui_atelier_ui_foundation.py
   test_gui_app_entry.py
   test_gui_optional_dependency.py
   test_gui_layout_store.py
@@ -130,6 +142,7 @@ tests/
   test_gui_runtime_setup_state.py
   test_gui_smoke.py
   test_gui_state_reader.py
+  test_gui_workflow_canvas_foundation.py
   test_gui_workflow_run_entry.py
   test_gui_workflow_run_intent.py
   test_minimal_audio_extract_workflow.py
@@ -185,6 +198,20 @@ Boundary:
 
 - `.gitignore` does not define product install paths.
 - Do not put real product runtime packs into the repository just because they are ignored locally.
+
+### `open_atelier_ui_workbench.ps1`
+
+Responsibility:
+
+- Provides a root-level PowerShell development shortcut for opening the dev-only `AtelierUI Component Workbench`.
+- Locates the repository root from the script path.
+- Prefers `.venv\Scripts\python.exe` and falls back to `python`.
+- Runs `-m atelier.gui.ui.component_workbench` and passes through extra arguments.
+
+Boundary:
+
+- Development convenience only; not a product launcher or installer entry.
+- Does not run workflows, Scheduler, workers, FFmpeg, model inference, hardware scheduling, shell commands beyond launching the Python module, or SQLite mutations.
 
 ## Environment Directory Boundaries
 
@@ -342,6 +369,7 @@ Boundary:
 Responsibility:
 
 - Stores the current Atelier icon resources.
+- Contains `Main.py`, a standalone PySide6 Bezier helper / visual reference utility, and `Main.svg`, a related curve reference asset.
 - Provides brand/app icon assets under `brand/` for app icon, installer/about page, header logo, monochrome mark, and tray variants.
 - Keeps `brand/01.png` through `brand/04.png` as visual reference renders for the brand SVGs.
 - Provides original 24 × 24 SVG line icons for toolbar, navigation, workflow nodes, queue, hardware, status, inspector, and system module surfaces.
@@ -350,7 +378,8 @@ Responsibility:
 
 Boundary:
 
-- This is a resource directory, not Python runtime logic.
+- This is primarily a resource directory, not product runtime logic.
+- `Main.py` is not the GUI launch entry, not an app service, and not a reviewed `AtelierUI` shared widget. Do not import it from product GUI code or treat it as packaged application behavior without a separate review.
 - Does not implement Qt `.qrc` registration, IconManager, runtime recoloring, icon cache, or theme switching.
 - Does not generate Windows `.ico`, macOS `.icns`, or a complete PNG export set from brand SVGs.
 - Do not load icons through ad hoc hard-coded paths in many widgets once GUI implementation starts; add a single asset path / icon loading boundary first.
@@ -561,6 +590,16 @@ Boundary:
 
 ## `atelier/gui/`
 
+Atelier GUI now has a project-specific local UI library direction named `AtelierUI`.
+
+Current governance boundary:
+
+- Shared self-painted widgets, animation effects, theme tokens, overlays, motion helpers, queue delegates, and page transitions should live under the local Atelier-specific UI library path `atelier/gui/ui/` after review.
+- This local UI library is not a mature external library and should ship only as Atelier runtime or core application code.
+- New self-painted widgets must be reviewed by the user before they are added to this library and before product code calls them as shared components.
+- If reference projects or reference code exist, read and learn from them first; borrow structure, behavior, test ideas, and boundaries without copying incompatible code or introducing unreviewed dependencies.
+- Current `atelier/gui/workflow_canvas.py` is a feature-level Workflow Canvas foundation, not yet a reviewed shared `AtelierUI` widget library module.
+
 ### `atelier/gui/__init__.py`
 
 Responsibility:
@@ -571,6 +610,101 @@ Boundary:
 
 - Importing `atelier.gui` must not import PySide6 or start a Qt application.
 - Keep package initialization side-effect free.
+
+### `atelier/gui/ui/`
+
+Responsibility:
+
+- Provides the first local `AtelierUI` package boundary.
+- Owns shared GUI foundation code that is specific to Atelier and not intended as a public library.
+- Current modules:
+  - `component_workbench.py`
+  - `component_workbench_state.py`
+  - `theme_tokens.py`
+  - `widget_intake.py`
+- `README.md` documents local library scope, packaging boundary, and self-painted widget review rules.
+- Provides a dev-only `AtelierUI Component Workbench` launch entry for token preview, candidate story placeholders, story states / controls metadata, catalog switching, intake checklist review, and manual review snapshot output.
+
+Boundary:
+
+- Does not import PySide6 as a package side effect.
+- Package import does not start `QApplication`, create widgets, run animations, or mutate product state.
+- `component_workbench.py` may import PySide6 only when the explicit dev-only workbench entry is launched.
+- Does not run workflows, workers, FFmpeg, model inference, hardware scheduling, shell commands, or SQLite mutations.
+- Does not contain reviewed shared self-painted widget implementations yet.
+
+### `atelier/gui/ui/component_workbench_state.py`
+
+Responsibility:
+
+- Defines pure-Python view state for the dev-only `AtelierUI Component Workbench`.
+- Exposes catalog entries, token swatch views, typography sample views, intake checklist steps, story states, controls metadata, candidate story metadata, and review snapshot metadata.
+- Keeps the first `WorkflowNodeItem Candidate` story marked as not approved for shared adoption.
+- Builds JSON-safe review snapshot records without absolute user paths.
+
+Boundary:
+
+- Does not import PySide6.
+- Does not approve self-painted widgets.
+- Does not read SQLite, runtime manifests, product snapshots, external reference repositories, or user media.
+
+### `atelier/gui/ui/component_workbench.py`
+
+Responsibility:
+
+- Provides the dev-only component workbench launch entry:
+  `.venv\Scripts\python -m atelier.gui.ui.component_workbench`.
+- Defines `ComponentWorkbenchWindow`, a PySide6 `QMainWindow` with catalog, selected story preview, token preview, typography preview, candidate placeholder, controls panel, review note editor, save review action, and intake checklist surfaces.
+- Supports catalog selection updates for the selected story title, summary, states, and controls metadata.
+- Saves dev-only review snapshots as PNG plus JSON metadata under `.atelier/component-workbench/reviews/` by default.
+- Supports `--no-exec` so tests can build the window without entering the Qt event loop.
+
+Boundary:
+
+- Does not create the product `MainWindow`.
+- Does not execute workflow intents, Scheduler, workers, FFmpeg, model inference, hardware scheduling, shell commands, or SQLite mutations.
+- Does not implement real parameter controls that drive drawing, motion playback, visual diff, review approval, or reviewed shared self-painted widgets yet.
+- Review snapshots do not approve shared adoption and do not contain user media paths, SQLite rows, worker logs, or secrets by design.
+
+### `atelier/gui/ui/theme_tokens.py`
+
+Responsibility:
+
+- Defines frozen pure-Python token dataclasses sourced from `DESIGN.md`:
+  - `ColorTokens`
+  - `FontTokens`
+  - `TypographyTokens`
+  - `RadiusTokens`
+  - `SpacingTokens`
+  - `WorkflowCanvasTokens`
+  - `ThemeTokens`
+- Exposes `ATELIER_THEME_TOKENS` and `color(role)`.
+- Covers current dark palette roles, desktop typography scale, radius/spacing values, and the first Workflow Canvas card/layout dimensions.
+
+Boundary:
+
+- Does not import PySide6 or depend on Qt.
+- Does not apply styles to widgets.
+- Does not own runtime theme switching, user preferences, i18n, or asset loading.
+- Does not replace `DESIGN.md` as the design fact source.
+
+### `atelier/gui/ui/widget_intake.py`
+
+Responsibility:
+
+- Defines the current self-painted widget intake checklist:
+  - purpose
+  - reference review
+  - minimal test
+  - Atelier-specific implementation
+  - user review
+- Exposes helpers that state a candidate requires user review before shared adoption.
+
+Boundary:
+
+- Does not approve widgets automatically.
+- Does not load reference code, licenses, or third-party packages.
+- Does not implement self-painted widgets.
 
 ### `atelier/gui/app.py`
 
@@ -622,6 +756,7 @@ Responsibility:
 - Defines the first read-only PySide6 `MainWindow`.
 - Accepts `AppPaths`, optional `WorkbenchSnapshot`, optional `RuntimeSetupSnapshot`, and an optional runtime setup service.
 - Accepts an optional active plan id plus workflow run intent service protocol for the first GUI run-control boundary.
+- Accepts an optional `WorkflowGraph` and renders it through `workflow_canvas.py` as the central Workflow Canvas.
 - Creates a `QMainWindow` with dock widgets for workflow, execution, queue, resources/runtime, and Runtime Setup panels.
 - Renders a minimal central run-intent control that calls `request_run(plan_id)` when a plan and service are supplied.
 - Submits run intents through `WorkflowRunIntentExecutor` so a slow run-intent service does not block the button click path.
@@ -635,8 +770,29 @@ Boundary:
 - Does not open SQLite directly.
 - Does not call Scheduler, worker runners, FFmpeg, model backends, or runtime installers.
 - Does not choose executable/model paths itself; Runtime Setup actions go through the supplied app service.
+- Does not mutate or persist `WorkflowGraph`; the central canvas owns only GUI visual state such as selection.
 - Does not call `WorkflowRunAppService.run_plan()` or backend runner internals directly; the central run control only submits a run intent through an injected protocol.
 - Does not implement complex workspace presets, panel visibility policy, or user-facing layout management UI yet.
+
+### `atelier/gui/workflow_canvas.py`
+
+Responsibility:
+
+- Defines the first PySide6-native Workflow Canvas boundary.
+- Defines PySide-independent view models:
+  - `WorkflowCanvasViewModel`
+  - `WorkflowCanvasNodeView`
+  - `WorkflowCanvasEdgeView`
+- Provides `build_workflow_canvas_view_model(graph)` to convert a `WorkflowGraph` into stable visual input without adding visual fields to graph data.
+- Renders minimal node cards and edge paths using `QGraphicsView` / `QGraphicsScene`.
+- Tracks node selection as GUI-only visual state and emits `selection_changed`.
+
+Boundary:
+
+- Does not run workflow, Scheduler, Worker, FFmpeg, adapters, RuntimeManager, or SQLite queries.
+- Does not persist node position, selection, hover, or other visual state.
+- Does not implement node editing, drag persistence, port validation, dynamic Inspector forms, or Execution Canvas.
+- Is not yet a reviewed shared `AtelierUI` self-painted widget library module; future extraction of node/edge/overlay pieces requires user review.
 
 ### `atelier/gui/workflow_run_intent.py`
 
@@ -1559,6 +1715,42 @@ Boundary:
 - Does not run Scheduler, workers, FFmpeg/model adapters, or recovery actions.
 - Skips when PySide6 is not installed.
 
+### `tests/test_gui_atelier_ui_component_workbench.py`
+
+Responsibility:
+
+- Tests Phase A-D of `plan_atelier_ui_component_workbench_foundation.md` and Phase A-D of `plan_atelier_ui_component_workbench_controls.md`.
+- Confirms the pure-Python workbench state lists catalog entries, token swatches, typography samples, candidate stories, and required intake checklist steps.
+- Confirms candidate story states / controls metadata is exposed without PySide6.
+- Confirms review snapshot metadata is JSON-safe and does not expose absolute repository paths.
+- Confirms `component_workbench_state.py` does not import PySide6.
+- Confirms the dev-only PySide6 workbench window can be built offscreen, exposes stable object names for catalog / preview / checklist surfaces, and does not construct the product `MainWindow`.
+- Confirms catalog selection updates selected story preview and the controls panel.
+- Confirms saving a review snapshot writes PNG and JSON files to an injected review directory.
+- Confirms the launch entry supports `--no-exec` for tests.
+
+Boundary:
+
+- Does not enter a long-running Qt event loop.
+- Does not approve any self-painted widget for shared adoption.
+- Does not run workflows, Scheduler, workers, FFmpeg/model adapters, shell commands, SQLite mutation, screenshots, or visual regression.
+- Skips Qt window tests when PySide6 is not installed.
+
+### `tests/test_gui_atelier_ui_foundation.py`
+
+Responsibility:
+
+- Tests Phase A-D of `plan_atelier_ui_foundation.md`.
+- Confirms `atelier.gui.ui.theme_tokens` exposes key `DESIGN.md` palette roles, typography, radius, and Workflow Canvas size tokens.
+- Confirms theme tokens are immutable and can be imported without importing PySide6.
+- Confirms `widget_intake.py` requires purpose, reference review, minimal test, Atelier-specific implementation, and user review before shared self-painted widget adoption.
+
+Boundary:
+
+- Does not construct Qt widgets or require PySide6.
+- Does not approve any self-painted widget for shared adoption.
+- Does not test runtime theme switching, animation driver behavior, or visual rendering.
+
 ### `tests/test_gui_optional_dependency.py`
 
 Responsibility:
@@ -1790,7 +1982,7 @@ These packages are specified in docs but not fully implemented yet:
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
 - `scheduler/`: `SimpleScheduler`, a narrow claimed-task dispatch helper, the first storage-backed artifact handoff query, minimal downstream `output.export.input_path` materialization, and a minimum sequential workflow runner exist; lifecycle timeout/cancel/protocol-error results can be persisted for already claimed stub tasks, but durable queue claiming, concurrent dispatch loops, broad port-level param materialization, priorities, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
-- `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models including final output / failure fields, and a minimal actionable Runtime Setup dock exist; real canvases, workflow editing, theme system, i18n catalog, workspace preset UI, packaged app entry, and visual verification are not implemented yet.
+- `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models including final output / failure fields, a minimal actionable Runtime Setup dock, the first minimal Workflow Canvas foundation, a pure-Python `AtelierUI` foundation package with theme tokens and widget intake checklist, and the first dev-only `AtelierUI Component Workbench` launch entry exist; full workflow editing, Execution Canvas, Queue Monitor model/view, Inspector parameter UI, runtime theme switching, i18n catalog, workspace preset UI, packaged app entry, reviewed `AtelierUI` shared self-painted widget modules, real workbench parameter controls, screenshot/review notes, and visual verification are not implemented yet.
 - `atelier/domain/translation.py`: translation / OCR fusion / structured subtitle output models described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `atelier/translation/`: input resolver, timeline builder, OCR context aligner, chunk planner, prompt builder, provider clients, result validator, repair runner, and subtitle rebuilder described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `adapters`: minimal adapter contract, built-in registry, typed command executor, `metadata.probe` / `FFprobeMetadataAdapter`, `media.audio_extract` / `FFmpegAudioExtractAdapter`, and `output.export` / `ArtifactFinalizerAdapter` exist; subtitle mux/burn, ASR, OCR recognition, Translate Agent, subtitle review, composition, enhancement, plugin adapter discovery, and production adapter cancellation are not implemented.

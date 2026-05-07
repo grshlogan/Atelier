@@ -41,7 +41,7 @@
 - 当前已有 `atelier/workers/adapter_entry.py`，可从 task.json 调用 built-in adapter 并输出 Worker JSON Lines。
 - 当前已有 `atelier/scheduler/dispatch.py`，支持把已 claim 的 `ClaimedTask` 接到 `task.json`、stub worker runner / lifecycle runner 和 SQLite event/artifact/failure persistence，并返回结构化 dispatch result；已验证 completed、timeout、cancel、failed 和 protocol-error stub paths。当前已有 `atelier/scheduler/workflow_runner.py`，可顺序推进 fake `media.audio_extract -> output.export` 后端 workflow。当前 `WorkbenchSnapshot` 可读出 final output paths 和 failure code/message。
 - 当前已有 `atelier/assets/`，作为 Atelier 主界面 toolbar、navigation、workflow nodes、queue、hardware、status、inspector 和 system 的 SVG 线性图标资源库。
-- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次结果为 124 tests passed。
+- 当前验证基线是 `.venv/Scripts/python -m unittest discover -s tests`，最近一次完整记录结果为 140 tests passed。
 - `rg` 在此环境曾返回 Windows `Access is denied`，文本搜索暂用 PowerShell `Select-String`。
 
 ## Constraints（约束）
@@ -57,6 +57,7 @@
 - Worker 应通过结构化事件协议上报进度，当前首版使用 pydantic models 和 simulated Worker。
 - SQLite 是 runtime state、events、artifacts、cache、recovery state 的首选持久层。
 - `atelier/assets/` 是资源目录，不代表已经实现 Qt `.qrc`、IconManager、图标缓存或运行时主题重染色。
+- `AtelierUI` 是 GUI 本地专属库方向，只用于 Atelier 自绘控件、动效和共享视觉基础；当前已有纯 Python theme tokens、widget intake checklist 和 dev-only component workbench，不作为成熟外部库发布，新自绘控件入库并被软件调用前必须经过用户审查。
 - 不假设全局安装 FFmpeg、CUDA tools、llama.cpp、whisper.cpp、模型文件或开发机路径。
 - 不硬编码 `cuda:0` 作为默认策略。
 - 不提交 secrets、API keys、bearer tokens、模型 provider credentials 或本地 runtime 数据。
@@ -248,6 +249,13 @@
 - [plan_minimal_backend_workflow_runner.md](./plan_minimal_backend_workflow_runner.md)：第 12 个后续子计划。把单节点 adapter dispatch 推进为最小多节点后端 workflow runner。
 - [plan_gui_minimal_run_workflow_entry.md](./plan_gui_minimal_run_workflow_entry.md)：第 13 个后续子计划。让 GUI 提交最小 workflow run intent，并保持执行链路归后端 service / Scheduler / RuntimeManager。
 - [plan_main_interactive_gui_workbench.md](./plan_main_interactive_gui_workbench.md)：GUI 专线主计划。把 GUI 后续长期工作拆成 Workflow Canvas、Execution Canvas、Queue Monitor、Inspector、workspace 和 motion 等方向。
+- [plan_workflow_canvas_foundation.md](./plan_workflow_canvas_foundation.md)：GUI 专线首个子计划。建立 PySide6-native 卡片式 Workflow Canvas 基础，渲染最小 WorkflowGraph 节点和边，并保持 graph data 与 visual state 分离。
+- [plan_atelier_ui_local_library_governance.md](./plan_atelier_ui_local_library_governance.md)：GUI 专属库治理计划。规定 `AtelierUI` 只作为本地专属库随软件打包，新自绘控件需用户审查，参考项目优先调研借鉴。
+- [plan_atelier_ui_foundation.md](./plan_atelier_ui_foundation.md)：GUI 专属库最小地基计划。建立 `atelier/gui/ui/`、theme tokens 和自绘控件入库 checklist。
+- [plan_atelier_ui_component_workbench.md](./plan_atelier_ui_component_workbench.md)：GUI 专属控件画板计划。规定候选自绘控件应先在 dev-only 画板中调参和审查，不直接放进产品 `MainWindow`。
+- [plan_atelier_ui_component_workbench_foundation.md](./plan_atelier_ui_component_workbench_foundation.md)：控件画板第一实现阶段。建立 dev-only PySide6 启动入口、PySide-independent state、token preview 和 intake checklist preview。
+- [plan_atelier_ui_component_workbench_controls.md](./plan_atelier_ui_component_workbench_controls.md)：控件画板第二实现阶段。建立 catalog selection、story states / controls metadata 和 controls panel。
+- [plan_atelier_ui_component_workbench_screenshot.md](./plan_atelier_ui_component_workbench_screenshot.md)：控件画板第三实现阶段。建立手动截图和 JSON 审查备注留痕。
 
 执行顺序：
 
@@ -265,6 +273,12 @@
 12. 再执行 `plan_minimal_backend_workflow_runner.md`，让上游 artifact 能进入下游任务，并形成最小 claim / dispatch / persist loop。
 13. 再执行 `plan_gui_minimal_run_workflow_entry.md`，让 GUI 进入 run intent 阶段，但不把后端 runner、Scheduler、RuntimeManager 或 adapter 逻辑塞进 GUI。
 14. GUI 后续进入 `plan_main_interactive_gui_workbench.md`，优先拆 `plan_workflow_canvas_foundation.md`，不优先走低完成度 file import 演示路线。
+15. 执行 `plan_workflow_canvas_foundation.md`，让 central view 进入真正 Workflow Canvas 基础阶段。
+16. 执行并维护 `plan_atelier_ui_local_library_governance.md`，把 `AtelierUI` 作为 GUI 自绘控件和动效的本地专属库治理边界。
+17. 执行 `plan_atelier_ui_foundation.md`，建立 `AtelierUI` 最小代码地基。
+18. 执行 `plan_atelier_ui_component_workbench.md` 和 `plan_atelier_ui_component_workbench_foundation.md`，把候选控件调参 / 审查画板从规划推进到 dev-only 可打开入口。
+19. 执行 `plan_atelier_ui_component_workbench_controls.md`，让控件画板支持 story selection 和基础 controls metadata。
+20. 执行 `plan_atelier_ui_component_workbench_screenshot.md`，让控件画板支持手动截图和 JSON 审查备注留痕。
 
 如后续某一阶段继续变复杂，例如 Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
 
@@ -280,9 +294,10 @@ git diff --check
 
 当前最近验证事实：
 
-- `.venv/Scripts/python -m unittest discover -s tests`：124 tests passed。
+- `.venv/Scripts/python -m unittest discover -s tests`：140 tests passed。
 - `.venv/Scripts/python -m compileall -q atelier tests`：passed。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
+- 文档空白扫描：no matches。
 
 项目未来配置完成后，再启用：
 
@@ -356,6 +371,11 @@ python -m mypy .
 - 2026-05-06：继续执行 `plan_gui_minimal_run_workflow_entry.md` Phase C。`MainWindow` 可接收 active plan id 和 run-intent service protocol，中央 run 控件只提交 `request_run(plan_id)`，不直接运行后端任务。
 - 2026-05-07：完成 `plan_gui_minimal_run_workflow_entry.md` Phase D/E。新增 `WorkflowRunIntentExecutor`，GUI run intent 不阻塞 Qt 点击路径；文档地图、recent changes、主计划和本计划已对齐。
 - 2026-05-07：新增 `plan_main_interactive_gui_workbench.md`。决策：GUI 专线对话长期负责交互式工作台；全局/后端对话负责后端统筹。下一步选择 `workflow_canvas_foundation`，暂不优先做低完成度 file import 演示。
+- 2026-05-07：新增 `plan_atelier_ui_local_library_governance.md`。决策：`AtelierUI` 是 Atelier 本地专属 UI 库，不作为成熟库发布；新自绘控件先经用户审查再入库调用；有参考项目时先调研借鉴。
+- 2026-05-07：新增并执行 `plan_atelier_ui_foundation.md` 首版。`AtelierUI` 现在有 `atelier/gui/ui/` 本地库目录、纯 Python theme tokens 和 widget intake checklist；全量验证为 132 tests passed。
+- 2026-05-07：新增并执行 `plan_atelier_ui_component_workbench_foundation.md` 第一阶段。`AtelierUI` 现在有 dev-only 控件画板入口，可在产品 GUI 外查看 tokens、typography、candidate placeholder 和 intake checklist。
+- 2026-05-07：新增并执行 `plan_atelier_ui_component_workbench_controls.md` 第二阶段。控件画板现在可切换 catalog story，并展示 story states / controls metadata；全量验证为 137 tests passed。
+- 2026-05-07：新增并执行 `plan_atelier_ui_component_workbench_screenshot.md` 第三阶段。控件画板现在可保存 PNG 截图和 JSON 审查备注；全量验证为 140 tests passed。
 
 ## Blockers（阻塞）
 

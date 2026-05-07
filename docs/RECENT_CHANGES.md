@@ -2,6 +2,343 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260507_004000 [AtelierUI component workbench foundation]
+
+- Created `docs/plan/plan_atelier_ui_component_workbench_foundation.md`.
+- Added `tests/test_gui_atelier_ui_component_workbench.py` before implementation and confirmed the expected red state: `atelier.gui.ui.component_workbench_state` / `atelier.gui.ui.component_workbench` did not exist.
+- Added `atelier/gui/ui/component_workbench_state.py` with pure-Python workbench state:
+  - catalog entries.
+  - token swatch views from `ATELIER_THEME_TOKENS`.
+  - typography samples.
+  - widget intake checklist steps.
+  - candidate story metadata that keeps `WorkflowNodeItem Candidate` unapproved for shared adoption.
+- Added `atelier/gui/ui/component_workbench.py` with a dev-only PySide6 `ComponentWorkbenchWindow`.
+- Added the launch entry:
+
+```powershell
+.venv\Scripts\python -m atelier.gui.ui.component_workbench
+```
+
+Current boundary:
+
+- Implemented: dev-only component workbench window with catalog, token preview, typography preview, intake checklist, candidate placeholder, and `--no-exec` test entry.
+- Implemented: state module does not import PySide6.
+- Not implemented: real self-painted widgets, parameter controls, motion playback, screenshot saving, Qt Designer plugin, or visual regression.
+- Not changed: product `MainWindow` does not host the component workbench, and no candidate widget is approved for shared `AtelierUI` adoption.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+```
+
+Result:
+
+- Red first: 4 errors because the new workbench modules were missing.
+- Component workbench tests: 4 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 14 tests passed.
+- Full unittest discovery: 136 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+Follow-up:
+
+- Updated the dev-only component workbench visible UI copy to Chinese instead of adding a partial i18n layer.
+- Kept code identifiers, object names, command flags, token roles, and product model names in their original language.
+- Added test assertions so the workbench title, catalog label, candidate review status, intake checklist text, and planned screenshot button stay Chinese until a real i18n boundary exists.
+
+## 20260507_004500 [AtelierUI component workbench controls]
+
+- Created `docs/plan/plan_atelier_ui_component_workbench_controls.md`.
+- Extended `tests/test_gui_atelier_ui_component_workbench.py` before implementation and confirmed the expected red state:
+  - `ComponentStoryView` did not expose `states` / `controls`.
+  - the workbench window did not expose selected story preview labels.
+  - the controls panel did not exist.
+- Extended `atelier/gui/ui/component_workbench_state.py` with:
+  - `ComponentStoryStateView`.
+  - `ComponentControlView`.
+  - story-level `states`.
+  - story-level `controls`.
+- Extended `atelier/gui/ui/component_workbench.py` so catalog selection updates:
+  - selected story title.
+  - selected story summary.
+  - selected story states.
+  - controls panel summary.
+
+Current boundary:
+
+- Implemented: catalog selection and metadata-only controls panel.
+- Implemented: `WorkflowNodeItem 候选` exposes `normal` / `hovered` / `selected` states and `selected` / `hovered` / `density` controls.
+- Not implemented: real self-painted widget drawing, parameter-driven rendering, motion playback, screenshot saving, review note persistence, or shared adoption approval.
+- Not changed: product `MainWindow` still does not host this workbench.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+```
+
+Result:
+
+- Red first: missing controls / preview widgets caused expected failures.
+- Component workbench tests: 5 tests passed after implementation.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 15 tests passed.
+- Full unittest discovery: 137 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+Follow-up:
+
+- Added root development launcher `open_atelier_ui_workbench.ps1`.
+- The launcher locates the repository root, prefers `.venv\Scripts\python.exe`, and runs `-m atelier.gui.ui.component_workbench`.
+- Extra PowerShell arguments are passed through to the workbench entry.
+- Verified with `powershell -NoProfile -ExecutionPolicy Bypass -File .\open_atelier_ui_workbench.ps1 --no-exec`.
+
+## 20260507_005000 [AtelierUI component workbench review snapshots]
+
+- Created `docs/plan/plan_atelier_ui_component_workbench_screenshot.md`.
+- Extended `tests/test_gui_atelier_ui_component_workbench.py` before implementation and confirmed the expected red state:
+  - no `build_review_snapshot_record()`.
+  - no injectable review output directory.
+  - screenshot button was still disabled placeholder.
+  - no review note editor.
+- Extended `atelier/gui/ui/component_workbench_state.py` with JSON-safe review snapshot metadata.
+- Extended `atelier/gui/ui/component_workbench.py` with:
+  - review note editor.
+  - enabled `保存截图和备注` action.
+  - `save_review_snapshot()`.
+  - PNG screenshot output.
+  - JSON metadata output.
+
+Current boundary:
+
+- Implemented: manual dev-only PNG screenshot and JSON review snapshot output.
+- Implemented: default output path is `.atelier/component-workbench/reviews/`.
+- Implemented: tests can inject a temporary review output directory.
+- Not implemented: visual diff, review approval state, database persistence, product export UI, or shared widget adoption.
+- Not changed: product `MainWindow` still does not host this workbench.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+```
+
+Result:
+
+- Red first: missing review snapshot and screenshot UI caused expected failures.
+- Component workbench tests: 8 tests passed after implementation.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 18 tests passed.
+- Full unittest discovery: 140 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260507_005500 [AtelierUI review page plan and GitHub boundary]
+
+- Created `docs/plan/plan_atelier_ui_component_workbench_review_page.md`.
+- Planned a static HTML review page generated from the dev-only workbench PNG / JSON review snapshot.
+- Recorded the browser handoff decision:
+  - Codex browser is useful for annotating static HTML review pages.
+  - Codex browser should not become the real PySide6 widget runtime.
+- Recorded the GitHub boundary:
+  - Commit workbench source, tests, docs, and root development launcher.
+  - Do not commit generated `.atelier/component-workbench/reviews/*.png`, `*.json`, or `*.html`.
+
+Validation run:
+
+```powershell
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md, .\AGENTS.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260507_003500 [Rejected ECHO reference candidate]
+
+- Updated `docs/UI_MOTION_SPEC.md` external code policy to require reference projects to be structurally clear, maintainable, reasonably stable, and license-clear before they enter Atelier's reference system.
+- Recorded `Moekotori/ECHO` as a rejected reference candidate.
+
+Current boundary:
+
+- `Moekotori/ECHO` should not be used as a reference for Atelier GUI, AtelierUI, plugin architecture, release flow, or smoke checklist work.
+- This is a documentation/governance decision only; no code changed.
+
+Validation run:
+
+```powershell
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md, .\AGENTS.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260507_003300 [AtelierUI component workbench plan]
+
+- Created `docs/plan/plan_atelier_ui_component_workbench.md`.
+- Updated `docs/UI_MOTION_SPEC.md` with the rule that candidate self-painted widgets should be tuned in a dev-only component workbench, not inside the real product GUI.
+- Updated `README.md` document index.
+
+Current boundary:
+
+- Implemented: planning and governance only.
+- Not implemented: `.venv\Scripts\python -m atelier.gui.ui.component_workbench`.
+- Current available GUI previews remain:
+  - product workbench: `.venv\Scripts\python -m atelier.gui.app`.
+  - icon preview: `atelier/assets/preview.html`.
+  - Bezier helper: `atelier/assets/Main.py`, not a product component gallery.
+
+Validation run:
+
+```powershell
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md, .\AGENTS.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260507_003000 [AtelierUI foundation]
+
+- Created `docs/plan/plan_atelier_ui_foundation.md`.
+- Added `tests/test_gui_atelier_ui_foundation.py` before implementation and confirmed the expected red state: `atelier.gui.ui` did not exist.
+- Added `atelier/gui/ui/`:
+  - `__init__.py`
+  - `theme_tokens.py`
+  - `widget_intake.py`
+  - `README.md`
+- Added pure Python `ATELIER_THEME_TOKENS` sourced from `DESIGN.md` baseline roles:
+  - dark palette roles.
+  - UI and monospace font stacks.
+  - compact desktop typography tokens.
+  - radius / spacing tokens.
+  - first Workflow Canvas node card sizing tokens.
+- Added `widget_intake.py` checklist for self-painted widget intake:
+  - purpose.
+  - reference review.
+  - minimal test.
+  - Atelier-specific implementation.
+  - user review.
+- Updated `README.md`, `docs/UI_MOTION_SPEC.md`, `docs/APP_CODE_MAP.md`, and main GUI plans to reflect that the local `AtelierUI` package now exists.
+
+Current boundary:
+
+- Implemented: pure Python tokens and intake checklist.
+- Implemented: import path does not require PySide6.
+- Not implemented: animation driver, runtime theme switching, overlay layer, queue delegate animation, or shared reviewed self-painted widgets.
+- Not changed: `atelier/gui/workflow_canvas.py` still owns current Workflow Canvas rendering and has not been migrated to `AtelierUI`.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_foundation
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_foundation tests.test_gui_workflow_canvas_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md, .\AGENTS.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Red first: 4 errors because `atelier.gui.ui` was missing.
+- Green after implementation: 4 tests passed.
+- AtelierUI foundation + Workflow Canvas foundation + GUI smoke tests: 14 tests passed.
+- Full unittest discovery: 132 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260507_002500 [AtelierUI local library governance]
+
+- Created `docs/plan/plan_atelier_ui_local_library_governance.md`.
+- Updated `AGENTS.md` with the non-negotiable GUI rule that Atelier must keep a local project-specific UI library direction for self-painted widgets, animation effects, theme tokens, overlays, and shared motion helpers.
+- Updated `docs/UI_MOTION_SPEC.md` so `AtelierUI` is explicitly:
+  - project-specific Atelier code.
+  - packaged only with the application runtime or core code.
+  - not a mature reusable external library.
+  - gated by user review before new self-painted widgets are adopted as shared components.
+- Updated GUI plans to record that self-painted widgets should reference existing open-source/code examples first, then implement Atelier-specific PySide6-native versions without copying incompatible code.
+- Updated `docs/APP_CODE_MAP.md` to record the governance boundary and to align the code tree with the current Workflow Canvas foundation files.
+
+Boundary at the time of this governance update:
+
+- Implemented: documentation and planning governance only.
+- Not implemented then: `atelier/gui/ui/`, `AnimationDriver`, theme tokens, overlay layer, queue delegate animation, or reviewed shared self-painted widget modules.
+- Not changed: existing `atelier/gui/workflow_canvas.py` remains a feature-level Workflow Canvas foundation module.
+
+Follow-up:
+
+- `20260507_003000 [AtelierUI foundation]` later added `atelier/gui/ui/` with pure Python theme tokens and a widget intake checklist.
+
+Validation run:
+
+```powershell
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md, .\AGENTS.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260507_002000 [Workflow Canvas foundation]
+
+- Created `docs/plan/plan_workflow_canvas_foundation.md`.
+- Added `tests/test_gui_workflow_canvas_foundation.py` with TDD red/green coverage for:
+  - `WorkflowGraph -> WorkflowCanvasViewModel` separation.
+  - rendering node card visual items and edge visual items.
+  - node selection as GUI visual state.
+  - `MainWindow` central view integration with injected `WorkflowGraph`.
+- Added `atelier/gui/workflow_canvas.py` with:
+  - `WorkflowCanvasViewModel`, `WorkflowCanvasNodeView`, and `WorkflowCanvasEdgeView`.
+  - `build_workflow_canvas_view_model(graph)`.
+  - `WorkflowCanvas`, a `QGraphicsView` / `QGraphicsScene` based canvas.
+  - GUI-only node selection state and `selection_changed` signal.
+- Updated `atelier/gui/main_window.py` so the central view uses `WorkflowCanvas` instead of a pure placeholder while preserving the existing run-intent control boundary.
+- Updated `docs/APP_CODE_MAP.md` with the new GUI canvas module and boundaries.
+
+Current boundary:
+
+- Implemented: minimal PySide6-native Workflow Canvas can render a graph's nodes and edges.
+- Implemented: graph data and visual state are separated; selection does not mutate `WorkflowGraph`.
+- Implemented: `MainWindow` can accept an injected `WorkflowGraph` and render it centrally.
+- Not implemented: graph editing, drag persistence, port validation, dynamic Inspector forms, Execution Canvas, or workflow execution from the canvas.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_workflow_canvas_foundation
+.venv\Scripts\python -m unittest tests.test_gui_workflow_canvas_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Workflow Canvas foundation tests: 3 tests passed after the first green slice.
+- Workflow Canvas foundation + GUI smoke tests: 10 tests passed after `MainWindow` integration.
+- Full unittest discovery: 128 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
 ## 20260507_001000 [Interactive GUI workbench main plan]
 
 - Created `docs/plan/plan_main_interactive_gui_workbench.md`.

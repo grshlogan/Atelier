@@ -30,6 +30,7 @@ Make failures recoverable.
   - 全局/后端专线：Scheduler、Worker、RuntimeManager、Storage、adapters、recovery execution、plugin/release/security 等后端能力。
 - 优先推进 `workflow_canvas_foundation`，不优先做低完成度 file picker 演示。
 - 保持 GUI 不直接执行 worker、FFmpeg、模型推理或硬件调度。
+- 建立本地专属 `AtelierUI` 库治理边界，用于未来自绘控件、动效、overlay、theme tokens 和共享 GUI 视觉基础；该库只服务 Atelier，不作为成熟通用库发布。
 
 暂不把本主计划当作单个巨大实现任务。每个阶段需要拆独立子计划，并按 TDD / GUI smoke / 必要视觉验证推进。
 
@@ -42,7 +43,10 @@ Make failures recoverable.
 - 当前 central view 仍是 placeholder，不是真正 Workflow Canvas。
 - 当前 Queue panel 仍是 text placeholder，不是模型视图、表格 delegate 或 recovery UI。
 - 当前 GUI user-facing strings 还未接入 I18nManager / Qt translation keys。
-- 当前 GUI motion 已有 `docs/UI_MOTION_SPEC.md` 作为规划规范，但尚未实现 `AtelierUI` motion layer。
+- 当前 GUI motion 已有 `docs/UI_MOTION_SPEC.md` 作为规划规范；`AtelierUI` 已有最小纯 Python theme tokens 和 widget intake checklist，但尚未实现 motion layer。
+- 当前已有 `docs/plan/plan_atelier_ui_local_library_governance.md`，记录 `AtelierUI` 本地专属库、用户审查和参考优先规则。
+- 当前已有 `docs/plan/plan_atelier_ui_foundation.md`，记录 `atelier/gui/ui/` 最小地基。
+- 当前已有 `docs/plan/plan_atelier_ui_component_workbench_foundation.md`，记录 dev-only 控件画板第一阶段；`.venv\Scripts\python -m atelier.gui.ui.component_workbench` 可打开 token / typography / checklist 预览。
 
 ## Constraints
 
@@ -55,6 +59,9 @@ Make failures recoverable.
 - 交互实现必须保留 Qt main event loop 响应性；长任务需要后台边界。
 - UI 文字后续需要接入 I18n；当前 placeholder 文字只允许作为过渡状态。
 - 不引入 web stack、Electron、Tauri、QML 或成熟第三方 UI framework，除非用户明确要求架构迁移。
+- 新自绘控件进入 `AtelierUI` 并被软件调用前，必须经过用户审查。
+- 自绘控件、delegate、overlay 或动画如有开源参考项目或参考代码，必须先调研借鉴结构、状态模型、测试方式和许可证边界，再做 Atelier 自己的实现。
+- `AtelierUI` 只作为 Atelier 本地专属库随 Runtime 或核心代码打包，不作为成熟库发布。
 
 ## Execution Plan
 
@@ -78,7 +85,7 @@ Make failures recoverable.
 
 状态：
 
-- 未开始。
+- 已完成首版 foundation。
 
 ### Phase 2: Execution Canvas read model
 
@@ -187,6 +194,8 @@ git diff --check
 - 后续可拆 `docs/plan/plan_execution_canvas_read_model.md`。
 - 后续可拆 `docs/plan/plan_queue_monitor_model_view.md`。
 - 后续可拆 `docs/plan/plan_gui_inspector_node_params.md`。
+- 已创建 `docs/plan/plan_atelier_ui_local_library_governance.md`。
+- 已创建并执行 `docs/plan/plan_atelier_ui_foundation.md` 的首版最小地基。
 - 后续可拆 `docs/plan/plan_gui_motion_foundation.md`。
 
 明确不优先执行：
@@ -211,11 +220,24 @@ git diff --check
 - `.venv\Scripts\python -m unittest discover -s tests`：124 tests passed。
 - `Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md -Pattern '[ \t]+$'`：no matches。
 - `git diff --check`：passed，仅有 Windows CRLF conversion warnings。
+- `.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_foundation tests.test_gui_workflow_canvas_foundation tests.test_gui_smoke`：14 tests passed after `AtelierUI` foundation。
+- `.venv\Scripts\python -m unittest discover -s tests`：132 tests passed after `AtelierUI` foundation。
+- `.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke`：14 tests passed after `AtelierUI Component Workbench` foundation。
+- `.venv\Scripts\python -m unittest discover -s tests`：136 tests passed after `AtelierUI Component Workbench` foundation。
+- `.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke`：15 tests passed after `AtelierUI Component Workbench` controls phase。
+- `.venv\Scripts\python -m unittest discover -s tests`：137 tests passed after `AtelierUI Component Workbench` controls phase。
+- `.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench`：8 tests passed after `AtelierUI Component Workbench` review snapshot phase。
 
 ## Progress / Decisions
 
 - 2026-05-07：创建本主计划。决策：GUI 专线对话专注交互式工作台，另一个全局/后端对话负责项目统筹和后端推进。
 - 2026-05-07：决策：下一步选择 `workflow_canvas_foundation`，暂不优先做 `gui_file_import_output_intent` 演示路线。
+- 2026-05-07：完成 `workflow_canvas_foundation` 首版。`MainWindow` central view 已接入 PySide6-native `WorkflowCanvas`，可渲染最小 `WorkflowGraph` 节点和边，并保持 selection 作为 GUI-only visual state。
+- 2026-05-07：新增 `AtelierUI` 本地专属库治理规则。决策：所有新自绘控件先经用户审查再入库并被软件调用；有参考项目时先调研借鉴，不无依据手搓；本次只沉淀文档规则，不迁移现有 canvas 代码。
+- 2026-05-07：执行 `plan_atelier_ui_foundation.md` 首版。新增 `atelier/gui/ui/`、纯 Python `theme_tokens.py` 和 `widget_intake.py`，作为后续动效和自绘控件的最小地基；全量验证为 132 tests passed。
+- 2026-05-07：执行 `plan_atelier_ui_component_workbench_foundation.md` 第一阶段。新增 dev-only `AtelierUI Component Workbench`，候选自绘控件后续可先在产品 GUI 外做 token / state / checklist 预览和用户审查。
+- 2026-05-07：执行 `plan_atelier_ui_component_workbench_controls.md` 第二阶段。画板现在支持 catalog 切换、story states 和 controls metadata 展示，仍不做真实自绘控件或产品调用。
+- 2026-05-07：执行 `plan_atelier_ui_component_workbench_screenshot.md` 第三阶段。画板现在可保存当前窗口 PNG 和 JSON 审查备注记录，仍不代表候选控件已通过用户审查。
 
 ## Blockers
 

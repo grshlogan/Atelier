@@ -11,9 +11,11 @@ from PySide6.QtWidgets import QLabel, QDockWidget, QMainWindow, QPushButton, QVB
 from atelier.gui.layout_store import WorkspaceLayoutStore
 from atelier.gui.runtime_setup_panel import RuntimeSetupServiceProtocol, create_runtime_setup_panel
 from atelier.gui.state_reader import WorkbenchSnapshot
+from atelier.gui.workflow_canvas import WorkflowCanvas, build_workflow_canvas_view_model
 from atelier.gui.workflow_run_intent import WorkflowRunIntentExecutor, WorkflowRunIntentServiceProtocol
 from atelier.gui.workspace import DEFAULT_WORKSPACE_PANELS, create_workspace_panel
 from atelier.runtime.setup import RuntimeSetupSnapshot
+from atelier.workflow.graph import WorkflowGraph
 
 
 class MainWindow(QMainWindow):
@@ -26,6 +28,7 @@ class MainWindow(QMainWindow):
         active_plan_id: str | None = None,
         workflow_run_intent_service: WorkflowRunIntentServiceProtocol | None = None,
         workflow_run_intent_executor: WorkflowRunIntentExecutor | None = None,
+        workflow_graph: WorkflowGraph | None = None,
     ) -> None:
         super().__init__()
         self.app_paths = app_paths
@@ -35,6 +38,7 @@ class MainWindow(QMainWindow):
         self.active_plan_id = active_plan_id
         self.workflow_run_intent_service = workflow_run_intent_service
         self.workflow_run_intent_executor = workflow_run_intent_executor
+        self.workflow_graph = workflow_graph
         self._owns_workflow_run_intent_executor = workflow_run_intent_executor is None
         self.workflow_run_status_label: QLabel | None = None
         self.setObjectName("atelier-main-window")
@@ -46,11 +50,9 @@ class MainWindow(QMainWindow):
 
     def _create_workstation_center(self) -> QWidget:
         center = QWidget()
-        center.setObjectName("workflow-canvas-placeholder")
+        center.setObjectName("workflow-workstation-center")
         layout = QVBoxLayout(center)
-        title = QLabel("Workflow Canvas")
-        title.setObjectName("workflow-canvas-title")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        canvas = WorkflowCanvas(build_workflow_canvas_view_model(self._central_workflow_graph()))
         run_button = QPushButton("Run Workflow")
         run_button.setObjectName("workflow-run-intent-button")
         run_button.setEnabled(
@@ -60,12 +62,15 @@ class MainWindow(QMainWindow):
         self.workflow_run_status_label = QLabel("No workflow run requested")
         self.workflow_run_status_label.setObjectName("workflow-run-intent-status")
         self.workflow_run_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addStretch(1)
-        layout.addWidget(title)
+        layout.addWidget(canvas, stretch=1)
         layout.addWidget(run_button, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.workflow_run_status_label)
-        layout.addStretch(1)
         return center
+
+    def _central_workflow_graph(self) -> WorkflowGraph:
+        if self.workflow_graph is not None:
+            return self.workflow_graph
+        return WorkflowGraph(graph_id="workflow-canvas-empty", name="Workflow Canvas")
 
     def _request_workflow_run(self) -> None:
         if self.active_plan_id is None or self.workflow_run_intent_service is None:
