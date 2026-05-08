@@ -2,12 +2,12 @@
 
 > This document maps the current code tree, file responsibilities, and boundaries. It is for AI agents and developers taking over the project. It does not replace `ARCHITECTURE.md`; it records what exists now.
 
-Code file count: 114
+Code file count: 117
 
 Scope counted:
 
 - `pyproject.toml`: 1 file
-- `atelier/`: 69 files
+- `atelier/`: 72 files
 - `tests/`: 44 files
 
 Non-code asset files are listed for ownership and handoff, but are not included in the code file count.
@@ -79,6 +79,11 @@ atelier/
       component_workbench_state.py
       theme_tokens.py
       widget_intake.py
+      workflow_canvas/
+        __init__.py
+        node_cards/
+          __init__.py
+          video_input_card.py
       README.md
   i18n/
     __init__.py
@@ -622,8 +627,10 @@ Responsibility:
   - `component_workbench_state.py`
   - `theme_tokens.py`
   - `widget_intake.py`
+  - `workflow_canvas/node_cards/video_input_card.py`
+  - `workflow_canvas/node_cards/video_input_vector_card.py`
 - `README.md` documents local library scope, packaging boundary, and self-painted widget review rules.
-- Provides a dev-only `AtelierUI Component Workbench` launch entry for token preview, candidate story placeholders, story states / controls metadata, catalog switching, intake checklist review, and manual review snapshot output.
+- Provides a dev-only `AtelierUI Component Workbench` launch entry focused on Workflow Canvas node card review, WorkCanvas preview, card-entry switching, basic zoom / pan, fullscreen preview, and visible paint-performance HUD review.
 
 Boundary:
 
@@ -632,15 +639,17 @@ Boundary:
 - `component_workbench.py` may import PySide6 only when the explicit dev-only workbench entry is launched.
 - Does not run workflows, workers, FFmpeg, model inference, hardware scheduling, shell commands, or SQLite mutations.
 - Does not contain reviewed shared self-painted widget implementations yet.
+- Workflow Canvas node card candidates under `workflow_canvas/node_cards/` remain review-only until the user approves shared adoption.
 
 ### `atelier/gui/ui/component_workbench_state.py`
 
 Responsibility:
 
 - Defines pure-Python view state for the dev-only `AtelierUI Component Workbench`.
-- Exposes catalog entries, token swatch views, typography sample views, intake checklist steps, story states, controls metadata, candidate story metadata, and review snapshot metadata.
-- Keeps the first `WorkflowNodeItem Candidate` story marked as not approved for shared adoption.
-- Builds JSON-safe review snapshot records without absolute user paths.
+- Exposes the active workbench catalog, token swatch metadata, typography sample metadata, intake checklist metadata, story states, controls metadata, candidate story metadata, review snapshot metadata, and static review page rendering.
+- Registers `VideoInputCard 候选` under `Workflow Canvas / Node Cards` as an unapproved candidate story.
+- Keeps `VideoInputCard 候选` as the only active catalog story while generic `WorkflowNodeItem 候选` remains archived from the current workbench surface.
+- Builds JSON-safe review snapshot records with screenshot / metadata / review page filenames and without absolute user paths.
 
 Boundary:
 
@@ -654,17 +663,74 @@ Responsibility:
 
 - Provides the dev-only component workbench launch entry:
   `.venv\Scripts\python -m atelier.gui.ui.component_workbench`.
-- Defines `ComponentWorkbenchWindow`, a PySide6 `QMainWindow` with catalog, selected story preview, token preview, typography preview, candidate placeholder, controls panel, review note editor, save review action, and intake checklist surfaces.
+- Defines `ComponentWorkbenchWindow`, a PySide6 `QMainWindow` with a focused `VideoInputCard` catalog story, selected story preview, WorkCanvas preview, card-entry controls, basic zoom / pan, and fullscreen preview.
+- Defaults the dev-only workbench window to 1980 px × 1080 px and recenters it on the current screen each time it is shown.
+- Provides a dev-only WorkCanvas preview area with a self-painted canvas background and explicit cached-preview-artifact thumbnail policy.
+- Provides basic `+` / `-` / `100%` zoom controls and mouse-drag panning for the vector WorkCanvas preview, implemented through `QGraphicsView` transform and `ScrollHandDrag`.
+- Uses a dedicated `_WorkCanvasView` for preview pan / zoom and cached tile / brush grid drawing so small-grid paint work is generated once per zoom LOD instead of every frame across the full viewport.
+- Keeps the central preview shell outside an outer `QScrollArea`; the canvas itself owns pan / zoom interaction.
+- Provides dev-only paint instrumentation on `_WorkCanvasView` through `debug_perf`, `debug_perf_snapshot()`, tile cache hit / miss counters, tile key, zoom, and `minimal` / `bounding` / `full` viewport update mode switching.
+- Displays those WorkCanvas and vector node paint snapshots in a visible dev-only WorkCanvas performance HUD.
+- Provides a `全屏` WorkCanvas preview window for inspecting the vector collapsed node card without the surrounding workbench chrome; fullscreen mode keeps zoom controls and the paint-performance HUD visible as overlay controls.
+- Keeps fullscreen HUD geometry stable across live refreshes so changing paint timing text does not resize the overlay while the mouse moves.
+- Provides card-entry controls so the new vector collapsed card and the older QWidget expanded reference do not stack on top of each other.
+- Renders the first dev-only `VideoInputCard` node card candidate preview from `workflow_canvas/node_cards/video_input_card.py`.
 - Supports catalog selection updates for the selected story title, summary, states, and controls metadata.
-- Saves dev-only review snapshots as PNG plus JSON metadata under `.atelier/component-workbench/reviews/` by default.
+- Keeps programmatic dev-only review snapshot output available as PNG, JSON metadata, and static HTML review pages under `.atelier/component-workbench/reviews/` by default, but the visible right-side review checklist / note panel has been removed from the current workbench UI.
 - Supports `--no-exec` so tests can build the window without entering the Qt event loop.
 
 Boundary:
 
 - Does not create the product `MainWindow`.
 - Does not execute workflow intents, Scheduler, workers, FFmpeg, model inference, hardware scheduling, shell commands, or SQLite mutations.
-- Does not implement real parameter controls that drive drawing, motion playback, visual diff, review approval, or reviewed shared self-painted widgets yet.
+- Does not implement real parameter controls that drive drawing, motion playback, visual diff, review approval, browser-side editing, right-click node creation, or reviewed shared self-painted widgets yet.
+- The WorkCanvas preview area does not generate thumbnails, run workflows, host the product `WorkflowCanvas`, or approve the QWidget candidate as the final product canvas item.
 - Review snapshots do not approve shared adoption and do not contain user media paths, SQLite rows, worker logs, or secrets by design.
+
+### `atelier/gui/ui/workflow_canvas/node_cards/`
+
+Responsibility:
+
+- Holds Workflow Canvas node card candidates for `AtelierUI` workbench review.
+- Current candidate:
+  - `video_input_card.py`
+  - `video_input_vector_card.py`
+
+Boundary:
+
+- Review-only until the user approves shared adoption.
+- Does not create workflow graph nodes, read media files, extract thumbnails, run FFmpeg, or submit workflow intents.
+- Does not replace `atelier/gui/workflow_canvas.py`, which remains the current product Workflow Canvas foundation.
+
+### `atelier/gui/ui/workflow_canvas/node_cards/video_input_card.py`
+
+Responsibility:
+
+- Defines `VideoInputCardCandidate`, the first dev-only Workflow Canvas node card candidate.
+- Renders a static 400 px × 600 px expanded video input card preview with 16 px radius, 3 px border, outward glow, a 50 px header section, an invisible left info container using the repository `nodes/video_input.svg` icon, a title whose weight matches the status text, an icon sized by `ICON_TO_TITLE_FONT_HEIGHT_RATIO`, an 80 px × 30 px visible status capsule, a 380 px × 75 px video preview card, and a 40 px input path / browse row with a 275 px input box and 100 px browse button.
+
+Boundary:
+
+- Does not open file dialogs, read user media, create thumbnails, probe metadata, run FFmpeg, or mutate `WorkflowGraph`.
+- Not approved for shared `AtelierUI` adoption yet.
+
+### `atelier/gui/ui/workflow_canvas/node_cards/video_input_vector_card.py`
+
+Responsibility:
+
+- Defines `VideoInputCollapsedNodeCardItem`, the collapsed `VideoInput` card for the WorkCanvas vector route.
+- Uses `QGraphicsObject` / `paint()` with a fixed 300 px × 200 px bounding rect.
+- Draws card background gradient, selected/resting border treatment, header, video icon, status capsule, video count, thumbnail stack fallback, total duration, total size, pending count, and the line-only four-corner expand affordance.
+- Separates border geometry from content geometry so border width changes do not move content positions.
+- Keeps the line-only expand affordance over the thumbnail stack instead of reserving bottom summary space; pointer proximity uses 40 px enter and 64 px exit thresholds.
+- Exposes dev/test snapshots for appearance tokens, thumbnail stack proximity state, summary metric icon-title-row layout, expand affordance geometry, icon layout, content layout, font weights, and paint timing.
+- Exposes stable item data and properties including `item_route = qgraphicsitem-paint`, `display_mode = collapsed`, and `thumbnail_strategy = cached-preview-or-vector-fallback`.
+- Provides dev-only `debug_perf` and `debug_perf_snapshot()` for independent node-card `paint()` timing, with node antialiasing retained separately from the background grid path.
+
+Boundary:
+
+- Does not read media, generate real thumbnails, decode images, build `QPixmap`, run workflows, call FFmpeg, call workers, access SQLite, or replace the product `WorkflowCanvas`.
+- Does not implement expanded content state, drag/drop, ports, cached preview artifact loading, or shared adoption approval yet.
 
 ### `atelier/gui/ui/theme_tokens.py`
 
@@ -1720,20 +1786,28 @@ Boundary:
 Responsibility:
 
 - Tests Phase A-D of `plan_atelier_ui_component_workbench_foundation.md` and Phase A-D of `plan_atelier_ui_component_workbench_controls.md`.
-- Confirms the pure-Python workbench state lists catalog entries, token swatches, typography samples, candidate stories, and required intake checklist steps.
+- Confirms the pure-Python workbench state keeps `VideoInputCard 候选` as the active catalog story while preserving token / typography / intake metadata outside the visible WorkCanvas tuning surface.
 - Confirms candidate story states / controls metadata is exposed without PySide6.
 - Confirms review snapshot metadata is JSON-safe and does not expose absolute repository paths.
 - Confirms `component_workbench_state.py` does not import PySide6.
-- Confirms the dev-only PySide6 workbench window can be built offscreen, exposes stable object names for catalog / preview / checklist surfaces, and does not construct the product `MainWindow`.
-- Confirms catalog selection updates selected story preview and the controls panel.
-- Confirms saving a review snapshot writes PNG and JSON files to an injected review directory.
+- Confirms the dev-only PySide6 workbench window can be built offscreen, exposes stable object names for catalog / preview surfaces, hides token preview and review checklist surfaces, and does not construct the product `MainWindow`.
+- Confirms catalog selection updates the selected story preview without showing the old controls panel.
+- Confirms `VideoInputCard 候选` is listed under Workflow Canvas node card candidates and renders a dev-only preview card.
+- Confirms the workbench exposes a dev-only WorkCanvas preview area for node cards and records the cached preview artifact thumbnail boundary.
+- Confirms the WorkCanvas preview hosts the collapsed `VideoInput` vector item with thumbnail stack fallback and proximity-reveal expand affordance.
+- Confirms the vector WorkCanvas preview supports basic zoom controls, mouse-drag panning, card-entry switching, fullscreen preview, fullscreen overlay controls, stable `QGraphicsScene` ownership, visible non-fullscreen controls, viewport-space grid LOD, cached tile grid painting, paint perf snapshots, visible performance HUD output, stable fullscreen HUD geometry, and viewport update mode switching without changing the vector item's `boundingRect()`.
+- Confirms the component workbench window defaults to 1980 px × 1080 px and recenters on show instead of reusing a previous close position.
+- Confirms `VideoInputCollapsedNodeCardItem` content layout stays stable when `CARD_BORDER_WIDTH` changes.
+- Confirms `VideoInputCollapsedNodeCardItem.paint()` exposes independent debug timing and keeps antialiasing enabled for node rendering.
+- Confirms saving a review snapshot writes PNG, JSON metadata, and an HTML review page to an injected review directory.
+- Confirms the generated metadata and HTML include screenshot / metadata / review page filenames and do not expose repository absolute paths.
 - Confirms the launch entry supports `--no-exec` for tests.
 
 Boundary:
 
 - Does not enter a long-running Qt event loop.
 - Does not approve any self-painted widget for shared adoption.
-- Does not run workflows, Scheduler, workers, FFmpeg/model adapters, shell commands, SQLite mutation, screenshots, or visual regression.
+- Does not run workflows, Scheduler, workers, FFmpeg/model adapters, shell commands, SQLite mutation, browser automation, or visual regression.
 - Skips Qt window tests when PySide6 is not installed.
 
 ### `tests/test_gui_atelier_ui_foundation.py`
@@ -1982,7 +2056,7 @@ These packages are specified in docs but not fully implemented yet:
 - `workflow/`: only minimal graph models exist; full node schema validation and registry are not implemented.
 - `planning/`: only a simple linear planner exists; full ExecutionPlan generation, validation, conflict detection, and optimization are not implemented.
 - `scheduler/`: `SimpleScheduler`, a narrow claimed-task dispatch helper, the first storage-backed artifact handoff query, minimal downstream `output.export.input_path` materialization, and a minimum sequential workflow runner exist; lifecycle timeout/cancel/protocol-error results can be persisted for already claimed stub tasks, but durable queue claiming, concurrent dispatch loops, broad port-level param materialization, priorities, retry execution, protocol-error retry/recovery actions, and crash recovery are not implemented.
-- `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models including final output / failure fields, a minimal actionable Runtime Setup dock, the first minimal Workflow Canvas foundation, a pure-Python `AtelierUI` foundation package with theme tokens and widget intake checklist, and the first dev-only `AtelierUI Component Workbench` launch entry exist; full workflow editing, Execution Canvas, Queue Monitor model/view, Inspector parameter UI, runtime theme switching, i18n catalog, workspace preset UI, packaged app entry, reviewed `AtelierUI` shared self-painted widget modules, real workbench parameter controls, screenshot/review notes, and visual verification are not implemented yet.
+- `gui/`: optional dependency entry helpers, formal development launch entry, a `MainWindow`, basic dock workspace specs, minimal layout persistence, read-only SQLite view models including final output / failure fields, a minimal actionable Runtime Setup dock, the first minimal Workflow Canvas foundation, a pure-Python `AtelierUI` foundation package with theme tokens and widget intake checklist metadata, and the first dev-only `AtelierUI Component Workbench` focused on WorkCanvas `VideoInputCard` review exist; the workbench now includes a self-painted grid preview, vector collapsed card preview, older QWidget expanded reference entry, basic zoom / pan, fullscreen preview, visible paint-performance HUD, and 1980×1080 centered launch geometry; full workflow editing, Execution Canvas, Queue Monitor model/view, Inspector parameter UI, runtime theme switching, i18n catalog, workspace preset UI, packaged app entry, reviewed `AtelierUI` shared self-painted widget modules, real workbench parameter controls, browser-side review editing, visual diff, and visual verification are not implemented yet.
 - `atelier/domain/translation.py`: translation / OCR fusion / structured subtitle output models described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `atelier/translation/`: input resolver, timeline builder, OCR context aligner, chunk planner, prompt builder, provider clients, result validator, repair runner, and subtitle rebuilder described by `docs/TRANSLATE_AGENT_SPEC.md`.
 - `adapters`: minimal adapter contract, built-in registry, typed command executor, `metadata.probe` / `FFprobeMetadataAdapter`, `media.audio_extract` / `FFmpegAudioExtractAdapter`, and `output.export` / `ArtifactFinalizerAdapter` exist; subtitle mux/burn, ASR, OCR recognition, Translate Agent, subtitle review, composition, enhancement, plugin adapter discovery, and production adapter cancellation are not implemented.

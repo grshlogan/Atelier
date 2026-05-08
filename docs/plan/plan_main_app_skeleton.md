@@ -248,14 +248,14 @@
 - [plan_output_export_finalizer.md](./plan_output_export_finalizer.md)：第 11 个后续子计划。在 staged artifact workflow 跑通后，接入最小 `output.export` / final output link。
 - [plan_minimal_backend_workflow_runner.md](./plan_minimal_backend_workflow_runner.md)：第 12 个后续子计划。把单节点 adapter dispatch 推进为最小多节点后端 workflow runner。
 - [plan_gui_minimal_run_workflow_entry.md](./plan_gui_minimal_run_workflow_entry.md)：第 13 个后续子计划。让 GUI 提交最小 workflow run intent，并保持执行链路归后端 service / Scheduler / RuntimeManager。
-- [plan_main_interactive_gui_workbench.md](./plan_main_interactive_gui_workbench.md)：GUI 专线主计划。把 GUI 后续长期工作拆成 Workflow Canvas、Execution Canvas、Queue Monitor、Inspector、workspace 和 motion 等方向。
-- [plan_workflow_canvas_foundation.md](./plan_workflow_canvas_foundation.md)：GUI 专线首个子计划。建立 PySide6-native 卡片式 Workflow Canvas 基础，渲染最小 WorkflowGraph 节点和边，并保持 graph data 与 visual state 分离。
-- [plan_atelier_ui_local_library_governance.md](./plan_atelier_ui_local_library_governance.md)：GUI 专属库治理计划。规定 `AtelierUI` 只作为本地专属库随软件打包，新自绘控件需用户审查，参考项目优先调研借鉴。
-- [plan_atelier_ui_foundation.md](./plan_atelier_ui_foundation.md)：GUI 专属库最小地基计划。建立 `atelier/gui/ui/`、theme tokens 和自绘控件入库 checklist。
-- [plan_atelier_ui_component_workbench.md](./plan_atelier_ui_component_workbench.md)：GUI 专属控件画板计划。规定候选自绘控件应先在 dev-only 画板中调参和审查，不直接放进产品 `MainWindow`。
-- [plan_atelier_ui_component_workbench_foundation.md](./plan_atelier_ui_component_workbench_foundation.md)：控件画板第一实现阶段。建立 dev-only PySide6 启动入口、PySide-independent state、token preview 和 intake checklist preview。
-- [plan_atelier_ui_component_workbench_controls.md](./plan_atelier_ui_component_workbench_controls.md)：控件画板第二实现阶段。建立 catalog selection、story states / controls metadata 和 controls panel。
-- [plan_atelier_ui_component_workbench_screenshot.md](./plan_atelier_ui_component_workbench_screenshot.md)：控件画板第三实现阶段。建立手动截图和 JSON 审查备注留痕。
+- [gui_workbench/README.md](./gui_workbench/README.md)：GUI / AtelierUI / 控件画板 / UI 打磨计划目录入口。
+- [gui_workbench/plan_main_interactive_gui_workbench.md](./gui_workbench/plan_main_interactive_gui_workbench.md)：GUI 专线主计划。把 GUI 后续长期工作拆成 Workflow Canvas、Execution Canvas、Queue Monitor、Inspector、workspace 和 motion 等方向。
+- [gui_workbench/plan_workflow_canvas_foundation.md](./gui_workbench/plan_workflow_canvas_foundation.md)：GUI 专线首个子计划。建立 PySide6-native 卡片式 Workflow Canvas 基础，渲染最小 WorkflowGraph 节点和边，并保持 graph data 与 visual state 分离。
+- [gui_workbench/plan_atelier_ui_local_library_governance.md](./gui_workbench/plan_atelier_ui_local_library_governance.md)：GUI 专属库治理计划。规定 `AtelierUI` 只作为本地专属库随软件打包，新自绘控件需用户审查，参考项目优先调研借鉴。
+- [gui_workbench/plan_atelier_ui_foundation.md](./gui_workbench/plan_atelier_ui_foundation.md)：GUI 专属库最小地基计划。建立 `atelier/gui/ui/`、theme tokens 和自绘控件入库 checklist。
+- [gui_workbench/plan_atelier_ui_component_workbench.md](./gui_workbench/plan_atelier_ui_component_workbench.md)：GUI 专属控件画板计划。规定候选自绘控件应先在 dev-only 画板中调参和审查，不直接放进产品 `MainWindow`。
+- [gui_workbench/plan_atelier_ui_workflow_canvas_node_cards.md](./gui_workbench/plan_atelier_ui_workflow_canvas_node_cards.md)：Workflow Canvas 节点卡片候选计划。当前候选是 `VideoInputCard`。
+- [gui_workbench/archive/component_workbench_phases/](./gui_workbench/archive/component_workbench_phases/)：已完成的控件画板 phase 计划归档。
 
 执行顺序：
 
@@ -272,13 +272,12 @@
 11. 再执行 `plan_output_export_finalizer.md`，把 staged artifact 安全复制为 final output artifact。
 12. 再执行 `plan_minimal_backend_workflow_runner.md`，让上游 artifact 能进入下游任务，并形成最小 claim / dispatch / persist loop。
 13. 再执行 `plan_gui_minimal_run_workflow_entry.md`，让 GUI 进入 run intent 阶段，但不把后端 runner、Scheduler、RuntimeManager 或 adapter 逻辑塞进 GUI。
-14. GUI 后续进入 `plan_main_interactive_gui_workbench.md`，优先拆 `plan_workflow_canvas_foundation.md`，不优先走低完成度 file import 演示路线。
-15. 执行 `plan_workflow_canvas_foundation.md`，让 central view 进入真正 Workflow Canvas 基础阶段。
-16. 执行并维护 `plan_atelier_ui_local_library_governance.md`，把 `AtelierUI` 作为 GUI 自绘控件和动效的本地专属库治理边界。
-17. 执行 `plan_atelier_ui_foundation.md`，建立 `AtelierUI` 最小代码地基。
-18. 执行 `plan_atelier_ui_component_workbench.md` 和 `plan_atelier_ui_component_workbench_foundation.md`，把候选控件调参 / 审查画板从规划推进到 dev-only 可打开入口。
-19. 执行 `plan_atelier_ui_component_workbench_controls.md`，让控件画板支持 story selection 和基础 controls metadata。
-20. 执行 `plan_atelier_ui_component_workbench_screenshot.md`，让控件画板支持手动截图和 JSON 审查备注留痕。
+14. GUI 后续进入 `gui_workbench/plan_main_interactive_gui_workbench.md`，优先拆 `gui_workbench/plan_workflow_canvas_foundation.md`，不优先走低完成度 file import 演示路线。
+15. 执行 `gui_workbench/plan_workflow_canvas_foundation.md`，让 central view 进入真正 Workflow Canvas 基础阶段。
+16. 执行并维护 `gui_workbench/plan_atelier_ui_local_library_governance.md`，把 `AtelierUI` 作为 GUI 自绘控件和动效的本地专属库治理边界。
+17. 执行 `gui_workbench/plan_atelier_ui_foundation.md`，建立 `AtelierUI` 最小代码地基。
+18. 执行 `gui_workbench/plan_atelier_ui_component_workbench.md`，把候选控件调参 / 审查画板作为长期 UI 打磨入口。
+19. 后续 UI 打磨和控件画板 phase 计划默认放入 `docs/plan/gui_workbench/`；完成后归档到 `docs/plan/gui_workbench/archive/`。
 
 如后续某一阶段继续变复杂，例如 Worker protocol、Plugin system 或 ReleaseManager 需要独立拆分，再新增 `docs/plan/plan_<topic>.md`。
 

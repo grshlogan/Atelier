@@ -2,6 +2,304 @@
 
 > This file records meaningful project changes for future AI agents and developers. It is intentionally more durable than chat history. Keep entries concise, factual, and anchored to files or behavior that exists.
 
+## 20260509_050259 [Thumbnail expand affordance line-only]
+
+- Removed the rounded button face, border, gradient fill, and shadow from the collapsed `VideoInput` thumbnail expand affordance.
+- Replaced the visual with a line-only four-corner expand mark, using rounded stroke caps over the thumbnail stack.
+- Kept the existing proximity reveal behavior: 40 px enter distance, 64 px exit distance, thumbnail fade-down, and line fade-in.
+- Updated plan and preview-artifact docs so the affordance is described as an expand line treatment instead of a button.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench.AtelierUIComponentWorkbenchWindowTests.test_video_input_collapsed_expand_affordance_is_line_only_corners
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench.AtelierUIComponentWorkbenchWindowTests.test_video_input_collapsed_expand_affordance_is_line_only_corners tests.test_gui_atelier_ui_component_workbench.AtelierUIComponentWorkbenchWindowTests.test_video_input_collapsed_thumbnail_stack_reveals_expand_on_pointer_proximity
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+```
+
+Result:
+
+- Red-first focused test failed before implementation because `expand_affordance_snapshot()` lacked `visual_treatment`.
+- Focused line-only + proximity tests: 2 tests passed.
+- Component workbench tests: 34 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 44 tests passed.
+- Full unittest discovery: 166 tests passed.
+- `compileall`: passed.
+
+## 20260509_044609 [Collapsed video input thumbnail reveal]
+
+- Updated `VideoInputCollapsedNodeCardItem` so the current vector collapsed card uses a three-thumbnail fallback stack instead of an empty right side.
+- Moved the expand/collapse affordance from the bottom summary area onto the thumbnail stack, preserving the uniform `总时长 / 总大小 / 待处理` rhythm.
+- Added pointer-proximity reveal behavior: 40 px enter distance fades the thumbnail stack down and the expand button in; 64 px exit distance fades back to thumbnails.
+- Kept the GUI runtime boundary intact: no media reads, thumbnail generation, FFmpeg, Worker, Scheduler, SQLite, or `QPixmap` construction in the item paint path.
+- Updated tests and docs to use `thumbnail_strategy = cached-preview-or-vector-fallback`.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench.AtelierUIComponentWorkbenchWindowTests.test_workcanvas_preview_hosts_thumbnail_stack_vector_collapsed_video_input_card tests.test_gui_atelier_ui_component_workbench.AtelierUIComponentWorkbenchWindowTests.test_video_input_collapsed_thumbnail_stack_reveals_expand_on_pointer_proximity tests.test_gui_atelier_ui_component_workbench.AtelierUIComponentWorkbenchWindowTests.test_video_input_collapsed_expand_affordance_is_line_only_corners
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\README.md, .\AGENTS.md, .\DESIGN.md, .\docs\*.md, .\docs\plan\*.md, .\docs\plan\gui_workbench\*.md, .\docs\design-md-references\*.md -Encoding UTF8 -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Focused red-first tests: failed before implementation for `thumbnail_strategy = none`, missing `thumbnail_stack_snapshot()`, and the old bottom-right expand rect; 3 tests passed after implementation.
+- Component workbench tests: 34 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 44 tests passed.
+- Full unittest discovery: 166 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260509_033625 [Video input vector card selected style]
+
+- Updated `VideoInputCollapsedNodeCardItem` so the current vector card is explicitly the selected state: thick blue border with a light glow.
+- Added resting-state appearance tokens with a thin dark border and no glow for future non-selected rendering.
+- Refined the vector card background to a restrained dark vertical gradient.
+- Changed the bottom summary metrics to icon + title rows with values below, and added a drawn gradient expand/collapse affordance with a soft bottom shadow.
+- Added snapshot coverage for appearance tokens, summary metric layout, and expand affordance geometry.
+- Generated a local preview image at `.atelier/component-workbench/previews/video-input-vector-card-phase-m.png`.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench.AtelierUIComponentWorkbenchWindowTests.test_video_input_collapsed_appearance_separates_selected_and_resting_state tests.test_gui_atelier_ui_component_workbench.AtelierUIComponentWorkbenchWindowTests.test_video_input_collapsed_summary_metrics_use_icon_title_rows tests.test_gui_atelier_ui_component_workbench.AtelierUIComponentWorkbenchWindowTests.test_video_input_collapsed_expand_affordance_is_line_only_corners
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\README.md, .\AGENTS.md, .\DESIGN.md, .\docs\*.md, .\docs\plan\*.md, .\docs\plan\gui_workbench\*.md, .\docs\design-md-references\*.md -Encoding UTF8 -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- New focused tests: 3 tests passed.
+- Component workbench tests: 32 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 42 tests passed.
+- Full unittest discovery: 164 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260509_025451 [Dark DESIGN.md reference]
+
+- Added `docs/design-md-references/dark-tech-sharp.DESIGN.md` from the DESIGN.md reference library as a dark AI / developer-tool style reference.
+- Updated `DESIGN.md` to list the new reference and explicitly constrain it to method-level inspiration, not Atelier's design source of truth.
+- Added `docs/plan/plan_design_md_dark_reference.md` for the reference selection and verification record.
+
+Validation run:
+
+```powershell
+Select-String -Path .\README.md, .\AGENTS.md, .\DESIGN.md, .\docs\*.md, .\docs\plan\*.md, .\docs\plan\gui_workbench\*.md, .\docs\design-md-references\*.md -Encoding UTF8 -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260509_002000 [Vector card border-independent content layout]
+
+- Split `VideoInputCollapsedNodeCardItem` border geometry from content geometry.
+- Added `content_layout_snapshot()` for dev/test inspection of border rect, content rects, and divider lines.
+- Changing `CARD_BORDER_WIDTH` now affects the border rect only; icon, title, status capsule, primary metric, and divider coordinates remain content-token driven.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+```
+
+Result:
+
+- Component workbench tests: 27 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 37 tests passed.
+- Full unittest discovery: 159 tests passed.
+- `compileall`: passed.
+
+## 20260509_001500 [Workbench fullscreen HUD stability]
+
+- Added fullscreen WorkCanvas overlay controls so zoom and the paint-performance HUD remain visible in fullscreen mode.
+- Fixed fullscreen HUD live-refresh jitter by giving the HUD stable geometry instead of resizing it on every performance text update.
+- Added regression coverage for fullscreen HUD stability during repeated refreshes.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\README.md, .\AGENTS.md, .\DESIGN.md, .\docs\*.md, .\docs\plan\*.md, .\docs\plan\gui_workbench\*.md, .\docs\plan\gui_workbench\archive\component_workbench_phases\*.md -Encoding UTF8 -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Component workbench tests: 24 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 34 tests passed.
+- Full unittest discovery: 156 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260509_001000 [Workbench visible performance HUD and centered launch]
+
+- Added a dev-only WorkCanvas performance HUD to the AtelierUI Component Workbench.
+- The HUD displays zoom, WorkCanvas background paint time, tile cache hit / miss counts, tile key, viewport update mode, background / node AA state, and `VideoInputCollapsedNodeCardItem.paint()` timing.
+- Enabled the existing WorkCanvas / node-card `debug_perf` snapshots by default inside the dev-only workbench preview so the HUD has live data.
+- Changed `ComponentWorkbenchWindow` launch geometry to default to 1980 px × 1080 px and recenter on the current screen each time the window is shown instead of relying on a previous close position.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\README.md, .\AGENTS.md, .\DESIGN.md, .\docs\*.md, .\docs\plan\*.md, .\docs\plan\gui_workbench\*.md, .\docs\plan\gui_workbench\archive\component_workbench_phases\*.md -Encoding UTF8 -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Component workbench tests: 23 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 33 tests passed.
+- Full unittest discovery: 155 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260508_004000 [WorkCanvas paint performance instrumentation]
+
+- Added `_WorkCanvasView.set_debug_perf()` and `debug_perf_snapshot()` for dev-only paint instrumentation.
+- WorkCanvas background perf snapshots now include `drawBackground` time, tile cache hit / miss counters, tile key, zoom, viewport update mode, and background AA state.
+- Added `_WorkCanvasView.set_viewport_update_mode_name()` with `minimal`, `bounding`, and `full` modes.
+- Background grid drawing explicitly disables antialiasing while the vector node view keeps AA enabled for node painting.
+- Added `VideoInputCollapsedNodeCardItem.set_debug_perf()` and `debug_perf_snapshot()` so node-card `paint()` timing is tracked separately from background grid timing.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\README.md, .\AGENTS.md, .\DESIGN.md, .\docs\*.md, .\docs\plan\*.md, .\docs\plan\gui_workbench\*.md, .\docs\plan\gui_workbench\archive\component_workbench_phases\*.md -Encoding UTF8 -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Component workbench tests: 21 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 31 tests passed.
+- Full unittest discovery: 153 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260508_003500 [WorkCanvas preview controls and grid performance]
+
+- Changed the dev-only WorkCanvas preview so the central workbench surface no longer depends on an outer `QScrollArea`; the canvas handles pan / zoom itself.
+- Fixed `QGraphicsScene` ownership for the non-fullscreen vector preview so `QGraphicsView.scene()` remains stable.
+- Changed WorkCanvas grid drawing from scene-space loops to viewport / screen-space drawing with adaptive LOD.
+- At low zoom, minor grid lines and dot intersections are skipped so zooming out does not increase grid primitive count.
+- Changed small-grid painting to a cached tile / brush strategy, so normal panning no longer rebuilds full-viewport minor lines and dot primitives every paint.
+- Preserved fullscreen preview and added stable properties for fullscreen `item_route`, `display_mode`, `thumbnail_strategy`, and `pan_interaction`.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\README.md, .\AGENTS.md, .\DESIGN.md, .\docs\*.md, .\docs\plan\*.md, .\docs\plan\gui_workbench\*.md, .\docs\plan\gui_workbench\archive\component_workbench_phases\*.md -Encoding UTF8 -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Component workbench tests: 19 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 29 tests passed.
+- Full unittest discovery: 151 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260508_003000 [Component workbench focused WorkCanvas tuning surface]
+
+- Focused the active dev-only `AtelierUI Component Workbench` catalog on `VideoInputCard 候选`.
+- Archived `WorkflowNodeItem 候选` and the visible `主题 Tokens` preview from the current workbench surface.
+- Removed the visible right-side intake review checklist / note panel from the workbench UI; direct screenshots remain sufficient for the current polishing loop.
+- Added WorkCanvas card-entry controls so `矢量内缩` and `旧版展开参考` are selected explicitly instead of being stacked together.
+- Added a `全屏` WorkCanvas preview window for inspecting the thumbnail-free vector collapsed card in a larger canvas view.
+- Added TDD coverage for catalog cleanup, hidden token / review surfaces, entry switching, and fullscreen preview.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\README.md, .\AGENTS.md, .\DESIGN.md, .\docs\*.md, .\docs\plan\*.md, .\docs\plan\gui_workbench\*.md, .\docs\plan\gui_workbench\archive\component_workbench_phases\*.md -Encoding UTF8 -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Component workbench tests: 16 tests passed.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 26 tests passed.
+- Full unittest discovery: 148 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260508_002000 [VideoInput vector collapsed card]
+
+- Added `docs/plan/gui_workbench/plan_video_input_vector_collapsed_card.md`.
+- Added `atelier/gui/ui/workflow_canvas/node_cards/video_input_vector_card.py` with `VideoInputCollapsedNodeCardItem`.
+- The new card is a `QGraphicsObject` / `paint()` WorkCanvas-route candidate with fixed 300 px × 200 px bounds and no thumbnail or thumbnail placeholder.
+- Added `component-workbench-video-input-vector-preview` in the dev-only WorkCanvas preview area, while keeping the older QWidget candidate as visual reference.
+- Added basic `+` / `-` / `100%` zoom controls and mouse-drag panning for the vector preview; zoom changes the `QGraphicsView` transform, not the card item's geometry.
+- Added TDD coverage proving the WorkCanvas preview hosts the thumbnail-free collapsed vector item and records `thumbnail_strategy = none`.
+
+## 20260508_001000 [WorkCanvas preview artifact and workbench preview area]
+
+- Added `docs/WORKCANVAS_PREVIEW_ARTIFACT_SPEC.md`, recording ComfyUI-inspired preview artifact, thumbnail cache, lazy GUI drawing, and non-copy boundaries for Atelier WorkCanvas.
+- Added `docs/plan/gui_workbench/plan_component_workbench_workcanvas_preview_area.md`.
+- Extended the dev-only `AtelierUI` component workbench with `component-workbench-workcanvas-preview`, a self-painted WorkCanvas preview area that hosts the current `VideoInputCardCandidate`.
+- The preview area declares `thumbnail_policy = cached-preview-artifact-only` and `gui_runtime_boundary = no-worker-no-ffmpeg-no-thumbnail-generation`.
+- Added TDD coverage proving the workbench exposes the WorkCanvas preview area and hosts the video input node card inside it.
+
+## 20260508_000000 [GUI workbench plan taxonomy]
+
+- Created `docs/plan/gui_workbench/` as the dedicated home for GUI / AtelierUI / component workbench / UI polishing plans.
+- Added `docs/plan/gui_workbench/README.md` as the current plan index and `docs/plan/gui_workbench/plan_gui_workbench_plan_taxonomy.md` as the taxonomy plan.
+- Moved active GUI plans into `docs/plan/gui_workbench/`:
+  - `plan_main_interactive_gui_workbench.md`.
+  - `plan_workflow_canvas_foundation.md`.
+  - `plan_atelier_ui_local_library_governance.md`.
+  - `plan_atelier_ui_foundation.md`.
+  - `plan_atelier_ui_component_workbench.md`.
+  - `plan_atelier_ui_workflow_canvas_node_cards.md`.
+- Archived completed component workbench phase plans and the one-off UI motion spec writing plan under `docs/plan/gui_workbench/archive/component_workbench_phases/`.
+- Updated README, `docs/UI_MOTION_SPEC.md`, `docs/plan/plan_main_app_skeleton.md`, and active GUI plans so current entry links point to the new folder.
+
 ## 20260507_004000 [AtelierUI component workbench foundation]
 
 - Created `docs/plan/plan_atelier_ui_component_workbench_foundation.md`.
@@ -143,6 +441,14 @@ Result:
 
 - Created `docs/plan/plan_atelier_ui_component_workbench_review_page.md`.
 - Planned a static HTML review page generated from the dev-only workbench PNG / JSON review snapshot.
+- Extended `tests/test_gui_atelier_ui_component_workbench.py` before implementation and confirmed the expected red state:
+  - no `review_page_filename` metadata.
+  - no `render_review_page_html()`.
+  - no `ReviewSnapshotResult.review_page_path`.
+- Extended `atelier/gui/ui/component_workbench_state.py` with static review page HTML rendering.
+- Extended `atelier/gui/ui/component_workbench.py` so `save_review_snapshot()` writes PNG, JSON, and HTML.
+- Added a review page handoff label in the workbench UI so the latest HTML filename is visible after saving.
+- Follow-up TDD slice added `metadata_filename` to the review snapshot contract so JSON and HTML both identify the sibling metadata file without absolute paths.
 - Recorded the browser handoff decision:
   - Codex browser is useful for annotating static HTML review pages.
   - Codex browser should not become the real PySide6 widget runtime.
@@ -153,12 +459,79 @@ Result:
 Validation run:
 
 ```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
 Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md, .\AGENTS.md -Pattern '[ \t]+$'
 git diff --check
 ```
 
 Result:
 
+- Red first: missing review page metadata / renderer / result path caused expected failures.
+- Browser handoff red first: missing review page path label caused expected failures.
+- Metadata filename red first: `metadata_filename` assertions failed before the review snapshot contract was extended.
+- Component workbench tests: 9 tests passed after implementation.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 19 tests passed.
+- Full unittest discovery: 141 tests passed.
+- `compileall`: passed.
+- Trailing whitespace scan: no matches.
+- `git diff --check`: passed with only Windows CRLF conversion warnings.
+
+## 20260507_005800 [AtelierUI Workflow Canvas VideoInputCard candidate]
+
+- Created `docs/plan/plan_atelier_ui_workflow_canvas_node_cards.md`.
+- Added `atelier/gui/ui/workflow_canvas/node_cards/` as the parent directory for Workflow Canvas node card candidates.
+- Added `atelier/gui/ui/workflow_canvas/node_cards/video_input_card.py` with the first dev-only `VideoInputCardCandidate` preview.
+- Refined `VideoInputCardCandidate` to the current expanded-state review spec:
+  - fixed 400 px × 600 px card size.
+  - 16 px radius and 3 px border.
+  - outward blue glow through a Qt drop shadow effect.
+  - 50 px header section with an invisible left info container.
+  - info container uses `atelier/assets/nodes/video_input.svg` plus title text only.
+  - title weight matches the status text instead of using bold.
+  - icon size is controlled by `ICON_TO_TITLE_FONT_HEIGHT_RATIO` in `video_input_card.py`.
+  - 80 px × 30 px visible status capsule with 15 px radius and centered text.
+  - stream section uses vertical centered sequencing with 5 px spacing.
+  - 380 px × 75 px video preview card without the AI-generated video label.
+  - input path box and 100 px browse button share a 40 px row with 5 px spacing.
+  - input path box width is fixed to `400 - 100 - 10 - 10 - 5 = 275 px`.
+- Extended `tests/test_gui_atelier_ui_component_workbench.py` before implementation and confirmed the expected red state:
+  - catalog did not list `video-input-card`.
+  - selecting the third catalog item did not show `VideoInputCard 候选`.
+  - no `component-workbench-video-input-card` preview existed.
+- Extended `atelier/gui/ui/component_workbench_state.py` so `VideoInputCard 候选` appears under `Workflow Canvas / Node Cards`.
+- Extended `atelier/gui/ui/component_workbench.py` so the workbench renders the candidate card preview when that story is selected.
+
+Current boundary:
+
+- Implemented: review-only static expanded video input node card candidate in the dev-only workbench with fixed geometry and semantic Header / Stream sections.
+- Implemented: story controls metadata for `selected`, `hovered`, `media_status`, and `thumbnail`.
+- Not implemented: file picking, media probing, thumbnail extraction, WorkflowGraph node creation, real parameter-driven rendering, or product `MainWindow` usage.
+- Not changed: candidate is not approved for shared `AtelierUI` adoption.
+
+Validation run:
+
+```powershell
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench
+.venv\Scripts\python -m unittest tests.test_gui_atelier_ui_component_workbench tests.test_gui_atelier_ui_foundation tests.test_gui_smoke
+.venv\Scripts\python -m unittest discover -s tests
+.venv\Scripts\python -m compileall -q atelier tests
+Select-String -Path .\docs\*.md, .\docs\plan\*.md, .\README.md, .\AGENTS.md -Pattern '[ \t]+$'
+git diff --check
+```
+
+Result:
+
+- Red first: missing `video-input-card` story and preview caused expected failures.
+- Expanded-state red first: card height was still 300 px before the expanded layout implementation.
+- Geometry-adjustment red first: card border was still 4 px before the latest geometry pass.
+- Header/icon red first: header was still 40 px before the latest header pass.
+- Component workbench tests: 10 tests passed after implementation.
+- Component workbench + AtelierUI foundation + GUI smoke tests: 20 tests passed.
+- Full unittest discovery: 142 tests passed.
+- `compileall`: passed.
 - Trailing whitespace scan: no matches.
 - `git diff --check`: passed with only Windows CRLF conversion warnings.
 

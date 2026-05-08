@@ -302,7 +302,7 @@ MotionOverlay
 - 可以展示候选控件、参数 controls、状态 presets、token swatches 和 review checklist。
 - 不运行 worker、FFmpeg、模型推理、硬件调度、任意 shell 或 SQLite mutation。
 - 候选控件在画板可见，不代表已经进入 `AtelierUI` 共享调用。
-- 当前已实现 token swatches、typography samples、intake checklist、story selection、controls metadata、手动 screenshot / review snapshot 和 `WorkflowNodeItem` 候选 placeholder；尚未实现真实参数 controls 驱动绘制、motion token playback、视觉 diff 或已审查共享控件。
+- 当前已实现 dev-only 控件画板、WorkCanvas 预览承载区、`VideoInputCard` 候选、矢量内缩卡片预览、基础 zoom / pan、卡片入口切换和全屏预览；主题 token 预览、`WorkflowNodeItem` placeholder、右侧入库审查清单已从当前可见工作区隐藏 / 归档；尚未实现真实参数 controls 驱动绘制、motion token playback、视觉 diff 或已审查共享控件。
 
 参考模型：
 
@@ -310,7 +310,7 @@ MotionOverlay
 - Qt Designer custom widget preview 的插件边界。
 - Qt Design Studio 的 state / transition / timeline 思路。
 
-规划见 `docs/plan/plan_atelier_ui_component_workbench.md`；第一阶段实现计划见 `docs/plan/plan_atelier_ui_component_workbench_foundation.md`；第二阶段 controls 计划见 `docs/plan/plan_atelier_ui_component_workbench_controls.md`；第三阶段 screenshot / review notes 计划见 `docs/plan/plan_atelier_ui_component_workbench_screenshot.md`。
+规划见 `docs/plan/gui_workbench/plan_atelier_ui_component_workbench.md`；已完成的阶段性 workbench 计划归档在 `docs/plan/gui_workbench/archive/component_workbench_phases/`。
 
 ## 10. Queue Delegate Animation
 

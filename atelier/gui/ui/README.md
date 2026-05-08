@@ -6,8 +6,9 @@ It is not a public UI library, not a PyPI package, and not a mature external dep
 
 Current scope:
 
-- `component_workbench_state.py`: pure Python catalog, story, token preview, typography preview, and intake checklist state for the dev-only component workbench.
-- `component_workbench.py`: PySide6 dev-only workbench entry for reviewing AtelierUI candidates outside the product `MainWindow`.
+- `component_workbench_state.py`: pure Python catalog, story, token, typography, intake checklist, and review snapshot metadata for the dev-only component workbench.
+- `component_workbench.py`: PySide6 dev-only workbench entry focused on WorkCanvas `VideoInputCard` tuning outside the product `MainWindow`.
+- `workflow_canvas/node_cards/`: Workflow Canvas node card candidates that must be reviewed in the workbench before shared adoption.
 - `theme_tokens.py`: pure Python visual tokens sourced from `DESIGN.md`.
 - `widget_intake.py`: required review checklist for future self-painted widgets.
 

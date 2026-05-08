@@ -35,6 +35,7 @@ Atelier 的设计关键词：
 - `nvidia.DESIGN.md`：参考 GPU、性能指标、硬件状态表达。
 - `ollama.DESIGN.md`：参考本地 AI、runtime、模型和命令输出语境。
 - `runwayml.DESIGN.md`：参考视频媒体氛围、创作工具感和高质量媒体预览。
+- `dark-tech-sharp.DESIGN.md`：参考深色 AI / developer tool 的克制层级、边框式 elevation、排版纪律和密集工具界面节奏。
 
 禁止：
 
@@ -44,6 +45,7 @@ Atelier 的设计关键词：
 - 不要因为参考 `nvidia` 就把全局做成黑绿控制台。
 - 不要因为参考 `runwayml` 就把工作台做成暗黑影院。
 - 不要因为参考 `apple` 就把桌面工具做成大留白官网。
+- 不要因为参考 `dark-tech-sharp` 就把 Atelier 做成纯黑、纯白、低色彩的单调开发者网页。
 
 ## 3. Visual Theme And Atmosphere
 
